@@ -1,0 +1,222 @@
+{
+  "behaviours": [
+    {
+      "channel": "canvas-draw",
+      "description": "Canvas draw lifecycle",
+      "id": "behaviour.canvas.draw",
+      "module": "behaviours/canvas/draw.js",
+      "occurrences": 7,
+      "workspaces": 2
+    },
+    {
+      "channel": "content",
+      "description": "Frame-driven rendered content",
+      "id": "behaviour.content.value",
+      "module": "behaviours/content/value.js",
+      "occurrences": 17,
+      "workspaces": 3
+    },
+    {
+      "channel": "opacity",
+      "description": "Opacity",
+      "id": "behaviour.css.opacity",
+      "module": "behaviours/css/opacity.js",
+      "occurrences": 138,
+      "workspaces": 9
+    },
+    {
+      "channel": "property",
+      "description": "CSS property",
+      "id": "behaviour.css.property",
+      "module": "behaviours/css/property.js",
+      "occurrences": 80,
+      "workspaces": 10
+    },
+    {
+      "channel": "attribute",
+      "description": "DOM attribute",
+      "id": "behaviour.dom.attribute",
+      "module": "behaviours/dom/attribute.js",
+      "occurrences": 42,
+      "workspaces": 4
+    },
+    {
+      "channel": "svg-attribute",
+      "description": "SVG attribute",
+      "id": "behaviour.svg.attribute",
+      "module": "behaviours/svg/attribute.js",
+      "occurrences": 28,
+      "workspaces": 3
+    },
+    {
+      "channel": "three-effect",
+      "description": "Three.js frame mutation lifecycle",
+      "id": "behaviour.three.effect",
+      "module": "behaviours/three/effect.js",
+      "occurrences": 2,
+      "workspaces": 2
+    },
+    {
+      "channel": "three-property",
+      "description": "Three.js property or uniform",
+      "id": "behaviour.three.property",
+      "module": "behaviours/three/property.js",
+      "occurrences": 7,
+      "workspaces": 5
+    },
+    {
+      "channel": "rotate",
+      "description": "Rotation",
+      "id": "behaviour.transform.rotate",
+      "module": "behaviours/transform/rotate.js",
+      "occurrences": 51,
+      "workspaces": 5
+    },
+    {
+      "channel": "scale",
+      "description": "Scale",
+      "id": "behaviour.transform.scale",
+      "module": "behaviours/transform/scale.js",
+      "occurrences": 73,
+      "workspaces": 8
+    },
+    {
+      "channel": "translate",
+      "description": "Translation",
+      "id": "behaviour.transform.translate",
+      "module": "behaviours/transform/translate.js",
+      "occurrences": 64,
+      "workspaces": 8
+    }
+  ],
+  "units": [
+    {
+      "backend": "canvas",
+      "description": "Canvas surface",
+      "id": "unit.canvas.surface",
+      "module": "units/canvas/surface.js",
+      "occurrences": 7,
+      "workspaces": 2
+    },
+    {
+      "backend": "react",
+      "description": "Repeat any number of child units",
+      "id": "unit.control.repeat",
+      "module": "units/control/repeat.js",
+      "occurrences": 57,
+      "workspaces": 8
+    },
+    {
+      "backend": "react",
+      "description": "Choose child units from a control branch",
+      "id": "unit.control.switch",
+      "module": "units/control/switch.js",
+      "occurrences": 52,
+      "workspaces": 9
+    },
+    {
+      "backend": "dom",
+      "description": "Generic DOM element",
+      "id": "unit.dom.element",
+      "module": "units/dom/element.js",
+      "occurrences": 329,
+      "workspaces": 10
+    },
+    {
+      "backend": "dom",
+      "description": "Text-bearing DOM element",
+      "id": "unit.dom.text",
+      "module": "units/dom/text.js",
+      "occurrences": 35,
+      "workspaces": 5
+    },
+    {
+      "backend": "media",
+      "description": "Audio",
+      "id": "unit.media.audio",
+      "module": "units/media/audio.js",
+      "occurrences": 5,
+      "workspaces": 1
+    },
+    {
+      "backend": "media",
+      "description": "Image",
+      "id": "unit.media.image",
+      "module": "units/media/image.js",
+      "occurrences": 40,
+      "workspaces": 7
+    },
+    {
+      "backend": "media",
+      "description": "Video",
+      "id": "unit.media.video",
+      "module": "units/media/video.js",
+      "occurrences": 5,
+      "workspaces": 2
+    },
+    {
+      "backend": "react",
+      "description": "Fragment",
+      "id": "unit.react.fragment",
+      "module": "units/react/fragment.js",
+      "occurrences": 2,
+      "workspaces": 1
+    },
+    {
+      "backend": "react",
+      "description": "Locally declared component",
+      "id": "unit.react.local-component",
+      "module": "units/react/local-component.js",
+      "occurrences": 20,
+      "workspaces": 4
+    },
+    {
+      "backend": "remotion",
+      "description": "Full-frame layer",
+      "id": "unit.remotion.layer",
+      "module": "units/remotion/layer.js",
+      "occurrences": 169,
+      "workspaces": 10
+    },
+    {
+      "backend": "remotion",
+      "description": "Timeline slot",
+      "id": "unit.remotion.timeline-slot",
+      "module": "units/remotion/timeline-slot.js",
+      "occurrences": 9,
+      "workspaces": 3
+    },
+    {
+      "backend": "svg",
+      "description": "SVG element",
+      "id": "unit.svg.element",
+      "module": "units/svg/element.js",
+      "occurrences": 86,
+      "workspaces": 5
+    },
+    {
+      "backend": "svg",
+      "description": "SVG root",
+      "id": "unit.svg.root",
+      "module": "units/svg/root.js",
+      "occurrences": 17,
+      "workspaces": 5
+    },
+    {
+      "backend": "three",
+      "description": "Three.js scene element",
+      "id": "unit.three.element",
+      "module": "units/three/element.js",
+      "occurrences": 74,
+      "workspaces": 5
+    },
+    {
+      "backend": "three",
+      "description": "Three.js scene root",
+      "id": "unit.three.scene",
+      "module": "units/three/scene.js",
+      "occurrences": 5,
+      "workspaces": 5
+    }
+  ]
+}

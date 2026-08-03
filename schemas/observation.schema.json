@@ -1,0 +1,323 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/cut3-ai/agent-memory/schemas/observation.schema.json",
+  "title": "Sanitized public composition observation",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "observationId",
+    "sourceHash",
+    "workspace",
+    "track",
+    "code",
+    "signals",
+    "feedback",
+    "state",
+    "trusted",
+    "evidenceStatus"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "observationId": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "sourceHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "workspace": {
+      "type": "object",
+      "required": ["index", "width", "height", "fps", "length"],
+      "properties": {
+        "index": { "type": "integer", "minimum": 0 },
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 },
+        "fps": { "type": "number", "exclusiveMinimum": 0 },
+        "length": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "track": {
+      "type": "object",
+      "required": ["index", "id", "start", "length"],
+      "properties": {
+        "index": { "type": "integer", "minimum": 0 },
+        "id": { "type": "string", "pattern": "^track-[a-f0-9]{12}$" },
+        "start": { "type": "number", "minimum": 0 },
+        "length": { "type": "number", "exclusiveMinimum": 0 },
+        "zIndex": { "type": ["number", "null"] },
+        "hasCover": { "type": "boolean" },
+        "comment": { "const": null }
+      },
+      "additionalProperties": false
+    },
+    "code": {
+      "type": "object",
+      "required": [
+        "parseStatus",
+        "parseError",
+        "sourceChars",
+        "strippedChars",
+        "spanSource",
+        "generatedCompositionFound",
+        "structuralHash",
+        "features",
+        "helpers",
+        "visualAtoms",
+        "visualFragments",
+        "dependencies"
+      ],
+      "properties": {
+        "parseStatus": { "enum": ["valid", "invalid"] },
+        "parseError": { "enum": [null, "parse-error"] },
+        "sourceChars": { "type": "integer", "minimum": 0 },
+        "strippedChars": { "type": ["integer", "null"], "minimum": 0 },
+        "spanSource": { "const": "normalized-composition" },
+        "generatedCompositionFound": { "type": "boolean" },
+        "structuralHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "features": {
+          "type": "object",
+          "required": [
+            "nodeTypes",
+            "calls",
+            "jsxTags",
+            "styleProperties",
+            "operators",
+            "globalIdentifiers",
+            "literalClasses",
+            "motionPrimitives",
+            "families",
+            "renderMode",
+            "hasCodeFence",
+            "hasMathRandom",
+            "hasNondeterministicClock",
+            "hasDeterministicFrame"
+          ],
+          "properties": {
+            "nodeTypes": { "$ref": "#/$defs/countMap" },
+            "calls": {
+              "allOf": [
+                { "$ref": "#/$defs/countMap" },
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "enum": [
+                      "_custom", "useCurrentFrame", "useVideoConfig", "useEffect", "useMemo", "useRef", "useState", "useCallback",
+                      "interpolate", "spring", "loadGoogleFont", "lerp", "clamp", "ms2f", "msToFrames", "pseudoRandom", "mulberry32",
+                      "jitter", "wobble", "boil", "map", "filter", "reduce", "Array.from", "Easing.bezier", "Easing.in", "Easing.inOut",
+                      "Easing.out", "Math.abs", "Math.ceil", "Math.cos", "Math.exp", "Math.floor", "Math.imul", "Math.max", "Math.min",
+                      "Math.pow", "Math.round", "Math.sin", "Math.sqrt", "canvas.getContext", "ctx.clearRect", "ctx.createRadialGradient",
+                      "ctx.drawImage", "ctx.fillRect", "ctx.fillText", "ctx.measureText", "ctx.restore", "ctx.rotate", "ctx.save", "ctx.scale",
+                      "ctx.strokeText", "ctx.translate", "new:THREE.BufferAttribute", "new:THREE.BufferGeometry", "new:THREE.CanvasTexture",
+                      "new:THREE.ExtrudeGeometry", "new:THREE.Path", "new:THREE.ShaderMaterial", "new:THREE.Shape", "new:THREE.SphereGeometry",
+                      "shape.absarc", "shape.bezierCurveTo", "shape.closePath", "shape.holes.push", "shape.lineTo", "shape.moveTo"
+                    ]
+                  }
+                }
+              ]
+            },
+            "jsxTags": {
+              "allOf": [
+                { "$ref": "#/$defs/countMap" },
+                {
+                  "type": "object",
+                  "propertyNames": {
+                    "enum": [
+                      "_custom", "div", "span", "pre", "style", "canvas", "svg", "path", "rect", "circle", "line", "g", "defs",
+                      "filter", "feTurbulence", "feColorMatrix", "feComponentTransfer", "feFuncA", "feMerge", "feMergeNode", "feDisplacementMap",
+                      "AbsoluteFill", "Sequence", "Series", "Img", "Video", "OffthreadVideo", "Audio", "AnimatedImage", "ThreeCanvas", "group",
+                      "mesh", "points", "lineSegments", "ambientLight", "directionalLight", "pointLight", "spotLight", "meshBasicMaterial",
+                      "meshStandardMaterial", "pointsMaterial", "PerspectiveCamera", "OrthographicCamera", "Text", "Text3D", "Center", "Sparkles",
+                      "Float", "Stars", "Cloud", "Environment"
+                    ]
+                  }
+                }
+              ]
+            },
+            "styleProperties": { "$ref": "#/$defs/countMap" },
+            "operators": { "$ref": "#/$defs/countMap" },
+            "globalIdentifiers": { "$ref": "#/$defs/countMap" },
+            "literalClasses": { "$ref": "#/$defs/countMap" },
+            "motionPrimitives": { "$ref": "#/$defs/countMap" },
+            "families": {
+              "type": "array",
+              "items": { "enum": ["audio", "canvas", "image", "overlay", "text", "three", "video"] },
+              "uniqueItems": true
+            },
+            "renderMode": { "enum": ["dom", "canvas2d", "svg", "three", "unknown"] },
+            "hasCodeFence": { "type": "boolean" },
+            "hasMathRandom": { "type": "boolean" },
+            "hasNondeterministicClock": { "type": "boolean" },
+            "hasDeterministicFrame": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "helpers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "kind", "parameters", "structuralHash"],
+            "properties": {
+              "name": { "enum": ["_custom", "msToFrames", "lerp", "clamp", "deterministicVariation", "deterministicRandom"] },
+              "kind": { "enum": ["function", "arrow", "function-expression"] },
+              "parameters": { "type": "integer", "minimum": 0 },
+              "structuralHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "visualAtoms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "atomId", "nodeIndex", "rootKind", "channel", "frameDriven",
+              "drivers", "shapes", "expressionHash", "dependencyHash",
+              "variantHash", "span", "dependencySpans"
+            ],
+            "properties": {
+              "atomId": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "nodeIndex": { "type": "integer", "minimum": 0 },
+              "rootKind": { "$ref": "#/$defs/rootKind" },
+              "channel": {
+                "enum": [
+                  "opacity", "filter", "clip", "transform.scale",
+                  "transform.translate", "transform.rotate", "transform.other"
+                ]
+              },
+              "frameDriven": { "type": "boolean" },
+              "drivers": {
+                "type": "array",
+                "items": { "enum": ["formula", "keyframes", "oscillation", "spring"] },
+                "uniqueItems": true
+              },
+              "shapes": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^(constant|increasing|decreasing|peak|valley|mixed):[0-9]+$" },
+                "uniqueItems": true
+              },
+              "expressionHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "dependencyHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "variantHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "span": { "$ref": "#/$defs/span" },
+              "dependencySpans": {
+                "type": "array",
+                "items": { "$ref": "#/$defs/span" }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "visualFragments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "fragmentId", "fragmentIndex", "rootKind", "span", "structuralHash",
+              "directStyleProperties", "subtreeStyleProperties", "families", "fullFrame",
+              "containsMedia", "hasText", "hasMapShape", "hasColorBackground",
+              "hasDirectColorBackground", "childElementCount", "hasCustomDescendant",
+              "hasStyledContainer", "hasVignetteGradient", "hasNoiseSemantics",
+              "hasDirectVignetteGradient",
+              "hasRankingSemantics", "hasDialogueSemantics", "hasTimedScatterSemantics"
+            ],
+            "properties": {
+              "fragmentId": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "fragmentIndex": { "type": "integer", "minimum": 0 },
+              "rootKind": { "$ref": "#/$defs/rootKind" },
+              "span": { "$ref": "#/$defs/span" },
+              "structuralHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "directStyleProperties": { "$ref": "#/$defs/styleNames" },
+              "subtreeStyleProperties": { "$ref": "#/$defs/styleNames" },
+              "families": {
+                "type": "array",
+                "items": { "enum": ["audio", "canvas", "image", "svg", "text", "three", "video"] },
+                "uniqueItems": true
+              },
+              "fullFrame": { "type": "boolean" },
+              "containsMedia": { "type": "boolean" },
+              "hasText": { "type": "boolean" },
+              "hasMapShape": { "type": "boolean" },
+              "hasColorBackground": { "type": "boolean" },
+              "hasDirectColorBackground": { "type": "boolean" },
+              "childElementCount": { "type": "integer", "minimum": 0 },
+              "hasCustomDescendant": { "type": "boolean" },
+              "hasStyledContainer": { "type": "boolean" },
+              "hasVignetteGradient": { "type": "boolean" },
+              "hasDirectVignetteGradient": { "type": "boolean" },
+              "hasNoiseSemantics": { "type": "boolean" },
+              "hasRankingSemantics": { "type": "boolean" },
+              "hasDialogueSemantics": { "type": "boolean" },
+              "hasTimedScatterSemantics": { "type": "boolean" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "dependencies": {
+          "type": "object",
+          "required": ["counts"],
+          "properties": {
+            "counts": {
+              "type": "object",
+              "required": ["image", "video", "audio", "font", "other"],
+              "properties": {
+                "image": { "type": "integer", "minimum": 0 },
+                "video": { "type": "integer", "minimum": 0 },
+                "audio": { "type": "integer", "minimum": 0 },
+                "font": { "type": "integer", "minimum": 0 },
+                "other": { "type": "integer", "minimum": 0 }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "signals": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "feedback": {
+      "type": "object",
+      "required": ["state"],
+      "properties": { "state": { "const": "unknown" } },
+      "additionalProperties": false
+    },
+    "state": { "const": "observed" },
+    "trusted": { "const": false },
+    "evidenceStatus": { "const": "observed" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "rootKind": {
+      "enum": [
+        "absolute-fill", "audio", "canvas", "custom", "div", "image",
+        "pre", "span", "svg", "text", "three", "video"
+      ]
+    },
+    "span": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": "integer", "minimum": 0 },
+        "end": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "styleNames": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "WebkitMaskImage", "WebkitTextStroke", "background", "backgroundColor",
+          "backgroundImage", "bottom", "boxShadow", "clipPath", "filter", "fontFamily",
+          "fontSize", "height", "left", "maskImage", "mixBlendMode", "objectFit",
+          "opacity", "overflow", "perspective", "position", "right", "textShadow",
+          "top", "transform", "transformStyle", "width", "zIndex"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "countMap": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    }
+  }
+}

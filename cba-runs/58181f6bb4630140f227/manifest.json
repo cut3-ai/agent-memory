@@ -1,0 +1,13 @@
+{
+  "algorithmVersion": "cba-lossless-v0.3.1",
+  "counts": {
+    "compositionTracks": 100,
+    "workspaces": 13,
+    "workspacesWithCompositions": 10
+  },
+  "cycles": 20,
+  "inputSha256": "3a8c7a667dcb7a486ec348fee945c9754a530402156a50526285c8cea19e1c51",
+  "privateReconstructionRoot": ".private-cba-runs/58181f6bb4630140f227",
+  "publicArtifactsContainRawCompositionSource": false,
+  "runId": "58181f6bb4630140f227"
+}
