@@ -8,7 +8,7 @@ import { buildCorpusCensus } from './corpus.js';
 import { evaluateMemoryCandidate } from './evaluate.js';
 import { assertPublicArtifact, inspectPublicArtifact } from './privacy.js';
 
-export const MEMORY_ALGORITHM_VERSION = 'class-memory-v4.0.0-promotion-ledger';
+export const MEMORY_ALGORITHM_VERSION = 'class-memory-v6-stylistic-subtree';
 
 export async function runMemoryPipeline(inputText, options = {}) {
   const repositoryRoot = path.resolve(options.repositoryRoot ?? process.cwd());
@@ -34,7 +34,7 @@ export async function runMemoryPipeline(inputText, options = {}) {
   })).slice(0, 20);
   const runDirectory = path.join(outputRoot, runId);
   const manifest = {
-    schemaVersion: 4,
+    schemaVersion: 6,
     runId,
     algorithmVersion: MEMORY_ALGORITHM_VERSION,
     censusSha256: firstCensus.censusSha256,
@@ -48,13 +48,28 @@ export async function runMemoryPipeline(inputText, options = {}) {
       unitWitnesses: firstCensus.counts.unitWitnesses,
       visualSinks: firstCensus.counts.visualSinks,
       atomicBehaviourWitnesses: firstCensus.counts.atomicBehaviourWitnesses,
-      indexedUnits: classValidation.units,
-      indexedBehaviours: classValidation.behaviours,
+      infrastructureUnitWitnesses: firstCensus.counts.infrastructureUnitWitnesses ?? 0,
+      infrastructureBehaviourWitnesses:
+        firstCensus.counts.infrastructureBehaviourWitnesses ?? 0,
+      motifCandidates: firstCensus.memoryCandidates.length,
+      evidenceReadyMotifs: firstCensus.memoryCandidates.filter(
+        (entry) => entry.eligibility?.evidenceReady === true,
+      ).length,
+      candidateUnits: firstCensus.memoryCandidates.filter(
+        (entry) => entry.kind === 'unit',
+      ).length,
+      candidateBehaviours: firstCensus.memoryCandidates.filter(
+        (entry) => entry.kind === 'behaviour',
+      ).length,
+      indexedInfrastructure: classValidation.infrastructureEntries,
+      indexedMemoryUnits: classValidation.memoryUnits,
+      indexedMemoryBehaviours: classValidation.memoryBehaviours,
     },
     proofLevel: metrics.proofLevel,
     reconstructionProven: metrics.reconstruction.oneToOneVerified,
     automaticPromotionAllowed: false,
-    refinementAuthority: 'experiment-profile-lab',
+    refinementAuthority: 'deterministic-stylistic-motif-miner',
+    modelGenerationAuthority: false,
     containsRawCompositionData: false,
   };
   const publicFiles = new Map([

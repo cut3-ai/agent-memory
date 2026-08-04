@@ -393,6 +393,7 @@ function candidateMetadata(identity, evidenceSha256, dependencyClosureSha256) {
     kind: identity.kind,
     candidateSha256: candidateRevisionSha256({
       ...identity,
+      role: 'memory',
       dependencyClosureSha256,
     }),
     moduleSha256: identity.moduleSha256,

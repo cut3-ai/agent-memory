@@ -10,9 +10,16 @@ const SPLITS = new Set(['train', 'validation', 'heldout']);
 export function evaluateCbaProfile(dataset, split, profile, options = {}) {
   const selectedSplits = normalizeSplits(options.splits ?? ['train']);
   const totals = emptyMetrics();
-  const reusableKinds = new Set();
-  const reusableUnitKinds = new Set();
+  const foundationKinds = options.foundationKinds instanceof Set
+    ? options.foundationKinds : new Set();
+  const memoryKinds = options.memoryKinds instanceof Set
+    ? options.memoryKinds : new Set();
+  const foundationBehaviourKinds = new Set();
+  const foundationUnitKinds = new Set();
+  const authenticMemoryKinds = new Set();
   const unsupportedEffectKinds = new Set();
+  let indexedBehaviourOccurrences = 0;
+  let indexedUnitOccurrences = 0;
 
   for (const workspace of dataset.workspaces) {
     const assigned = split.assignmentByWorkspaceKey.get(workspace.workspaceKey);
@@ -44,22 +51,42 @@ export function evaluateCbaProfile(dataset, split, profile, options = {}) {
         totals.staticResidualVisualPotential += (
           compiled.escapeHatches.sourceDependentVisualComputations
         );
-        totals.reusableBehaviours += verification.maximumPublicBehaviours;
-        totals.publicUnitOccurrences += verification.maximumPublicUnits;
+        const unitCounts = verification.publicUnitKindCounts ?? {};
+        const behaviourCounts = verification.publicBehaviourKindCounts ?? {};
+        const foundationUnits = selectedOccurrences(unitCounts, foundationKinds);
+        const foundationBehaviours = selectedOccurrences(behaviourCounts, foundationKinds);
+        const authenticMemoryUnits = selectedOccurrences(unitCounts, memoryKinds);
+        const authenticMemoryBehaviours = selectedOccurrences(behaviourCounts, memoryKinds);
+        totals.foundationUnitOccurrences += foundationUnits;
+        totals.foundationBehaviours += foundationBehaviours;
+        totals.authenticMemoryUnitOccurrences += authenticMemoryUnits;
+        totals.authenticMemoryBehaviourOccurrences += authenticMemoryBehaviours;
+        indexedUnitOccurrences += sumCountRecord(unitCounts);
+        indexedBehaviourOccurrences += sumCountRecord(behaviourCounts);
         totals.warnings += compiled.warnings.length;
         totals.invalidOwners = Math.max(
           totals.invalidOwners,
           verification.invalidBehaviourOwners,
         );
-        verification.publicBehaviourKinds.forEach((kind) => reusableKinds.add(kind));
-        verification.publicUnitKinds.forEach((kind) => reusableUnitKinds.add(kind));
+        selectedObservedKinds(behaviourCounts, foundationKinds)
+          .forEach((kind) => foundationBehaviourKinds.add(kind));
+        selectedObservedKinds(unitCounts, foundationKinds)
+          .forEach((kind) => foundationUnitKinds.add(kind));
+        selectedObservedKinds(unitCounts, memoryKinds)
+          .forEach((kind) => authenticMemoryKinds.add(kind));
+        selectedObservedKinds(behaviourCounts, memoryKinds)
+          .forEach((kind) => authenticMemoryKinds.add(kind));
         if (verification.unsupportedEffects.length > 0) {
           totals.unsupportedEffectCases += 1;
           totals.unsupportedEffectFrames += verification.totalFrames;
           totals.unsupportedEffectOccurrences += verification.unsupportedEffects.length;
           verification.unsupportedEffects.forEach((kind) => unsupportedEffectKinds.add(kind));
         }
-        const publicBrickStructuralExact = verification.exact
+        const publicKinds = [
+          ...Object.keys(unitCounts),
+          ...Object.keys(behaviourCounts),
+        ];
+        const structuralExact = verification.exact
           && verification.maximumPublicUnits > 0
           && verification.maximumNativeUnits === 0
           && verification.maximumLocalBehaviours === 0
@@ -72,16 +99,24 @@ export function evaluateCbaProfile(dataset, split, profile, options = {}) {
           && options.libraryVerified === true
           && options.promotionVerified === true
           && options.indexVerified === true
-          && options.indexedKinds instanceof Set
-          && [...verification.publicUnitKinds, ...verification.publicBehaviourKinds]
-            .every((kind) => options.indexedKinds.has(kind));
+          && foundationKinds instanceof Set
+          && memoryKinds instanceof Set;
+        const foundationBrickStructuralExact = structuralExact
+          && foundationUnits > 0
+          && publicKinds.every((kind) => foundationKinds.has(kind));
+        const authenticMemoryStructuralExact = structuralExact
+          && authenticMemoryUnits + authenticMemoryBehaviours > 0
+          && publicKinds.every((kind) => foundationKinds.has(kind) || memoryKinds.has(kind));
         const structurallyMatched = verification.matchedFrames === verification.totalFrames
           && verification.baselineRenderErrors === 0
           && verification.generatedRenderErrors === 0;
-        totals.publicBrickStructuralExactCases += Number(publicBrickStructuralExact);
-        totals.fallbackExactCases += Number(verification.exact && !publicBrickStructuralExact);
+        totals.foundationBrickStructuralExactCases += Number(foundationBrickStructuralExact);
+        totals.authenticMemoryStructuralExactCases += Number(authenticMemoryStructuralExact);
+        const classifiedStructuralExact = foundationBrickStructuralExact
+          || authenticMemoryStructuralExact;
+        totals.fallbackExactCases += Number(verification.exact && !classifiedStructuralExact);
         totals.structurallyMatchedCases += Number(structurallyMatched);
-        totals.fallbackMatchedCases += Number(structurallyMatched && !publicBrickStructuralExact);
+        totals.fallbackMatchedCases += Number(structurallyMatched && !classifiedStructuralExact);
         if (!verification.exact) {
           const code = mismatchCode(verification);
           totals.failureCases[code] = (totals.failureCases[code] ?? 0) + 1;
@@ -96,17 +131,18 @@ export function evaluateCbaProfile(dataset, split, profile, options = {}) {
     }
   }
 
-  totals.reusableKinds = reusableKinds.size;
-  totals.publicUnitKinds = reusableUnitKinds.size;
+  totals.foundationBehaviourKinds = foundationBehaviourKinds.size;
+  totals.foundationUnitKinds = foundationUnitKinds.size;
+  totals.authenticMemoryKinds = authenticMemoryKinds.size;
   totals.unsupportedEffectKinds = unsupportedEffectKinds.size;
-  const unitOccurrences = totals.publicUnitOccurrences + totals.nativeUnits;
-  totals.publicUnitCoverage = unitOccurrences === 0
+  const unitOccurrences = indexedUnitOccurrences + totals.nativeUnits;
+  totals.foundationUnitCoverage = unitOccurrences === 0
     ? 0
-    : totals.publicUnitOccurrences / unitOccurrences;
-  const behaviourOccurrences = totals.reusableBehaviours + totals.localBehaviours;
-  totals.publicBehaviourCoverage = behaviourOccurrences === 0
+    : totals.foundationUnitOccurrences / unitOccurrences;
+  const behaviourOccurrences = indexedBehaviourOccurrences + totals.localBehaviours;
+  totals.foundationBehaviourCoverage = behaviourOccurrences === 0
     ? 0
-    : totals.reusableBehaviours / behaviourOccurrences;
+    : totals.foundationBehaviours / behaviourOccurrences;
   totals.mismatchedFrames = totals.frames - totals.matchedFrames;
   totals.renderErrorFrames = totals.baselineErrorFrames + totals.generatedErrorFrames;
   totals.treeExact = totals.cases > 0
@@ -128,7 +164,7 @@ export function modelMetrics(train, validation) {
 /**
  * Deterministic authority: a profile may never trade fidelity for reuse.
  *
- * Reusable classes are useful only after the generated graph remains at least
+ * Foundation classes are useful only after the generated graph remains at least
  * as faithful on both tuning splits.  This is deliberately a Pareto gate,
  * rather than a weighted score or lexicographic shortcut: one extra matched
  * frame cannot hide a new compile failure, render error, or lost exact case.
@@ -151,16 +187,16 @@ export function isProfileImprovement(candidate, baseline) {
   const hardHigherIsBetter = [
     'matchedFrames',
     'exactCases',
-    'publicBrickStructuralExactCases',
+    'foundationBrickStructuralExactCases',
     'structurallyMatchedCases',
-    'publicUnitCoverage',
-    'publicUnitOccurrences',
-    'publicUnitKinds',
+    'foundationUnitCoverage',
+    'foundationUnitOccurrences',
+    'foundationUnitKinds',
   ];
   const secondaryHigherIsBetter = [
-    'reusableBehaviours',
-    'reusableKinds',
-    'publicBehaviourCoverage',
+    'foundationBehaviours',
+    'foundationBehaviourKinds',
+    'foundationBehaviourCoverage',
   ];
   let fidelityImproved = false;
   let unitImproved = false;
@@ -174,7 +210,8 @@ export function isProfileImprovement(candidate, baseline) {
     for (const metric of hardHigherIsBetter) {
       if (candidate[group][metric] < baseline[group][metric]) return false;
       if (candidate[group][metric] > baseline[group][metric]) {
-        if (['publicUnitCoverage', 'publicUnitOccurrences', 'publicUnitKinds'].includes(metric)) {
+        if (['foundationUnitCoverage', 'foundationUnitOccurrences', 'foundationUnitKinds']
+          .includes(metric)) {
           unitImproved = true;
         } else {
           fidelityImproved = true;
@@ -195,19 +232,20 @@ export function isProfileImprovement(candidate, baseline) {
 
   if (fidelityImproved) return true;
 
-  // A reusable Unit improvement must replace fallback nodes, not merely add a
-  // public class beside the same NativeUnit graph.
+  // A foundation Unit improvement must replace fallback nodes, not merely add
+  // a foundation class beside the same NativeUnit graph.
   const replacedFallback = ['validation', 'train'].some((group) => (
     candidate[group].nativeUnits < baseline[group].nativeUnits
-      && candidate[group].publicUnitOccurrences > baseline[group].publicUnitOccurrences
-      && candidate[group].publicUnitCoverage > baseline[group].publicUnitCoverage
+      && candidate[group].foundationUnitOccurrences
+        > baseline[group].foundationUnitOccurrences
+      && candidate[group].foundationUnitCoverage > baseline[group].foundationUnitCoverage
   ));
   if (unitImproved && replacedFallback) return true;
 
   // Behaviour-only improvements cannot turn a NativeUnit-only reconstruction
-  // into a successful memory result.  They become eligible only after both
-  // tuning splits already have a non-zero public Unit foundation.
-  if (['validation', 'train'].some((group) => candidate[group].publicUnitCoverage <= 0)) {
+  // into a successful foundation result. They become eligible only after both
+  // tuning splits already have non-zero foundation Unit coverage.
+  if (['validation', 'train'].some((group) => candidate[group].foundationUnitCoverage <= 0)) {
     return false;
   }
 
@@ -235,19 +273,23 @@ function compactMetrics(value) {
     mismatchedFrames: value.mismatchedFrames,
     compileFailures: value.compileFailures,
     renderErrorFrames: value.renderErrorFrames,
-    reusableBehaviours: value.reusableBehaviours,
-    reusableKinds: value.reusableKinds,
-    publicBehaviourCoverage: value.publicBehaviourCoverage,
-    publicUnitOccurrences: value.publicUnitOccurrences,
-    publicUnitKinds: value.publicUnitKinds,
-    publicUnitCoverage: value.publicUnitCoverage,
+    foundationBehaviours: value.foundationBehaviours,
+    foundationBehaviourKinds: value.foundationBehaviourKinds,
+    foundationBehaviourCoverage: value.foundationBehaviourCoverage,
+    foundationUnitOccurrences: value.foundationUnitOccurrences,
+    foundationUnitKinds: value.foundationUnitKinds,
+    foundationUnitCoverage: value.foundationUnitCoverage,
+    authenticMemoryUnitOccurrences: value.authenticMemoryUnitOccurrences,
+    authenticMemoryBehaviourOccurrences: value.authenticMemoryBehaviourOccurrences,
+    authenticMemoryKinds: value.authenticMemoryKinds,
+    authenticMemoryStructuralExactCases: value.authenticMemoryStructuralExactCases,
     localBehaviours: value.localBehaviours,
     staticLocalBehaviourPotential: value.staticLocalBehaviourPotential,
     residualVisualComputations: value.residualVisualComputations,
     staticResidualVisualPotential: value.staticResidualVisualPotential,
     nativeUnits: value.nativeUnits,
     staticNativeUnitPotential: value.staticNativeUnitPotential,
-    publicBrickStructuralExactCases: value.publicBrickStructuralExactCases,
+    foundationBrickStructuralExactCases: value.foundationBrickStructuralExactCases,
     fallbackExactCases: value.fallbackExactCases,
     structurallyMatchedCases: value.structurallyMatchedCases,
     fallbackMatchedCases: value.fallbackMatchedCases,
@@ -277,13 +319,17 @@ function emptyMetrics() {
     staticLocalBehaviourPotential: 0,
     residualVisualComputations: 0,
     staticResidualVisualPotential: 0,
-    reusableBehaviours: 0,
-    reusableKinds: 0,
-    publicBehaviourCoverage: 0,
-    publicUnitOccurrences: 0,
-    publicUnitKinds: 0,
-    publicUnitCoverage: 0,
-    publicBrickStructuralExactCases: 0,
+    foundationBehaviours: 0,
+    foundationBehaviourKinds: 0,
+    foundationBehaviourCoverage: 0,
+    foundationUnitOccurrences: 0,
+    foundationUnitKinds: 0,
+    foundationUnitCoverage: 0,
+    foundationBrickStructuralExactCases: 0,
+    authenticMemoryUnitOccurrences: 0,
+    authenticMemoryBehaviourOccurrences: 0,
+    authenticMemoryKinds: 0,
+    authenticMemoryStructuralExactCases: 0,
     fallbackExactCases: 0,
     structurallyMatchedCases: 0,
     fallbackMatchedCases: 0,
@@ -298,6 +344,22 @@ function emptyMetrics() {
     pixelComparedFrames: 0,
     pixelExact: false,
   };
+}
+
+function selectedOccurrences(counts, selectedKinds) {
+  return Object.entries(counts).reduce((total, [kind, count]) => (
+    total + (selectedKinds.has(kind) ? Number(count) : 0)
+  ), 0);
+}
+
+function selectedObservedKinds(counts, selectedKinds) {
+  return Object.entries(counts)
+    .filter(([kind, count]) => selectedKinds.has(kind) && Number(count) > 0)
+    .map(([kind]) => kind);
+}
+
+function sumCountRecord(counts) {
+  return Object.values(counts).reduce((total, count) => total + Number(count), 0);
 }
 
 function mismatchCode(verification) {

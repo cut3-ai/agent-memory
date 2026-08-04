@@ -38,23 +38,44 @@ test('final Pareto selection is independent of evaluated-record order', () => {
   const baseline = record('b_0000000000000000', metrics());
   const unitProfile = record('p_1111111111111111', metrics({
     nativeUnits: 0,
-    publicUnitOccurrences: 1,
-    publicUnitKinds: 1,
-    publicUnitCoverage: 1,
-    publicBrickStructuralExactCases: 1,
+    foundationUnitOccurrences: 1,
+    foundationUnitKinds: 1,
+    foundationUnitCoverage: 1,
+    foundationBrickStructuralExactCases: 1,
     fallbackExactCases: 0,
     fallbackMatchedCases: 0,
   }));
-  const pseudoReuse = record('p_2222222222222222', metrics({
-    reusableBehaviours: 100,
-    reusableKinds: 10,
-    publicBehaviourCoverage: 1,
+  const pseudoFoundationBehaviour = record('p_2222222222222222', metrics({
+    foundationBehaviours: 100,
+    foundationBehaviourKinds: 10,
+    foundationBehaviourCoverage: 1,
   }));
-  const forward = selectDeterministicProfile(baseline, [unitProfile, pseudoReuse]);
-  const reverse = selectDeterministicProfile(baseline, [pseudoReuse, unitProfile]);
+  const observationalMemory = record('p_3333333333333333', metrics({
+    authenticMemoryUnitOccurrences: 100,
+    authenticMemoryBehaviourOccurrences: 100,
+    authenticMemoryKinds: 20,
+    authenticMemoryStructuralExactCases: 1,
+  }));
+  const forward = selectDeterministicProfile(baseline, [
+    unitProfile,
+    pseudoFoundationBehaviour,
+    observationalMemory,
+  ]);
+  const reverse = selectDeterministicProfile(baseline, [
+    observationalMemory,
+    pseudoFoundationBehaviour,
+    unitProfile,
+  ]);
   assert.deepEqual(forward, reverse);
   assert.equal(forward.selectedProfileId, unitProfile.profile.id);
-  assert.equal(forward.eligibleProfileIds.includes(pseudoReuse.profile.id), false);
+  assert.equal(
+    forward.eligibleProfileIds.includes(pseudoFoundationBehaviour.profile.id),
+    false,
+  );
+  assert.equal(
+    forward.eligibleProfileIds.includes(observationalMemory.profile.id),
+    false,
+  );
 });
 
 test('deterministic Pareto tie-break prefers lower static escape-hatch potential', () => {
@@ -64,20 +85,20 @@ test('deterministic Pareto tie-break prefers lower static escape-hatch potential
   const lexicallyEarlierButWorse = record('p_1111111111111111', metrics({
     nativeUnits: 0,
     staticNativeUnitPotential: 5,
-    publicUnitOccurrences: 1,
-    publicUnitKinds: 1,
-    publicUnitCoverage: 1,
-    publicBrickStructuralExactCases: 1,
+    foundationUnitOccurrences: 1,
+    foundationUnitKinds: 1,
+    foundationUnitCoverage: 1,
+    foundationBrickStructuralExactCases: 1,
     fallbackExactCases: 0,
     fallbackMatchedCases: 0,
   }));
   const lowerEscapeHatchPotential = record('p_9999999999999999', metrics({
     nativeUnits: 0,
     staticNativeUnitPotential: 2,
-    publicUnitOccurrences: 1,
-    publicUnitKinds: 1,
-    publicUnitCoverage: 1,
-    publicBrickStructuralExactCases: 1,
+    foundationUnitOccurrences: 1,
+    foundationUnitKinds: 1,
+    foundationUnitCoverage: 1,
+    foundationBrickStructuralExactCases: 1,
     fallbackExactCases: 0,
     fallbackMatchedCases: 0,
   }));
@@ -118,19 +139,23 @@ function metrics(overrides = {}) {
     mismatchedFrames: 0,
     compileFailures: 0,
     renderErrorFrames: 0,
-    reusableBehaviours: 0,
-    reusableKinds: 0,
-    publicBehaviourCoverage: 0,
-    publicUnitOccurrences: 0,
-    publicUnitKinds: 0,
-    publicUnitCoverage: 0,
+    foundationBehaviours: 0,
+    foundationBehaviourKinds: 0,
+    foundationBehaviourCoverage: 0,
+    foundationUnitOccurrences: 0,
+    foundationUnitKinds: 0,
+    foundationUnitCoverage: 0,
+    authenticMemoryUnitOccurrences: 0,
+    authenticMemoryBehaviourOccurrences: 0,
+    authenticMemoryKinds: 0,
+    authenticMemoryStructuralExactCases: 0,
     localBehaviours: 0,
     staticLocalBehaviourPotential: 0,
     residualVisualComputations: 0,
     staticResidualVisualPotential: 0,
     nativeUnits: 1,
     staticNativeUnitPotential: 1,
-    publicBrickStructuralExactCases: 0,
+    foundationBrickStructuralExactCases: 0,
     fallbackExactCases: 1,
     structurallyMatchedCases: 1,
     fallbackMatchedCases: 1,

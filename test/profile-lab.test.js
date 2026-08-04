@@ -93,6 +93,8 @@ test('profile lab runs twenty real profiles and publishes privacy-safe receipts'
   });
   assert.equal(result.manifest.modelAcceptanceAuthority, false);
   assert.equal(result.manifest.modelSearchOrderAuthority, true);
+  assert.equal(result.manifest.optimizationScope, 'foundation-lowering-only');
+  assert.equal(result.manifest.authenticMemoryClassesGenerated, 0);
   assert.equal(result.manifest.finalSelectionOrderIndependentWithinEvaluatedSet, true);
   assert.equal(result.manifest.privateMaterialSentToProviders, false);
   assert.equal(result.manifest.splitOutcomeBlind, true);
@@ -107,14 +109,16 @@ test('profile lab runs twenty real profiles and publishes privacy-safe receipts'
   assert.equal(result.privacy.valid, true);
   assert.equal(result.navigationIndex.format, 'cut3-static-library-index');
   assert.ok(result.navigationIndex.entries.every((entry) => (
-    Object.keys(entry).sort().join(',') === 'export,kind,source,type'
+    Object.keys(entry).sort().join(',') === 'export,kind,role,source,type'
   )));
   const publicBytes = JSON.stringify(result);
   assert.doesNotMatch(publicBytes, /GeneratedComposition|data-i|private rationale|https?:/iu);
+  assert.doesNotMatch(publicBytes, /publicUnit|publicBehaviour|reusableKinds|reusableBehaviours/u);
   const files = await fs.readdir(result.experimentDirectory);
   assert.ok(files.includes('final-metrics.json'));
   assert.ok(files.includes('rounds.json'));
   assert.ok(files.includes('preflight.json'));
+  assert.ok(files.includes('verification.json'));
   assert.equal(files.includes('README.md'), false);
   const candidates = JSON.parse(await fs.readFile(
     path.join(result.experimentDirectory, 'candidates.json'),
@@ -131,8 +135,33 @@ test('profile lab runs twenty real profiles and publishes privacy-safe receipts'
     'utf8',
   ));
   assert.equal(Object.hasOwn(preflight, 'publicBrickCaseDelta'), false);
-  assert.ok(preflight.validationPublicBrickCaseDelta > 0);
+  assert.equal(Object.hasOwn(preflight, 'validationPublicBrickCaseDelta'), false);
+  assert.ok(preflight.validationFoundationBrickCaseDelta > 0);
   assert.equal(preflight.generalizationSplit, 'validation');
+  const verification = JSON.parse(await fs.readFile(
+    path.join(result.experimentDirectory, 'verification.json'),
+    'utf8',
+  ));
+  assert.equal(Object.hasOwn(verification, 'treeShaking'), false);
+  assert.deepEqual(
+    Object.keys(verification.domDriverStaticReachability).sort(),
+    [
+      'bundlerOptimizationProven',
+      'externalImports',
+      'failures',
+      'method',
+      'reachableFiles',
+      'valid',
+    ],
+  );
+  assert.equal(
+    verification.domDriverStaticReachability.method,
+    'static-esm-import-reachability',
+  );
+  assert.equal(
+    verification.domDriverStaticReachability.bundlerOptimizationProven,
+    false,
+  );
   const artifactManifest = JSON.parse(await fs.readFile(
     path.join(result.experimentDirectory, 'artifact-manifest.json'),
     'utf8',
@@ -248,7 +277,7 @@ test('profile lab fails its free all-feature preflight before any provider call'
     writeIndex: false,
     kimi: fakeProvider('kimi', calls),
     anthropic: fakeProvider('anthropic', calls),
-  }), /public-brick preflight/);
+  }), /foundation-brick preflight/);
   assert.deepEqual(calls, { kimi: 0, anthropic: 0 });
 });
 

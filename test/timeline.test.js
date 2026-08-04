@@ -150,7 +150,7 @@ test('timeline arrangements are ineligible and disjoint from memory entries', ()
     type: 'composition',
     start: index * 1000,
     length: 1000,
-    source: `const RANK=${rank};const GeneratedComposition=()=> <AbsoluteFill><Img src="https://example.test/${rank}.jpg" style={{objectFit:"cover"}}/><div style={{position:"absolute",opacity:1,transform:"scale(1)"}}><div style={{fontSize:80}}>#{RANK}</div><div>Title</div></div></AbsoluteFill>;`,
+    source: `const RANK=${rank};const GeneratedComposition=()=> <AbsoluteFill><Img src="https://example.test/${rank}.jpg" style={{objectFit:"cover"}}/><div data-kind="ranking-card" style={{position:"absolute",backgroundColor:"#111",borderRadius:24,padding:20}}><div style={{fontSize:80,fontWeight:800}}>#{RANK}</div><div style={{color:"white",fontWeight:600}}>Title</div></div></AbsoluteFill>;`,
   }));
   const run = mineDataset(JSON.stringify({
     width: 1080,

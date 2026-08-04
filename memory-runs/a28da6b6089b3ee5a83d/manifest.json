@@ -1,0 +1,32 @@
+{
+  "algorithmVersion": "class-memory-v6-stylistic-subtree",
+  "automaticPromotionAllowed": false,
+  "censusSha256": "f8fd85953e971871e9a2c376cb54776e2dc2b2a310ac10a78e613c98238d3c6c",
+  "containsRawCompositionData": false,
+  "counts": {
+    "atomicBehaviourWitnesses": 430,
+    "candidateBehaviours": 4,
+    "candidateUnits": 1,
+    "compositions": 100,
+    "evidenceReadyMotifs": 2,
+    "indexedInfrastructure": 25,
+    "indexedMemoryBehaviours": 0,
+    "indexedMemoryUnits": 0,
+    "infrastructureBehaviourWitnesses": 331,
+    "infrastructureUnitWitnesses": 414,
+    "motifCandidates": 5,
+    "unitWitnesses": 923,
+    "visualSinks": 369
+  },
+  "deterministic": true,
+  "indexSha256": "01003bd9b205cc9838dff3a951abb86a5760ba8e57d7529e152beb34a18e0c50",
+  "metricsSha256": "05e52ff9908d082efa0fa8995d5133937b7d37177d37a75f824f455f046fcef9",
+  "modelGenerationAuthority": false,
+  "promotionLedgerRevision": 5,
+  "promotionLedgerSha256": "79abbe39a5be2caaaef24e993ba92799ffaee6d50e93e580d7e353349b6c3066",
+  "proofLevel": "static-class-contract-independent-ast-census-and-receipts",
+  "reconstructionProven": false,
+  "refinementAuthority": "deterministic-stylistic-motif-miner",
+  "runId": "a28da6b6089b3ee5a83d",
+  "schemaVersion": 6
+}

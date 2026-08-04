@@ -33,6 +33,8 @@ const FREE_TEXT = /\s|["'`{};]/u;
 const DOTTED_LABEL_KEYS = new Set([
   'candidatekind',
   'capability',
+  'channel',
+  'infrastructurekind',
   'kind',
   'memorykind',
   'sourcekind',

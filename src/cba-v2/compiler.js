@@ -14,24 +14,46 @@ const UNIT_KINDS = Object.freeze({
   Video: 'unit.video',
 });
 
+const BEHAVIOUR_KINDS = Object.freeze({
+  Opacity: 'behaviour.opacity',
+  Rotate: 'behaviour.rotate',
+  Scale: 'behaviour.scale',
+  Translate: 'behaviour.translate',
+});
+
 export function compileCompositionV2(source, options = {}) {
   const features = normalizeCbaV2Features(options.features);
   const parsed = parseCompositionSource(source);
   const analysis = analyzeComposition(parsed.ast, features);
   const emitted = emitComposition(parsed, analysis, options);
+  const foundationUnitClasses = [...new Set([
+    ...emitted.rendering.unitClasses,
+    ...(emitted.rendering.supportUnitClasses ?? []),
+  ])].sort();
+  const foundationUnits = Object.freeze(foundationUnitClasses.map((className) => (
+    Object.freeze({ className, kind: UNIT_KINDS[className] })
+  )));
+  const foundationBehaviours = Object.freeze(analysis.inventory.behaviours
+    .filter((item) => item.implementation === 'library')
+    .map((item) => Object.freeze({
+      kind: BEHAVIOUR_KINDS[item.className] ?? `behaviour.${item.kind}`,
+      className: item.className,
+    })));
   return {
     program: emitted.program,
     features,
     inventory: analysis.inventory,
-    memoryCandidates: {
-      units: Object.freeze(emitted.rendering.unitClasses.map((className) => Object.freeze({
-        className,
-        kind: UNIT_KINDS[className],
-      }))),
-      behaviours: Object.freeze(analysis.inventory.behaviours
-        .filter((item) => item.implementation === 'library')
-        .map((item) => Object.freeze({ kind: item.kind, className: item.className }))),
-    },
+    foundationDependencies: Object.freeze({
+      units: foundationUnits,
+      behaviours: foundationBehaviours,
+    }),
+    // The compiler can prove that these mechanics reconstruct the source, but
+    // reconstruction alone does not make them stylistic memory.  Authentic
+    // memory candidates are mined as connected motifs and promoted separately.
+    memoryCandidates: Object.freeze({
+      units: Object.freeze([]),
+      behaviours: Object.freeze([]),
+    }),
     escapeHatches: Object.freeze({
       nativeUnits: analysis.inventory.units.filter((item) => item.implementation === 'native').length,
       localBehaviours: analysis.inventory.behaviours.filter((item) => item.implementation === 'local').length,

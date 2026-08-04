@@ -55,16 +55,17 @@ test('v2 emits public atomic Behaviours with callback-free declarative Signals',
   assert.doesNotMatch(result.program, /factoryMaps?|loadFactory|dynamic import|backend\s*:/i);
   assert.deepEqual(result.inventory.behaviours.map(({ kind }) => kind),
     ['opacity', 'translate', 'scale', 'rotate']);
-  assert.deepEqual(result.memoryCandidates.units, [
+  assert.deepEqual(result.foundationDependencies.units, [
     { kind: 'unit.box', className: 'Box' },
     { kind: 'unit.group', className: 'Group' },
   ]);
-  assert.deepEqual(result.memoryCandidates.behaviours, [
-    { kind: 'opacity', className: 'Opacity' },
-    { kind: 'translate', className: 'Translate' },
-    { kind: 'scale', className: 'Scale' },
-    { kind: 'rotate', className: 'Rotate' },
+  assert.deepEqual(result.foundationDependencies.behaviours, [
+    { kind: 'behaviour.opacity', className: 'Opacity' },
+    { kind: 'behaviour.translate', className: 'Translate' },
+    { kind: 'behaviour.scale', className: 'Scale' },
+    { kind: 'behaviour.rotate', className: 'Rotate' },
   ]);
+  assert.deepEqual(result.memoryCandidates, { units: [], behaviours: [] });
   assert.equal(result.escapeHatches.localBehaviours, 0);
   assert.equal(result.escapeHatches.nativeUnits, 0);
   assert.equal(result.verification.generatedParse, true);
@@ -89,7 +90,10 @@ test('clamped linear interpolation becomes the reusable Opacity plus Tween class
   assert.match(result.program, /import \{ Opacity \}/);
   assert.match(result.program, /new Opacity\([^;]+new Tween\(/s);
   assert.equal(result.inventory.behaviours[0].implementation, 'library');
-  assert.deepEqual(result.memoryCandidates.behaviours, [{ kind: 'opacity', className: 'Opacity' }]);
+  assert.deepEqual(result.foundationDependencies.behaviours, [
+    { kind: 'behaviour.opacity', className: 'Opacity' },
+  ]);
+  assert.deepEqual(result.memoryCandidates.behaviours, []);
   assert.equal(verifyCompositionV2(result, video).exact, true);
 });
 
@@ -265,6 +269,9 @@ test('all-off baseline keeps every visual sink native and remains exact', () => 
   });
   assert.deepEqual(result.inventory.behaviours, []);
   assert.ok(result.inventory.units.every(({ implementation }) => implementation === 'native'));
+  assert.deepEqual(result.foundationDependencies.units, [
+    { className: 'Group', kind: 'unit.group' },
+  ]);
   assert.deepEqual(result.memoryCandidates.units, []);
   assert.doesNotMatch(result.program, /addBehaviour/);
   assert.equal(verifyCompositionV2(result, video).exact, true);
@@ -283,7 +290,7 @@ test('safe element shapes lower to direct public Unit classes with witnessed cov
       </AbsoluteFill>
     );
   `);
-  assert.deepEqual(result.memoryCandidates.units, [
+  assert.deepEqual(result.foundationDependencies.units, [
     { className: 'Audio', kind: 'unit.audio' },
     { className: 'Box', kind: 'unit.box' },
     { className: 'Group', kind: 'unit.group' },
@@ -339,7 +346,8 @@ test('a differently imported Remotion component cannot spoof a canonical public 
 
   assert.equal(result.escapeHatches.nativeUnits, 1);
   assert.deepEqual(result.memoryCandidates.units, []);
-  assert.match(result.program, /new NativeUnit\(OffthreadVideo/u);
+  assert.match(result.program, /new NativeUnit\(__v2Type\d+/u);
+  assert.match(result.program, /\}\)\(OffthreadVideo,/u);
   assert.doesNotMatch(result.program, /new __v2VideoUnit/u);
   assert.equal(verifyCompositionV2(result, video).matchedFrames, video.fps);
 });
@@ -354,7 +362,8 @@ test('import-free Native Remotion components receive static ESM bindings', () =>
   `);
 
   assert.match(result.program, /import \{ Sequence \} from "remotion";/u);
-  assert.match(result.program, /new NativeUnit\(Sequence/u);
+  assert.match(result.program, /new NativeUnit\(__v2Type\d+/u);
+  assert.match(result.program, /\}\)\(Sequence,/u);
   assert.equal(result.verification.unresolvedExternalCount, 0);
   assert.equal(result.verification.publishableEsm, true);
   assert.equal(verifyCompositionV2(result, video).matchedFrames, video.fps);
@@ -415,7 +424,7 @@ test('each renderer-neutral public Unit lowering is independently feature-contro
       features: normalizeCbaV2Features({ [feature]: false }),
     });
     assert.equal(
-      result.memoryCandidates.units.some((candidate) => candidate.className === className),
+      result.rendering.unitClasses.includes(className),
       false,
       feature,
     );
@@ -435,7 +444,7 @@ test('collection children lower to Group plus primitive TextNode without wrapper
   `;
   const result = compileCompositionV2(source);
   assert.equal(result.escapeHatches.nativeUnits, 0);
-  assert.deepEqual(result.memoryCandidates.units, [
+  assert.deepEqual(result.foundationDependencies.units, [
     { className: 'Box', kind: 'unit.box' },
     { className: 'Group', kind: 'unit.group' },
     { className: 'TextNode', kind: 'unit.text-node' },
@@ -455,9 +464,43 @@ test('collection children lower to Group plus primitive TextNode without wrapper
       features: normalizeCbaV2Features({ [disabled]: false }),
     });
     assert.ok(fallback.escapeHatches.nativeUnits > 0, disabled);
-    assert.equal(fallback.memoryCandidates.units.some(({ className }) => className === 'TextNode'), false);
+    assert.equal(
+      fallback.foundationDependencies.units.some(({ className }) => className === 'TextNode'),
+      false,
+    );
     assert.equal(verifyCompositionV2(fallback, video).exact, true, disabled);
   }
+});
+
+test('composition entry siblings become one explicit rooted Group tree', () => {
+  const result = compileCompositionV2(`
+    const GeneratedComposition = () => [
+      <span style={{color: 'white'}}>left</span>,
+      <span style={{color: 'red'}}>right</span>,
+    ];
+  `);
+  assert.match(result.program, /function __v2NormalizeUnitRoot/u);
+  assert.match(result.program, /new __v2GroupUnit\(\.\.\.units\)/u);
+
+  const verification = verifyCompositionV2(result, video);
+  assert.equal(verification.exact, true);
+  assert.equal(verification.rootedUnitTree, true);
+  assert.equal(verification.maximumUnitTreeDepth, 2);
+  assert.equal(verification.invalidParentLinks, 0);
+  assert.equal(verification.maximumPublicUnits, 3);
+  assert.deepEqual(verification.publicUnitKinds, ['unit.group', 'unit.text']);
+
+  const unnormalized = verifyCompositionV2({
+    rendering: { adapters: [], components: {} },
+    evaluationPrograms: {
+      baseline: 'globalThis.__composition = () => [];',
+      cba: 'globalThis.__composition = () => [];',
+    },
+  }, { fps: 1, width: 1, height: 1, lengthMs: 1000 });
+  assert.equal(unnormalized.matchedFrames, 1);
+  assert.equal(unnormalized.exact, false);
+  assert.equal(unnormalized.rootedUnitTree, false);
+  assert.equal(unnormalized.mismatchCategory, 'UnitTreeInvalid');
 });
 
 test('collection lowering rejects children outside its closed static grammar', () => {
@@ -476,7 +519,10 @@ test('collection lowering rejects children outside its closed static grammar', (
       'NativeUnit',
       body,
     );
-    assert.equal(result.memoryCandidates.units.some(({ className }) => className === 'TextNode'), false);
+    assert.equal(
+      result.foundationDependencies.units.some(({ className }) => className === 'TextNode'),
+      false,
+    );
     assert.equal(verifyCompositionV2(result, video, {
       props: { child: 'runtime', values: ['a'] },
     }).exact, true, body);
@@ -536,7 +582,7 @@ test('collection normalization does not import TextNode when only empty children
   `, {
     features: normalizeCbaV2Features({ primitiveChildUnit: false }),
   });
-  assert.deepEqual(result.memoryCandidates.units, [
+  assert.deepEqual(result.foundationDependencies.units, [
     { className: 'Box', kind: 'unit.box' },
     { className: 'Group', kind: 'unit.group' },
   ]);
@@ -567,7 +613,7 @@ test('bounded Array.from cards lower to reusable Units without cardinality-speci
   `);
 
   assert.equal(result.escapeHatches.nativeUnits, 0);
-  assert.deepEqual(result.memoryCandidates.units, [
+  assert.deepEqual(result.foundationDependencies.units, [
     { className: 'Box', kind: 'unit.box' },
     { className: 'Group', kind: 'unit.group' },
     { className: 'Layer', kind: 'unit.layer' },

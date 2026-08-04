@@ -1,7 +1,7 @@
 import { Unit } from '../core/Unit.js';
 import { addLeafBehaviours, finite, plain } from './shared.js';
 
-/** A reusable color layer. Flash timing is an Opacity Behaviour. */
+/** Foundation color primitive. Flash timing is an Opacity Behaviour. */
 export class SolidFill extends Unit {
   static kind = 'unit.solid-fill';
 

@@ -1,110 +1,137 @@
 # Как проверять Cut3 Agent Memory
 
-Главный успешный experiment: `experiment-runs/5e3007173aa16b1d67c7/`.
+Этот файл — единственная каноническая инструкция репозитория. README намеренно отсутствует.
 
-Главный memory census: `memory-runs/79e052bffa80599b77ad/`.
+Текущий авторитетный результат находится в `memory-runs/a28da6b6089b3ee5a83d/`. Это детерминированный AST census алгоритма `class-memory-v6-stylistic-subtree` с ruleset `stylistic-subtree-memory-census-v6`, а не заявление о том, что библиотека памяти уже наполнена готовыми классами.
 
-Код сохранён не внутри JSON, а обычными tree-shakeable ESM-классами в `units/`, `behaviours/` и `core/`. `index.generated.json` — только навигация для агента, а `promotion-ledger.json` фиксирует допущенные ревизии и полное дерево их относительных зависимостей.
+## Короткий итог
 
-Исходный dataset, `.env`, prompts, transcript, URL и source композиций в Git и публичные run-артефакты не входят.
+На текущей ревизии есть:
 
-## Порядок чтения
+- 25 проверенных foundation-записей: 18 Unit и 7 Behaviour с `role: "infrastructure"`;
+- 5 найденных stylistic candidates: 1 Unit и 4 Behaviour;
+- 2 `evidenceReady` candidates;
+- 0 сгенерированных, реконструированных или promoted классов с `role: "memory"`.
 
-1. `experiment-runs/5e3007173aa16b1d67c7/manifest.json` — binding, модели, число вызовов и границы доказательства.
-2. `experiment-runs/5e3007173aa16b1d67c7/final-metrics.json` — выбранный профиль и метрики train/validation/heldout/full.
-3. `experiment-runs/5e3007173aa16b1d67c7/rounds.json` — 20 решений Kimi и 4 ревью Claude. Receipt хранит только `candidateId`, provider/model, token usage и хеши; rationale отсутствует.
-4. `experiment-runs/5e3007173aa16b1d67c7/checkpoint-chain.json` и `artifact-manifest.json` — 44 append-only phase checkpoint и хеши файлов.
-5. `experiment-runs/5e3007173aa16b1d67c7/verification.json` и `privacy.json` — локальные library/tree-shaking/privacy проверки.
-6. `index.generated.json` → `units/` и `behaviours/` — фактический переиспользуемый код.
-7. `promotion-ledger.json` — какие точные module/dependency-closure ревизии опубликованы.
-8. `memory-runs/79e052bffa80599b77ad/manifest.json`, затем `metrics.json` и `corpus.json` — независимый AST census без raw source.
-9. `experiment-runs/attempt-audit.json` — успешный бюджет, прерванные attempts и отдельные schema smoke-вызовы.
+Поэтому `candidate != code != memory`:
 
-## Архитектура CBA
+- candidate — только хешированная гипотеза о переиспользуемом стилистическом мотиве;
+- code — реальный статический ESM-класс в `units/` или `behaviours/`;
+- memory — такой класс только после reconstruction, human feedback, шести подписанных gates и записи в `promotion-ledger.json` с `role: "memory"`.
 
-Архитектура следует ключевому паттерну Norman the Necromancer: широкий плоский набор объектов, а изменяемое поведение вынесено в принадлежащие объектам Behaviour.
+Сейчас реальный код в `units/`, `behaviours/` и `core/` является foundation vocabulary. Классов памяти в репозитории пока нет. `index.generated.json` — навигация, а не контейнер с кодом, schemas, recipes или apps.
 
-- `Unit` принимает уже созданный Unit, хранит дочерние Unit и Behaviour, но ничего не знает о React, Remotion, backend, runtime или factory.
-- `Behaviour` принимает ровно один Unit в конструкторе. Владелец неизменяем; `attach()` и перенос Behaviour между Unit отсутствуют.
-- Каждый конкретный класс объявляет собственный статический `kind`.
-- `Opacity`, `Scale`, `Translate`, `Rotate`, `Blur`, `TextReveal` и `VisibleDuring` — отдельные классы с одним визуальным каналом. Комбинированного `fade+scale` класса нет.
-- Числовые операции, clamp, перевод времени и interpolation не превращаются в Behaviour. Они представлены callback-free declarative Signals в `core/signals.js`.
-- Произвольное число карточек или текстовых элементов собирается из `Group`, `Box`, `TextNode`, `Text` и Behaviour. Классов «ровно три карточки» или «последовательность subtitle cards» нет.
-- React и Remotion — отдельные driver boundaries. Generic driver не импортирует ни одного конкретного Unit.
-- Реестр dynamic import/factory отсутствует. Приложение пишет обычные static ESM imports; `sideEffects: false` позволяет bundler tree-shaking.
-- Three.js ветка достижима только через явный импорт Three adapter; DOM/Remotion путь её сверху не тянет.
-- `index.generated.json` содержит только `kind`, `type`, `source`, `export`. Runtime schemas, recipes и apps в индекс не встроены.
+## Как читать текущий run
 
-## Что делали 20 кругов
+Читайте файлы в таком порядке:
 
-Это 20 адаптивных оценок профилей компилятора, а не 20 недоказуемых переписываний source моделью.
+1. `memory-runs/a28da6b6089b3ee5a83d/manifest.json` — версия алгоритма, хеши, границы доказательства и главные счётчики.
+2. `memory-runs/a28da6b6089b3ee5a83d/corpus.json` — агрегированный census schema 6 и `memoryCandidates`; raw source, текст, URL и assets здесь отсутствуют.
+3. `memory-runs/a28da6b6089b3ee5a83d/metrics.json` — mapping scope `stylistic-candidates-to-indexed-memory`, residuals и причины недоказанного reconstruction.
+4. `memory-runs/a28da6b6089b3ee5a83d/index.snapshot.json` — точный navigation index, использованный прогоном.
+5. `memory-runs/a28da6b6089b3ee5a83d/class-validation.json` — статическая проверка 25 foundation entries без исполнения модулей.
+6. `memory-runs/a28da6b6089b3ee5a83d/privacy.json` — результат проверки публичных данных.
+7. `memory-runs/a28da6b6089b3ee5a83d/artifact-manifest.json` — размеры и SHA-256 артефактов.
+8. Корневые `index.generated.json` и `promotion-ledger.json` — текущая опубликованная навигация и content-addressed история решений.
 
-1. Из dataset берутся только composition tracks.
-2. Split делается outcome-blind и по workspace-группам: train 63 композиции/6 workspaces, validation 19/2, heldout 18/2. Workspaces с одинаковым source не пересекают splits.
-3. До платных вызовов all-feature профиль обязан пройти локальный preflight и сохранить fidelity.
-4. На каждом круге Kimi `kimi-k2.6` видит ограниченный frontier из opaque ID, boolean feature flags и агрегированных счётчиков. Source, текст, URL и outcome отдельной композиции модель не получает.
-5. Выбранный профиль локально компилируется и прогоняется по всем кадрам train и validation.
-6. На кругах 5/10/15/20 `claude-sonnet-5` получает только агрегаты уже завершённого блока и рекомендует seed. Claude не может принять профиль.
-7. Финальный выбор пересчитывается детерминированно и независимо от порядка среди измеренных профилей плюс заранее измеренного all-feature anchor.
-8. Heldout открывается только после выбора.
+### Результат v6
 
-Выбран `p_5f2b0753e250a125`: все публичные Unit lowering, collection lowering, primitive children, declarative Signal IR и отдельные opacity/scale/translate/rotate formulas включены; отдельный `opacityTween` выключен, потому что тот же случай уже покрывает более общий Signal IR.
-
-## Результат experiment
-
-| Метрика | Результат |
+| Метрика | Значение |
 | --- | ---: |
-| Composition cases | 100 |
-| Проверено кадров | 16 156 |
-| Render-tree matched | 16 156 / 16 156 |
-| Compile/generated/render errors | 0 / 0 / 0 |
-| Public-brick exact cases | 30 / 100 |
-| Exact Native fallback cases | 58 / 100 |
-| Unsupported Canvas/Three cases | 12 / 100 |
-| Public Unit occurrences | 944 |
-| Local atomic Behaviours | 276 |
-| Native Units | 706 |
-| Residual visual computations | 76 |
+| Composition tracks | 100 |
+| Unit witnesses | 923 |
+| Atomic Behaviour witnesses | 430 |
+| Infrastructure Unit witnesses | 414 |
+| Infrastructure Behaviour witnesses | 331 |
+| Stylistic candidates | 5 |
+| Evidence-ready candidates | 2 |
+| Indexed infrastructure | 25 |
+| Indexed memory Unit / Behaviour | 0 / 0 |
+| Reconstruction proven | false |
+| Automatic promotion allowed | false |
+| Privacy findings | 0 |
 
-Baseline на train+validation имел 0 public-brick cases, 1 039 Native Units и 267 residual computations. Выбранный профиль получил 20 public-brick cases, снизил Native Units до 627 и residual computations до 68 без единого несовпавшего кадра.
+Найденные candidates:
 
-Heldout: 10/18 public-brick exact, 7/18 exact Native fallback, 1 unsupported; 4 052/4 052 кадров совпали.
+| Candidate | Состояние |
+| --- | --- |
+| `unit.dialogue-card.3157dd5e2669` | inventory: 1 workspace, class не emitted |
+| `behaviour.staged-curve.0739b6532e65` | inventory: 1 workspace, class не emitted |
+| `behaviour.staged-curve.0d8862fa2d3d` | evidenceReady, но reconstruction/feedback отсутствуют |
+| `behaviour.staged-curve.53e3d5ee425f` | inventory: 1 workspace, class не emitted |
+| `behaviour.staged-curve.d68470652e70` | evidenceReady, но reconstruction/feedback отсутствуют |
 
-Ограничения результата:
+`evidenceReady` означает только независимое повторение fingerprint в нескольких workspaces при стабильной границе. Это не готовый класс, не human approval и не право на promotion. Нулевая memory mapping coverage здесь корректна: в индексе действительно нет ни одного `role: "memory"`.
 
-- Сравнивается сгенерированное semantic render tree на каждом кадре, не браузерные пиксели. `pixelComparedFrames = 0`.
-- 12 Canvas/Three композиций проходят контролируемый fallback, но не считаются exact CBA reconstruction.
-- Heldout является process-heldout внутри уже известного development corpus, а не новым внешним unseen dataset.
-- Поэтому нельзя писать «100% визуально воспроизведено чистыми кирпичами». Доказано 30% public-brick structural exact при полной frame-tree fidelity с fallback.
+`reconstructionProven=false` тоже корректен: run не emitted composition modules, не получил reconstruction receipts и не сравнивал semantic tree или pixels для кандидатов. Он обнаруживает материал для следующего этапа, но не подменяет этот этап метрикой сходства.
 
-## Результат memory census
+## Что именно делает production miner
 
-`memory-runs/79e052bffa80599b77ad/` подтверждает:
+Единственный production authority для mining — `src/memory/pipeline.js`; CLI над ним — `src/memory/cli.js`. Pipeline:
 
-- 18 Unit и 7 Behaviour в публичном индексе;
-- 923 unit witness, 430 atomic-behaviour witness и 369 visual sink;
-- 0 cardinality-specific Unit, 0 combined Behaviour, 0 non-visual helper class;
-- 38 числовых/non-visual helper declarations намеренно не стали классами;
-- unit kind mapping coverage 44.8537%, behaviour kind mapping coverage 76.9767%; это navigation evidence, не reconstruction proof;
-- 14 индексированных kind имеют свидетельства из нескольких workspaces;
-- privacy findings: 0, модули при discovery не исполнялись.
+1. читает только tracks с `type === "composition"`;
+2. статически разбирает source и не импортирует пользовательские composition modules;
+3. отделяет foundation mechanics от stylistic candidates и residuals;
+4. для Unit ищет минимальное связное стилизованное поддерево, поэтому контейнер из двух или пяти карточек не становится отдельным cardinality-specific классом;
+5. для Behaviour рассматривает один визуальный канал и сохраняет fingerprint законченного authored temporal law;
+6. повторяет census и требует одинаковый SHA-256, затем выпускает только privacy-safe агрегаты.
 
-`reconstructionProven=false` и `automaticPromotionAllowed=false` здесь корректны. Census не имеет права сам выдать human feedback и подписать production gates. One-to-one проверка конкретного generated candidate выполняется promotion-gate evaluator, а не статистикой kind mapping.
+`src/mine.js` — legacy/research implementation. Он оставлен в Git для истории и отдельных тестов, но не экспортируется, не входит в npm package и не является вторым production authority.
 
-## Human feedback loop в production
+## Архитектура классов
 
-Для каждой генерации используется точная связка `generated assistant event → candidate revision → module hash → dependency-closure hash → evidence hash`.
+Основа — паттерн Component–Behaviour–Attributes из статьи [Norman the Necromancer](https://danthedev.com/norman-the-necromancer/), адаптированный к видео и статическому ESM.
 
-- Явный negative от пользователя сразу даёт `discard`; модель не вызывается и gates не могут переопределить отказ.
-- Positive или neutral становится candidate только после минимум 30 секунд grace period и при отсутствии более позднего negative.
-- Структурированный UI feedback является основным сигналом и не требует LLM.
-- Если UI не дал структурированный сигнал, опциональный classifier получает только post-generation user messages в ограниченном окне: максимум 20 сообщений/8 000 символов, opaque IDs, с удалёнными URL, code blocks и secret-like tokens.
-- Ответ classifier — только signal и opaque evidence IDs. Он не является authority для promotion; malformed/failed/ambiguous ответ отправляет candidate в quarantine.
-- Перед append код заново читает repository с диска, чтобы shared dependency не могла измениться во время внешнего вызова.
+- `Unit` renderer-neutral: в нём нет backend, React, Remotion, runtime или factory metadata.
+- Итоговая композиция — настоящее parent/child дерево Unit. Composite Unit принимает уже созданный Unit и строит внутри него осмысленное вложенное поддерево; список экземпляров остаётся данными композиции.
+- `Behaviour` принимает владельца-Unit в конструкторе, принадлежит только ему и изменяет ровно один визуальный канал.
+- React и Remotion находятся за отдельными driver boundaries. Remotion — основной driver, React — fallback.
+- Все используемые классы подключаются обычными static ESM imports. Dynamic factory registry отсутствует.
 
-Promotion требует пять подписанных gate receipts: `compilerFidelity`, `reconstruction`, `atomicity`, `privacy`, `module`. Все пять привязаны к одной ревизии candidate/module/dependency closure и одному evidence bundle.
+Foundation classes могут быть атомарными mechanics: `Text`, `Image`, `Group`, `Opacity`, `Scale` и другие. Их роль всегда `infrastructure`; сам факт, что opacity или scale встретились много раз, не превращает их в память.
 
-API-ключи моделей не дают права подписывать gates. Для production нужны отдельные локальные секреты и разные authority:
+Класс с `role: "memory"` обязан иметь стилистическую аутентичность:
+
+- Unit должен кодировать собственные визуальные решения и вложенную структуру, а не быть thin wrapper над host element, CSS property или чужой библиотекой;
+- Behaviour должен содержать authored frame-driven law, а не прокидывать `value`, callback, Signal или generic channel adapter;
+- открытые `style`, `props`, `renderer`, `backend`, `factory`, `component` и подобные входы запрещены;
+- bare `spring()`, `Math.sin()` или linear interpolation сами по себе остаются mechanics/infrastructure. Кандидатом может быть только конкретный одноканальный закон с собственной формулой и доказанной границей;
+- fade и scale остаются отдельными каналами; комбинированный `fade+scale` Behaviour запрещён;
+- clamp, lerp, перевод milliseconds в frames и другие числовые helpers не становятся Unit или Behaviour;
+- импорт внешней библиотеки, renderer/runtime dependency или dynamic import не проходит module gate.
+
+## Tree-shaking: что доказано
+
+`package.json` содержит `sideEffects: false`, библиотека использует static ESM, а adapters импортируются по одному. Three-ветка появляется только при явном импорте Three adapter.
+
+Важно различать две проверки:
+
+- receipt старого profile experiment проверяет только статическую достижимость import graph; это не результат оптимизатора bundler;
+- реальные esbuild-сборки находятся в `test/tree-shaking.test.js`: text-only entry не включает Canvas, Three и неиспользованные adapters/Behaviours.
+
+Поэтому формулировка «tree-shaking проверен» допустима только со ссылкой на bundler tests, а не на один static-reachability receipt.
+
+## Human feedback loop и promotion
+
+После генерации система связывает `assistant generation event → candidate revision → module hash → dependency-closure hash → evidence hash`.
+
+- Явный negative от пользователя немедленно даёт `discard`.
+- Positive или neutral может стать candidate только после grace period не менее 30 секунд и при отсутствии более позднего negative.
+- Structured UI feedback обрабатывается детерминированно и не требует LLM.
+- Если structured signal отсутствует, free-text dialogue может классифицировать опциональный Kimi provider. Ему передаётся только ограниченное, редактированное окно пользовательских сообщений после генерации; URL, code blocks, secrets и assistant content не отправляются.
+- Malformed, failed или ambiguous classification даёт quarantine, а не save.
+- Ни classifier, ни API key не имеют права подписывать gates или делать promotion.
+
+Promotion требует шесть подписанных receipts для одной и той же ревизии:
+
+1. `compilerFidelity` — candidate найден и связан с проверяемой генерацией;
+2. `reconstruction` — заявленное воспроизведение подтверждено evidence;
+3. `atomicity` — один Behaviour-канал, без combined behaviours и helper classes;
+4. `authenticity` — не thin wrapper, а стилистическое Unit-поддерево или authored temporal law;
+5. `privacy` — публичный модуль и evidence не содержат private material;
+6. `module` — корректный static ESM, допустимые imports и pinned dependency closure.
+
+Model provider keys не являются gate authority. Для production gates нужны отдельные локальные секреты:
 
 ```text
 CUT3_MEMORY_GATE_HMAC_KEY
@@ -113,28 +140,33 @@ CUT3_MEMORY_EVIDENCE_HMAC_KEY
 CUT3_MEMORY_EVIDENCE_AUTHORITY_ID
 ```
 
-Один HMAC secret для final gate authority и evidence authority отвергается.
+Final gate authority и evidence authority должны использовать разные secrets. Значения не коммитятся и не попадают в stdout или публичные receipts.
 
-## API и фактический бюджет
+## Нужны ли API-ключи
 
-Успешный experiment сделал ровно:
+Для deterministic v6 mining API не нужен. Run `a28da6b6089b3ee5a83d` не использовал Kimi или Anthropic; `modelGenerationAuthority=false` записан в manifest.
 
-- Kimi: 20 calls, 22 660 input + 384 output = 23 044 tokens; cached input 1 109.
-- Anthropic: 4 calls, 21 461 input + 179 output = 21 640 tokens.
+- Kimi нужен только для опциональной классификации free-text feedback, когда нет structured UI signal.
+- Anthropic для текущего v6 pipeline не нужен. Он использовался в историческом profile-search experiment и может применяться в отдельных research-прогонах.
+- Наличие `KIMI`, `KIMI_API_KEY` или `Anthropic` в локальном `.env` не даёт права сохранять код и не заменяет HMAC authorities.
 
-Во время отладки были четыре закрытых без replay attempts и пять schema smoke calls. В `attempt-audit.json` учтены 44 вызова с usage receipts: 66 125 известных tokens. Ещё четыре вызова могли быть оплачены, но usage receipt не был надёжно сохранён: 1 Kimi и 3 Anthropic. Точную сумму биллинга подтверждает только console провайдера.
+## Исторические артефакты
 
-Kimi и Anthropic читаются из локального `.env`; поддерживаются в том числе имена `KIMI` и `Anthropic`. Значения ключей не попадают в stdout, receipts, package или Git.
+`experiment-runs/5e3007173aa16b1d67c7/` и `memory-runs/79e052bffa80599b77ad/` сохранены immutable для аудита, но не являются текущим результатом памяти.
 
-Для `claude-sonnet-5` thinking явно выключен, а schema/tool names версионированы. Оба provider-контракта требуют ровно `{candidateId}`; extra fields, неизвестный ID, malformed JSON и неполный tool call отклоняются fail-closed.
+- `experiment-runs/5e...` — historical foundation-only compiler profile selection: 20 выборов Kimi и 4 ревью Claude. Модели выбирали, какие заранее определённые lowering features измерить; они не создавали Unit/Behaviour памяти и не учились по human feedback.
+- `memory-runs/79e...` создан старой схемой, которая называла 18 Unit и 7 Behaviour memory mapping. В актуальной role-aware схеме те же 25 записей reclassified как `infrastructure`.
+
+Старые поля `publicBrick`, `reusableKinds` и старые coverage-числа нельзя использовать как доказательство памяти. Они описывают foundation lowering/navigation на исторической ревизии.
 
 ## Воспроизведение
 
-Локальные проверки без платных API:
+Локальная проверка не делает платных вызовов:
 
 ```powershell
 npm ci
 npm test
+npm pack --dry-run --json
 
 node src/memory/cli.js `
   --input <dataset>/workspaces.jsonl `
@@ -142,18 +174,19 @@ node src/memory/cli.js `
   --repo .
 ```
 
-Новый полный experiment делает 24 платных вызова и обязан иметь новый path-safe attempt ID:
+Одинаковые bytes dataset плюс та же ревизия algorithm, index и promotion ledger должны дать тот же run ID. Dataset, `.env`, prompts, transcripts, URLs и composition source не должны добавляться в Git.
+
+Быстрая ручная проверка артефактов:
 
 ```powershell
-node src/experiment/profile-lab-cli.js `
-  --input <dataset>/workspaces.jsonl `
-  --output experiment-runs `
-  --env <local-config>/.env `
-  --repository . `
-  --attempt-id <new-attempt-id> `
-  --confirm-paid-calls RUN_20_KIMI_AND_4_ANTHROPIC_CALLS
+$manifest = Get-Content memory-runs/a28da6b6089b3ee5a83d/manifest.json -Raw | ConvertFrom-Json
+$manifest.counts
+
+$corpus = Get-Content memory-runs/a28da6b6089b3ee5a83d/corpus.json -Raw | ConvertFrom-Json
+$corpus.memoryCandidates | Select-Object candidateKind, kind, family, witnesses, workspaces, eligibility
+
+$index = Get-Content index.generated.json -Raw | ConvertFrom-Json
+$index.entries | Group-Object role
 ```
 
-Если в `.profile-lab-progress/<binding>/provider-inflight.json` остался intent без соответствующего checkpoint, удалять его и повторять вызов нельзя: запрос мог быть принят и оплачен. Такой attempt закрывается или вручную сверяется с provider billing. Новый прогон запускается с новым `--attempt-id`; старые bytes не изменяются.
-
-README намеренно отсутствует. Единственная инструкция по проверке — этот файл.
+Ожидаемый итог: 25 infrastructure entries, 0 memory entries, 5 candidates, из них 2 evidenceReady, `reconstructionProven=false` и `privacy.valid=true`.

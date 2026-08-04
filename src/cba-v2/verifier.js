@@ -66,6 +66,7 @@ const UNIT_ADAPTERS = Object.freeze({
 /** Compare the source and emitted class graph at every timeline frame. */
 export function verifyCompositionV2(compilation, video, options = {}) {
   const totalFrames = Math.max(1, Math.ceil(video.lengthMs / 1000 * video.fps));
+  const requireUnitTree = Boolean(compilation?.rendering);
   let baseline;
   let generated;
   try {
@@ -84,8 +85,13 @@ export function verifyCompositionV2(compilation, video, options = {}) {
   let maximumPublicBehaviours = 0;
   let maximumLocalBehaviours = 0;
   let invalidBehaviourOwners = 0;
+  let rootedUnitTree = true;
+  let maximumUnitTreeDepth = 0;
+  let invalidParentLinks = 0;
   const publicUnitKinds = new Set();
   const publicBehaviourKinds = new Set();
+  const publicUnitKindCounts = new Map();
+  const publicBehaviourKindCounts = new Map();
   const unsupportedEffects = new Set();
   for (let frame = 0; frame < totalFrames; frame += 1) {
     const left = safelyRender(baseline, frame);
@@ -99,18 +105,29 @@ export function verifyCompositionV2(compilation, video, options = {}) {
     maximumPublicBehaviours = Math.max(maximumPublicBehaviours, right.diagnostics.publicBehaviours);
     maximumLocalBehaviours = Math.max(maximumLocalBehaviours, right.diagnostics.localBehaviours);
     invalidBehaviourOwners = Math.max(invalidBehaviourOwners, right.diagnostics.invalidBehaviourOwners);
+    rootedUnitTree = rootedUnitTree && right.diagnostics.rootedUnitTree;
+    maximumUnitTreeDepth = Math.max(maximumUnitTreeDepth, right.diagnostics.unitTreeDepth);
+    invalidParentLinks = Math.max(invalidParentLinks, right.diagnostics.invalidParentLinks);
     left.diagnostics.unsupportedEffects.forEach((effect) => unsupportedEffects.add(effect));
     right.diagnostics.unsupportedEffects.forEach((effect) => unsupportedEffects.add(effect));
     right.diagnostics.publicUnitKinds.forEach((kind) => publicUnitKinds.add(kind));
     right.diagnostics.publicBehaviourKinds.forEach((kind) => publicBehaviourKinds.add(kind));
-    if (!left.errorCode && !right.errorCode && left.snapshot === right.snapshot) matchedFrames += 1;
-    else if (!firstMismatch) firstMismatch = {
+    mergeMaximumCounts(publicUnitKindCounts, right.diagnostics.publicUnitKindCounts);
+    mergeMaximumCounts(publicBehaviourKindCounts, right.diagnostics.publicBehaviourKindCounts);
+    const renderMatches = !left.errorCode && !right.errorCode && left.snapshot === right.snapshot;
+    const unitTreeMatches = !requireUnitTree || (right.diagnostics.rootedUnitTree
+      && right.diagnostics.invalidParentLinks === 0);
+    if (renderMatches) matchedFrames += 1;
+    if ((!renderMatches || !unitTreeMatches) && !firstMismatch) firstMismatch = {
       frame,
-      treeMatches: !left.errorCode && !right.errorCode && left.snapshot === right.snapshot,
+      treeMatches: renderMatches,
+      unitTreeMatches,
       ...(left.errorCode ? { baselineError: left.errorCode } : {}),
       ...(left.diagnosticCode ? { baselineDiagnostic: left.diagnosticCode } : {}),
       ...(right.errorCode ? { generatedError: right.errorCode } : {}),
       ...(right.diagnosticCode ? { generatedDiagnostic: right.diagnosticCode } : {}),
+      ...(!unitTreeMatches && !right.errorCode
+        ? { generatedDiagnostic: 'GeneratedProgram:InvalidUnitTree' } : {}),
     };
   }
   if (firstMismatch && !firstMismatch.baselineError
@@ -121,18 +138,26 @@ export function verifyCompositionV2(compilation, video, options = {}) {
   const mismatchCategory = firstMismatch
     ? firstMismatch.generatedDiagnostic === 'GeneratedProgram:MissingBinding'
       ? 'GeneratedProgramError'
+      : firstMismatch.generatedDiagnostic === 'GeneratedProgram:InvalidUnitTree'
+        ? 'UnitTreeInvalid'
       : firstMismatch.baselineError || firstMismatch.generatedError ? 'RenderError' : 'TreeMismatch'
     : unsupported.length > 0 ? 'UnsupportedEffects' : null;
   return {
-    totalFrames, matchedFrames, exact: matchedFrames === totalFrames && unsupported.length === 0, firstMismatch,
+    totalFrames, matchedFrames,
+    exact: matchedFrames === totalFrames && unsupported.length === 0
+      && (!requireUnitTree || (rootedUnitTree && invalidParentLinks === 0)),
+    firstMismatch,
     baselineRenderErrors, generatedRenderErrors, maximumUnits, maximumBehaviours,
     maximumPublicUnits, maximumNativeUnits, publicUnitKinds: [...publicUnitKinds].sort(),
+    publicUnitKindCounts: sortedCountRecord(publicUnitKindCounts),
     maximumPublicBehaviours, maximumLocalBehaviours,
     publicBehaviourKinds: [...publicBehaviourKinds].sort(),
+    publicBehaviourKindCounts: sortedCountRecord(publicBehaviourKindCounts),
     sourceDependentVisualComputations: Number(
       compilation.escapeHatches?.sourceDependentVisualComputations ?? 0,
     ),
-    invalidBehaviourOwners, unsupportedEffects: unsupported, mismatchCategory,
+    invalidBehaviourOwners, rootedUnitTree, maximumUnitTreeDepth, invalidParentLinks,
+    unsupportedEffects: unsupported, mismatchCategory,
   };
 }
 
@@ -197,6 +222,8 @@ function createGlobals(state, video, React, kind, unsupportedEffects) {
     Float32Array, Float64Array,
     Int8Array, Int16Array, Int32Array,
     Uint8Array, Uint8ClampedArray, Uint16Array, Uint32Array,
+    __v2IsArray: Array.isArray,
+    __v2IsUnit: isUnit,
     React,
     Fragment: React.Fragment,
     NATIVE_FRAGMENT,
@@ -370,17 +397,28 @@ function inspectGraph(root) {
   let publicBehaviours = 0;
   let localBehaviours = 0;
   let invalidBehaviourOwners = 0;
+  let unitTreeDepth = 0;
+  let invalidParentLinks = 0;
+  const rootedUnitTree = isUnit(root) && root.parent === null;
   const publicUnitKinds = new Set();
   const publicBehaviourKinds = new Set();
-  const walk = (value) => {
-    if (Array.isArray(value)) { value.forEach(walk); return; }
-    if (!isUnit(value) || seen.has(value)) return;
+  const publicUnitKindCounts = new Map();
+  const publicBehaviourKindCounts = new Map();
+  const walk = (value, parent = null, depth = 1) => {
+    if (!isUnit(value)) return;
+    if (value.parent !== parent) invalidParentLinks += 1;
+    if (seen.has(value)) {
+      invalidParentLinks += 1;
+      return;
+    }
     seen.add(value);
+    unitTreeDepth = Math.max(unitTreeDepth, depth);
     units += 1;
     if (value instanceof NativeUnit) nativeUnits += 1;
     else {
       publicUnits += 1;
       publicUnitKinds.add(value.constructor.kind);
+      incrementCount(publicUnitKindCounts, value.constructor.kind);
     }
     behaviours += value.behaviours.length;
     for (const behaviour of value.behaviours) {
@@ -388,19 +426,23 @@ function inspectGraph(root) {
       if (typeof kind === 'string' && kind.startsWith('behaviour.local.')) localBehaviours += 1;
       else {
         publicBehaviours += 1;
-        if (typeof kind === 'string') publicBehaviourKinds.add(kind);
+        if (typeof kind === 'string') {
+          publicBehaviourKinds.add(kind);
+          incrementCount(publicBehaviourKindCounts, kind);
+        }
       }
     }
     invalidBehaviourOwners += value.behaviours.filter((behaviour) => behaviour.unit !== value).length;
-    if (value instanceof NativeUnit) value.content.forEach(walk);
-    else value.children.forEach(walk);
+    value.children.forEach((child) => walk(child, value, depth + 1));
   };
   walk(root);
   return {
     units, publicUnits, nativeUnits, behaviours, publicBehaviours, localBehaviours,
-    invalidBehaviourOwners,
+    invalidBehaviourOwners, rootedUnitTree, unitTreeDepth, invalidParentLinks,
     publicUnitKinds: [...publicUnitKinds].sort(),
     publicBehaviourKinds: [...publicBehaviourKinds].sort(),
+    publicUnitKindCounts: sortedCountRecord(publicUnitKindCounts),
+    publicBehaviourKindCounts: sortedCountRecord(publicBehaviourKindCounts),
   };
 }
 
@@ -422,8 +464,11 @@ function failed(totalFrames, code, error) {
     baselineRenderErrors: totalFrames, generatedRenderErrors: totalFrames,
     maximumUnits: 0, maximumPublicUnits: 0, maximumNativeUnits: 0,
     maximumBehaviours: 0, maximumPublicBehaviours: 0, maximumLocalBehaviours: 0,
-    publicUnitKinds: [], publicBehaviourKinds: [], sourceDependentVisualComputations: 0,
-    invalidBehaviourOwners: 0,
+    publicUnitKinds: [], publicBehaviourKinds: [],
+    publicUnitKindCounts: {}, publicBehaviourKindCounts: {},
+    sourceDependentVisualComputations: 0,
+    invalidBehaviourOwners: 0, rootedUnitTree: false, maximumUnitTreeDepth: 0,
+    invalidParentLinks: 0,
     unsupportedEffects: [], mismatchCategory: code,
   };
 }
@@ -432,10 +477,25 @@ function emptyDiagnostics() {
     units: 0, publicUnits: 0, nativeUnits: 0, behaviours: 0,
     publicBehaviours: 0, localBehaviours: 0,
     publicUnitKinds: [], publicBehaviourKinds: [],
-    invalidBehaviourOwners: 0, unsupportedEffects: [],
+    publicUnitKindCounts: {}, publicBehaviourKindCounts: {},
+    invalidBehaviourOwners: 0, rootedUnitTree: false, unitTreeDepth: 0,
+    invalidParentLinks: 0, unsupportedEffects: [],
   };
 }
 function stableSnapshot(value) { return JSON.stringify(sortValue(value)); }
+function incrementCount(counts, key) {
+  counts.set(key, (counts.get(key) ?? 0) + 1);
+}
+function mergeMaximumCounts(target, source = {}) {
+  for (const [key, value] of Object.entries(source)) {
+    target.set(key, Math.max(target.get(key) ?? 0, Number(value) || 0));
+  }
+}
+function sortedCountRecord(counts) {
+  return Object.fromEntries([...counts.entries()].sort(([left], [right]) => (
+    left.localeCompare(right)
+  )));
+}
 function sortValue(value) {
   if (Array.isArray(value)) return value.map(sortValue);
   if (!value || typeof value !== 'object') return value;
@@ -464,6 +524,7 @@ function springValue(frame, fps) {
 }
 
 const SAFE_DIAGNOSTIC_IDENTIFIERS = new Set([
+  '__v2GroupUnit', '__v2IsUnit',
   'AbsoluteFill', 'AnimatedImage', 'Audio', 'Computed', 'ContextValue', 'Easing', 'Image', 'Img',
   'Interpolation', 'OffthreadVideo', 'Path2D', 'RecordValue',
   'React', 'Sequence', 'Series', 'THREE', 'Text', 'ThreeCanvas', 'Video', 'document', 'interpolate',

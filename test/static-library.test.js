@@ -58,24 +58,28 @@ test('static discovery writes a deterministic navigation-only index without eval
   assert.equal(validateNavigationIndex(first.index).ok, true);
   assert.deepEqual(first.index, {
     format: 'cut3-static-library-index',
-    version: 1,
+    version: 2,
     indexSha256: first.index.indexSha256,
     entries: [
       {
         kind: 'behaviour.fade',
         type: 'behaviour',
+        role: 'infrastructure',
         source: 'behaviours/Fade.js',
         export: 'default',
       },
       {
         kind: 'unit.card',
         type: 'unit',
+        role: 'infrastructure',
         source: 'units/Card.js',
         export: 'VisualCard',
       },
     ],
   });
-  assert.deepEqual(Object.keys(first.index.entries[0]), ['kind', 'type', 'source', 'export']);
+  assert.deepEqual(Object.keys(first.index.entries[0]), [
+    'kind', 'type', 'role', 'source', 'export',
+  ]);
   assert.doesNotMatch(firstBytes, /backend|factory|dependency|confidence|runtime/iu);
 });
 
@@ -245,7 +249,7 @@ test('promotion ledger pins each relative dependency closure without staling unr
     'unit.reviewed',
   ]);
   const reviewed = promotionLedger.entries.find((entry) => entry.kind === 'unit.reviewed');
-  assert.equal(promotionLedger.version, 2);
+  assert.equal(promotionLedger.version, 3);
   assert.deepEqual(reviewed.dependencyClosure.files.map((file) => file.module), [
     'core/Unit.js',
     'core/unit-state.js',

@@ -86,6 +86,13 @@ function libraryValidation(created) {
     entries: entries.length,
     units: entries.filter((entry) => entry.type === 'unit').length,
     behaviours: entries.filter((entry) => entry.type === 'behaviour').length,
+    infrastructureEntries: entries.filter((entry) => entry.role === 'infrastructure').length,
+    memoryUnits: entries.filter((entry) => (
+      entry.role === 'memory' && entry.type === 'unit'
+    )).length,
+    memoryBehaviours: entries.filter((entry) => (
+      entry.role === 'memory' && entry.type === 'behaviour'
+    )).length,
     discoveredEntries: created.verification.entries,
     excludedEntries: created.promotion.excludedEntries.length,
     evaluatedModules: 0,

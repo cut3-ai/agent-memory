@@ -72,6 +72,9 @@ export function createReactDriver(React, renderUnit, options = {}) {
 
     const output = renderUnit(adapterContext);
     if (output === UNHANDLED_UNIT) {
+      // Authentic memory Units are renderer-neutral semantic wrappers around
+      // a concrete foundation subtree. They need no per-memory adapter.
+      if (unit.children.length === 1) return renderNode(unit.children[0], frame);
       throw new TypeError(`No static React adapter for ${unit.constructor.name}`);
     }
     return output;

@@ -1,23 +1,28 @@
 export function buildReportData(run) {
-  const maturity = countBy(run.candidates, (candidate) => candidate.maturity);
   const kinds = countBy(run.candidates, (candidate) => candidate.kind);
+  const eligibility = countBy(run.candidates, (candidate) => (
+    candidate.eligibility.evidenceReady ? 'evidence-ready' : 'inventory'
+  ));
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     runId: run.runId,
     verdict: {
       humanFeedbackAvailable: false,
       promotionAllowed: false,
-      summary: 'The run located atomic visual patterns, but cannot prove success without human feedback or a compilable dependency closure.',
+      summary: 'The run located connected styled subtrees and bounded single-channel stylistic timing laws. Raw visual channels are infrastructure and no candidate can be promoted without emitted code, reconstruction and feedback.',
     },
     counts: run.manifest.counts,
-    candidateMaturity: maturity,
+    candidateEligibility: eligibility,
     candidateKinds: kinds,
     topCandidates: run.candidates.slice(0, 20).map((candidate) => ({
       id: candidate.id,
+      family: candidate.family,
       kind: candidate.kind,
-      maturity: candidate.maturity,
-      score: candidate.confidence.score,
+      evidenceReady: candidate.eligibility.evidenceReady,
+      promotionEligible: candidate.eligibility.promotionEligible,
+      blockers: candidate.eligibility.blockers,
       observations: candidate.evidence.observations,
+      occurrences: candidate.evidence.occurrences,
       independentOccurrences: candidate.evidence.independentOccurrences,
       uniqueSources: candidate.evidence.uniqueSources,
       workspaces: candidate.evidence.workspaces,
@@ -38,9 +43,9 @@ export function renderMarkdownReport(run) {
     `Алгоритм: \`${run.manifest.algorithmVersion}\`  `,
     `Порог complete-link clustering: \`${run.manifest.config.clusterThreshold}\``,
     '',
-    '> В датасете нет human feedback. `strong` означает сильное доказательство повторяемости/извлекаемости, а не успешность или визуальное качество. Все entries остаются `suggested`, `feedback: unknown`, `trusted: false`.',
+    '> В датасете нет human feedback. Miner публикует только проверяемые evidence, eligibility и blockers — без субъективных оценок.',
     '',
-    '> Miner локализует visual sink и AST spans (`atomic-occurrences-located`), но ещё не собирает компилируемый dependency closure. Поэтому ни один candidate не может попасть в production автоматически.',
+    '> Unit candidate — только связное стилизованное JSX-поддерево. Behaviour candidate — только нетривиальный одноканальный temporal law (spring/oscillation/non-monotonic staged curve). Сам CSS-канал остаётся infrastructure.',
     '',
     '## Корпус',
     '',
@@ -76,8 +81,9 @@ export function renderMarkdownReport(run) {
     '',
     '## Как читать результат',
     '',
-    '- `unit` — один локализованный renderable JSX subtree.',
-    '- `behavior` — один frame-driven visual channel конкретного JSX sink.',
+    '- `unit` — один локализованный connected styled JSX subtree, а не CSS property или host-element wrapper.',
+    '- `behaviour` — один стилистически характерный temporal law, который позже принимает Unit; он всегда пишет ровно в один канал.',
+    '- Atomic opacity/scale/translate/rotate сохраняются раздельно как infrastructure evidence; линейная запись сама по себе не является памятью.',
     '- `clamp`, `lerp`, `msToFrames` и другие числовые helpers никогда не становятся memory entries.',
     '- Совместные opacity + scale дают два behavior, но не новый `fadeScale` класс.',
     '- Количество одинаковых карточек меняет evidence, а не identity модуля.',
@@ -101,11 +107,11 @@ export function renderMarkdownReport(run) {
 function candidateTable(candidates) {
   if (candidates.length === 0) return '_Кандидаты не найдены._';
   const rows = [
-    '| Candidate | Kind | Tier | Score | Obs | Independent | Sources | WS |',
-    '|---|---|---|---:|---:|---:|---:|---:|',
+    '| Candidate | Family | Evidence ready | Obs | Occurrences | Independent | Sources | WS | Blockers |',
+    '|---|---|---|---:|---:|---:|---:|---:|---|',
   ];
   for (const candidate of candidates) {
-    rows.push(`| \`${escapeCell(candidate.id)}\` | ${candidate.kind} | ${candidate.confidence.tier} | ${candidate.confidence.score.toFixed(4)} | ${candidate.evidence.observations} | ${candidate.evidence.independentOccurrences} | ${candidate.evidence.uniqueSources} | ${candidate.evidence.workspaces} |`);
+    rows.push(`| \`${escapeCell(candidate.id)}\` | ${escapeCell(candidate.family)} | ${candidate.eligibility.evidenceReady} | ${candidate.evidence.observations} | ${candidate.evidence.occurrences} | ${candidate.evidence.independentOccurrences} | ${candidate.evidence.uniqueSources} | ${candidate.evidence.workspaces} | ${escapeCell(candidate.eligibility.blockers.join(', '))} |`);
   }
   return rows.join('\n');
 }

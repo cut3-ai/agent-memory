@@ -33,7 +33,7 @@ const TRANSIENT_SOURCE = [
   '',
 ].join('\n');
 
-test('local integrated evaluator computes all five gates and binds one signed result bundle', async () => {
+test('local integrated evaluator binds every signed result, including rejected authenticity', async () => {
   const candidate = await integratedBoxCandidate();
   const { issuer, verifier } = finalCapabilities();
   const result = await evaluateAndIssuePromotionGates({
@@ -43,7 +43,11 @@ test('local integrated evaluator computes all five gates and binds one signed re
 
   assert.deepEqual(Object.keys(result.gates), PROMOTION_GATE_NAMES);
   for (const gateName of PROMOTION_GATE_NAMES) {
-    assert.equal(result.bundle.results[gateName].passed, true, gateName);
+    assert.equal(
+      result.bundle.results[gateName].passed,
+      gateName !== 'authenticity',
+      gateName,
+    );
     assert.equal(result.gates[gateName].resultSha256, result.bundle.bundleSha256);
     assert.ok(verifyPromotionGateReceipt(verifier, result.gates[gateName], {
       gateName,
@@ -83,7 +87,7 @@ test('local evidence fails closed when the candidate is absent or workspaces are
   );
 });
 
-test('distinct evidence authority can attest a transient candidate without exposing raw evidence', async () => {
+test('distinct evidence authority cannot make a thin transient Unit authentic', async () => {
   const candidate = transientCandidate();
   const { issuer: finalIssuer, verifier: finalVerifier } = finalCapabilities();
   const evidenceIssuer = createPromotionGateIssuer({
@@ -107,7 +111,11 @@ test('distinct evidence authority can attest a transient candidate without expos
   });
 
   for (const gateName of PROMOTION_GATE_NAMES) {
-    assert.equal(result.bundle.results[gateName].passed, true, gateName);
+    assert.equal(
+      result.bundle.results[gateName].passed,
+      gateName !== 'authenticity',
+      gateName,
+    );
     assert.ok(verifyPromotionGateReceipt(finalVerifier, result.gates[gateName], {
       gateName,
       candidateSha256: identity.candidateSha256,
@@ -442,7 +450,7 @@ test('module, atomicity and privacy gates reject adversarial staged source', asy
   assert.ok(ownerlessBehaviour.bundle.results.module.violations > 0);
 });
 
-test('current atomic Box, Opacity and Scale modules pass all static gates', async () => {
+test('foundation Box, Opacity and Scale pass safety gates but fail authenticity', async () => {
   const { issuer } = finalCapabilities();
   const candidates = [
     ['unit.box', 'unit', 'units/box.js', 'Box'],
@@ -460,6 +468,166 @@ test('current atomic Box, Opacity and Scale modules pass all static gates', asyn
     assert.equal(result.bundle.results.module.passed, true, `${kind}: module`);
     assert.equal(result.bundle.results.atomicity.passed, true, `${kind}: atomicity`);
     assert.equal(result.bundle.results.privacy.passed, true, `${kind}: privacy`);
+    assert.equal(result.bundle.results.authenticity.passed, false, `${kind}: authenticity`);
+    assert.equal(
+      result.bundle.results.authenticity.code,
+      'foundation-kind-not-memory',
+      `${kind}: authenticity code`,
+    );
+  }
+});
+
+test('authenticity accepts a nested authored Unit and a frame-authored atomic Behaviour', async () => {
+  const { issuer } = finalCapabilities();
+  const candidates = [
+    {
+      kind: 'unit.editorial-frame',
+      type: 'unit',
+      source: 'units/editorial-frame.js',
+      export: 'EditorialFrame',
+      moduleSource: [
+        "import { Unit } from '../core/Unit.js';",
+        "import { Box } from './box.js';",
+        "import { Group } from './group.js';",
+        'export class EditorialFrame extends Unit {',
+        "  static kind = 'unit.editorial-frame';",
+        '  constructor(unit, { inset = 8 } = {}) {',
+        '    super(new Group(',
+        '      new Box(',
+        '        new Box(unit, { padding: 24, borderRadius: 18 }),',
+        '        { inset, opacity: 0.92 },',
+        '      ),',
+        '    ));',
+        '  }',
+        '}',
+      ].join('\n'),
+    },
+    {
+      kind: 'behaviour.editorial-fade',
+      type: 'behaviour',
+      source: 'behaviours/editorial-fade.js',
+      export: 'EditorialFade',
+      moduleSource: [
+        "import { Behaviour } from '../core/Behaviour.js';",
+        "import { absoluteFrame } from '../core/signals.js';",
+        'export class EditorialFade extends Behaviour {',
+        "  static kind = 'behaviour.editorial-fade';",
+        '  constructor(unit, { from = 0, duration = 18, strength = 0.9 } = {}) {',
+        '    super(unit);',
+        '    this.from = from;',
+        '    this.duration = duration;',
+        '    this.strength = strength;',
+        '  }',
+        '  onFrame(context) {',
+        '    const frame = absoluteFrame(context);',
+        '    const progress = Math.max(0, Math.min(1, (frame - this.from) / this.duration));',
+        '    const eased = progress * progress * (3 - 2 * progress);',
+        '    this.unit.opacity = 1 - (1 - this.strength) * eased;',
+        '  }',
+        '}',
+      ].join('\n'),
+    },
+  ];
+
+  for (const candidate of candidates) {
+    const result = await evaluateAndIssuePromotionGates({ candidate }, {
+      repositoryRoot: REPOSITORY_ROOT,
+      issuer,
+    });
+    assert.equal(result.bundle.results.atomicity.passed, true, `${candidate.kind}: atomicity`);
+    assert.equal(result.bundle.results.authenticity.passed, true, `${candidate.kind}: authenticity`);
+    assert.equal(result.bundle.results.privacy.passed, true, `${candidate.kind}: privacy`);
+  }
+});
+
+test('authenticity rejects signal/property passthroughs and flat imported Unit proxies', async () => {
+  const { issuer } = finalCapabilities();
+  const candidates = [
+    {
+      kind: 'behaviour.signal-opacity',
+      type: 'behaviour',
+      source: 'behaviours/signal-opacity.js',
+      export: 'SignalOpacity',
+      authenticityCode: 'open-style-input',
+      moduleSource: [
+        "import { Behaviour } from '../core/Behaviour.js';",
+        "import { animationValue, sampled } from './shared.js';",
+        'export class SignalOpacity extends Behaviour {',
+        "  static kind = 'behaviour.signal-opacity';",
+        '  constructor(unit, value) { super(unit); this.value = animationValue(value, \'opacity\'); }',
+        '  onFrame(context) { this.unit.opacity = sampled(this.value, context); }',
+        '}',
+      ].join('\n'),
+    },
+    {
+      kind: 'unit.import-proxy',
+      type: 'unit',
+      source: 'units/import-proxy.js',
+      export: 'ImportProxy',
+      authenticityCode: 'unit-tree-too-small',
+      moduleSource: [
+        "import { Unit } from '../core/Unit.js';",
+        "import { Box } from './box.js';",
+        'export class ImportProxy extends Unit {',
+        "  static kind = 'unit.import-proxy';",
+        '  constructor(unit) { super(new Box(unit)); }',
+        '}',
+      ].join('\n'),
+    },
+    {
+      kind: 'behaviour.linear-channel',
+      type: 'behaviour',
+      source: 'behaviours/linear-channel.js',
+      export: 'LinearChannel',
+      authenticityCode: 'temporal-law-not-authored',
+      moduleSource: [
+        "import { Behaviour } from '../core/Behaviour.js';",
+        "import { absoluteFrame } from '../core/signals.js';",
+        'export class LinearChannel extends Behaviour {',
+        "  static kind = 'behaviour.linear-channel';",
+        '  constructor(unit, { duration = 20 } = {}) { super(unit); this.duration = duration; }',
+        '  onFrame(context) {',
+        '    const frame = absoluteFrame(context);',
+        '    const progress = Math.max(0, Math.min(1, frame / this.duration));',
+        '    this.unit.opacity = progress;',
+        '  }',
+        '}',
+      ].join('\n'),
+    },
+    {
+      kind: 'unit.shared-child',
+      type: 'unit',
+      source: 'units/shared-child.js',
+      export: 'SharedChild',
+      authenticityCode: 'multi-parent-unit-node',
+      moduleSource: [
+        "import { Unit } from '../core/Unit.js';",
+        "import { Box } from './box.js';",
+        "import { Group } from './group.js';",
+        'export class SharedChild extends Unit {',
+        "  static kind = 'unit.shared-child';",
+        '  constructor(unit) {',
+        '    const shared = new Box(unit, { padding: 12, color: \'white\' });',
+        '    const left = new Box(shared, { borderRadius: 12, opacity: 0.8 });',
+        '    const right = new Box(shared, { borderRadius: 24, opacity: 0.6 });',
+        '    super(new Group(left, right));',
+        '  }',
+        '}',
+      ].join('\n'),
+    },
+  ];
+
+  for (const candidate of candidates) {
+    const result = await evaluateAndIssuePromotionGates({ candidate }, {
+      repositoryRoot: REPOSITORY_ROOT,
+      issuer,
+    });
+    assert.equal(result.bundle.results.authenticity.passed, false, candidate.kind);
+    assert.equal(
+      result.bundle.results.authenticity.code,
+      candidate.authenticityCode,
+      `${candidate.kind}: code`,
+    );
   }
 });
 

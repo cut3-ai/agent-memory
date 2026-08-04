@@ -11,11 +11,12 @@ import {
   parseEnv,
 } from '../providers/env.js';
 
-export const PROMOTION_GATE_RECEIPT_VERSION = 2;
+export const PROMOTION_GATE_RECEIPT_VERSION = 3;
 export const PROMOTION_GATE_NAMES = Object.freeze([
   'compilerFidelity',
   'reconstruction',
   'atomicity',
+  'authenticity',
   'privacy',
   'module',
 ]);

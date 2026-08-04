@@ -16,6 +16,7 @@ const DEFAULT_IMPORTS = Object.freeze({
   remotionThree: '@remotion/three',
   reactThreeDrei: '@react-three/drei',
   three: 'three',
+  Unit: `${PACKAGE}/core/Unit`,
   Behaviour: `${PACKAGE}/core/Behaviour`,
   signals: `${PACKAGE}/core/signals`,
   Audio: `${PACKAGE}/units/audio`,
@@ -132,6 +133,7 @@ export function emitComposition(parsed, analysis, options = {}) {
     runtimeUsage.childNormalization,
     runtimeUsage.primitiveChildNormalization,
   );
+  appendUnitTreeNormalizer(cbaAst);
   appendLocalBehaviourClasses(cbaAst, localBehaviours);
   appendStaticUnitRenderer(cbaAst, rendering);
   appendCompositionApi(cbaAst, analysis.entryName, false, rendering);
@@ -155,6 +157,7 @@ export function emitComposition(parsed, analysis, options = {}) {
     runtimeUsage.childNormalization,
     runtimeUsage.primitiveChildNormalization,
   );
+  appendUnitTreeNormalizer(cbaEvaluationAst);
   appendLocalBehaviourClasses(cbaEvaluationAst, localBehaviours);
   appendCompositionApi(cbaEvaluationAst, analysis.entryName, true, rendering);
 
@@ -177,6 +180,7 @@ export function emitComposition(parsed, analysis, options = {}) {
       concreteClassImports: Object.freeze([
         ...(runtimeUsage.nativeUnit ? ['NativeUnit'] : []),
         ...rendering.unitClasses,
+        ...rendering.supportUnitClasses,
         ...behaviourClassNames,
         ...signalClassNames,
         ...(usesTween ? ['Tween'] : []),
@@ -196,6 +200,7 @@ export function emitComposition(parsed, analysis, options = {}) {
 function buildRenderingPlan(analysis, sourceAst) {
   const descriptors = [...analysis.targets.values()].map(({ unit }) => unit);
   const unitClasses = new Set();
+  const supportUnitClasses = new Set(['Group']);
   const adapters = new Map();
   const components = {};
   for (const descriptor of descriptors) {
@@ -205,7 +210,7 @@ function buildRenderingPlan(analysis, sourceAst) {
     adapters.set(descriptor.className, descriptor.adapter);
     if (descriptor.component) components[componentRole(descriptor.className)] = descriptor.component;
   }
-  if (unitClasses.has('Group')) adapters.set('Group', 'renderGroup');
+  adapters.set('Group', 'renderGroup');
   if (unitClasses.has('TextNode')) adapters.set('TextNode', 'renderTextNode');
   const reservedNames = collectIdentifierNames(sourceAst);
   const componentImports = [...new Set(Object.values(components))]
@@ -219,6 +224,8 @@ function buildRenderingPlan(analysis, sourceAst) {
       .map(([className, adapter]) => Object.freeze({ className, adapter }))),
     componentImports: Object.freeze(componentImports),
     components: Object.freeze(Object.fromEntries(Object.entries(components).sort())),
+    supportUnitClasses: Object.freeze([...supportUnitClasses]
+      .filter((name) => !unitClasses.has(name)).sort()),
     unitClasses: Object.freeze([...unitClasses].sort()),
   });
 }
@@ -264,10 +271,6 @@ function rewriteElements(ast, analysis) {
         const type = normalizeType(call.arguments[0] ?? t.stringLiteral('div'));
         const props = call.arguments[1] ?? t.nullLiteral();
         const children = call.arguments.slice(2);
-        if (descriptor.behaviours.length === 0 && descriptor.unit.implementation === 'native') {
-          path.replaceWith(t.newExpression(t.identifier('NativeUnit'), [type, props, ...children]));
-          return;
-        }
         path.replaceWith(buildClassUnit(type, props, children, descriptor, serial++));
       },
     },
@@ -315,7 +318,15 @@ function buildClassUnit(type, props, children, descriptor, serial) {
 
 function buildUnitExpression(descriptor, type, props, children, childrenId) {
   if (descriptor.implementation === 'native') {
-    return t.newExpression(t.identifier('NativeUnit'), [type, props, t.spreadElement(childrenId)]);
+    return t.newExpression(t.identifier('NativeUnit'), [
+      type,
+      props,
+      childrenId,
+      t.callExpression(t.identifier('__v2NormalizeUnitTree'), [
+        childrenId,
+        t.booleanLiteral(false),
+      ]),
+    ]);
   }
   const Constructor = t.identifier(unitAlias(descriptor.className));
   const prop = (name) => t.callExpression(t.identifier('readElementProp'), [props, t.stringLiteral(name)]);
@@ -388,6 +399,25 @@ function appendChildNormalizer(ast, enabled, primitive) {
       }
       values.forEach(visit);
       return units;
+    }
+  `, { sourceType: 'module' }).program.body;
+  ast.program.body.unshift(...declarations);
+}
+
+function appendUnitTreeNormalizer(ast) {
+  const declarations = parse(`
+    function __v2NormalizeUnitTree(values, emptyGroup = true) {
+      const units = [];
+      function visit(value) {
+        if (__v2IsArray(value)) value.forEach(visit);
+        else if (__v2IsUnit(value)) units.push(value);
+      }
+      values.forEach(visit);
+      if (units.length === 0) return emptyGroup ? new __v2GroupUnit() : null;
+      return units.length === 1 ? units[0] : new __v2GroupUnit(...units);
+    }
+    function __v2NormalizeUnitRoot(value) {
+      return __v2NormalizeUnitTree([value]);
     }
   `, { sourceType: 'module' }).program.body;
   ast.program.body.unshift(...declarations);
@@ -566,7 +596,11 @@ function appendCompositionApi(ast, entryName, exposeGlobal, rendering) {
         t.objectProperty(t.identifier('fps'), t.numericLiteral(60)),
         t.spreadElement(nextContextId),
       ]))),
-      t.returnStatement(t.callExpression(t.identifier(entryName), [propsId])),
+      t.returnStatement(rendering
+        ? t.callExpression(t.identifier('__v2NormalizeUnitRoot'), [
+          t.callExpression(t.identifier(entryName), [propsId]),
+        ])
+        : t.callExpression(t.identifier(entryName), [propsId])),
     ]),
   ));
   if (exposeGlobal) {
@@ -626,7 +660,11 @@ function buildImportHeader(imports, classNames, {
   if (runtimeUsage.tweenOptions) runtimeNames.push('tweenOptions');
   if (runtimeUsage.unitsOption) runtimeNames.push('unitsOption');
   runtimeNames.sort();
-  const lines = [`import { ${runtimeNames.join(', ')} } from ${JSON.stringify(imports.runtime)};`];
+  const lines = [
+    `import { ${runtimeNames.join(', ')} } from ${JSON.stringify(imports.runtime)};`,
+    `import { isArrayValue as __v2IsArray } from ${JSON.stringify(imports.runtime)};`,
+    `import { isUnit as __v2IsUnit } from ${JSON.stringify(imports.Unit)};`,
+  ];
   if (rendering.componentImports.length > 0) {
     const specifiers = rendering.componentImports.map(({ imported, local }) => (
       imported === local ? imported : `${imported} as ${local}`
@@ -639,7 +677,7 @@ function buildImportHeader(imports, classNames, {
     lines.push(`import { ${signalImports.join(', ')} } from ${JSON.stringify(imports.signals)};`);
   }
   for (const className of classNames) lines.push(`import { ${className} } from ${JSON.stringify(imports[className])};`);
-  for (const className of rendering.unitClasses) {
+  for (const className of [...rendering.unitClasses, ...rendering.supportUnitClasses]) {
     lines.push(`import { ${className} as ${unitAlias(className)} } from ${JSON.stringify(imports[className])};`);
   }
   for (const { adapter } of rendering.adapters) {

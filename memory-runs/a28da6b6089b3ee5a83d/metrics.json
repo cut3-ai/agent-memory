@@ -1,0 +1,344 @@
+{
+  "atomicity": {
+    "cardinalitySpecificUnitClasses": 0,
+    "combinedBehaviourClasses": 0,
+    "nonVisualHelperClasses": 0,
+    "rejectedNonVisualHelperDeclarations": 38,
+    "structuralWritesReclassifiedAwayFromBehaviours": 1
+  },
+  "classContract": {
+    "indexedBehaviours": 0,
+    "indexedInfrastructure": 25,
+    "indexedUnits": 0,
+    "valid": true,
+    "violations": 0
+  },
+  "corpus": {
+    "atomicBehaviourWitnesses": 430,
+    "compositions": 100,
+    "imperativeResiduals": 8,
+    "structuralReclassifications": 1,
+    "unitWitnesses": 923,
+    "visualSinks": 369
+  },
+  "infrastructure": {
+    "behaviourWitnesses": 331,
+    "countedAsMemory": false,
+    "unitWitnesses": 414
+  },
+  "mapping": {
+    "behaviourKindMappingCoverage": 0,
+    "candidateBehaviourWitnesses": 6,
+    "candidateUnitWitnesses": 1,
+    "mappedBehaviourWitnesses": 0,
+    "mappedUnitWitnesses": 0,
+    "proof": "navigation-only",
+    "scope": "stylistic-candidates-to-indexed-memory",
+    "unitKindMappingCoverage": 0,
+    "unmappedBehaviourWitnesses": 6,
+    "unmappedUnitWitnesses": 1
+  },
+  "metricsSha256": "05e52ff9908d082efa0fa8995d5133937b7d37177d37a75f824f455f046fcef9",
+  "proofLevel": "static-class-contract-independent-ast-census-and-receipts",
+  "reconstruction": {
+    "emittedCompositionModules": 0,
+    "frames": {
+      "expected": 16156,
+      "pixelCompared": 0,
+      "pixelMatched": 0,
+      "semanticCompared": 0,
+      "semanticMatched": 0
+    },
+    "graphExactCompositions": 0,
+    "importedCompositionModules": 0,
+    "missingCompositions": 100,
+    "missingSetSha256": "2ff4096cfcbbf0d2cad0723de1cc4e1088556d0283c16138aabd5ac6d2ba9b2f",
+    "oneToOneVerified": false,
+    "pixelExactCompositions": 0,
+    "pixelOneToOneVerified": false,
+    "receipts": 0,
+    "receiptSetSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "reconstructionSha256": "c169bc1cc0052bf2a147f6d014611938f5d23fa379671e79f2485a24f48aa60e",
+    "residuals": {
+      "behaviourWitnesses": 430,
+      "functionValuedConfigs": 0,
+      "rawExecutableAstNodes": 0,
+      "sourceDependentVisualComputations": 430,
+      "unitWitnesses": 923
+    },
+    "schemaVersion": 1,
+    "semanticExactCompositions": 0,
+    "semanticOneToOneVerified": false
+  },
+  "release": {
+    "acceptedForAutomaticPromotion": false,
+    "reasons": [
+      "semantic-reconstruction-unproven",
+      "pixel-reconstruction-unproven",
+      "human-feedback-not-provided"
+    ]
+  },
+  "residualEvidence": {
+    "behaviourCapabilities": [
+      {
+        "capability": "content.dynamic",
+        "compositions": 7,
+        "residualCode": "typed-content-behaviour-required",
+        "status": "residual",
+        "witnesses": 7,
+        "workspaces": 2
+      },
+      {
+        "capability": "layout.position-x",
+        "compositions": 3,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 3,
+        "workspaces": 3
+      },
+      {
+        "capability": "layout.position-y",
+        "compositions": 6,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 6,
+        "workspaces": 4
+      },
+      {
+        "capability": "media.source",
+        "compositions": 3,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 3,
+        "workspaces": 3
+      },
+      {
+        "capability": "paint.background",
+        "compositions": 3,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 4,
+        "workspaces": 3
+      },
+      {
+        "capability": "paint.background-position",
+        "compositions": 2,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 2,
+        "workspaces": 2
+      },
+      {
+        "capability": "paint.blur-radius",
+        "compositions": 1,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 1,
+        "workspaces": 1
+      },
+      {
+        "capability": "paint.color",
+        "compositions": 2,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 2,
+        "workspaces": 1
+      },
+      {
+        "capability": "paint.fill",
+        "compositions": 4,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 4,
+        "workspaces": 3
+      },
+      {
+        "capability": "paint.filter",
+        "compositions": 10,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 11,
+        "workspaces": 5
+      },
+      {
+        "capability": "paint.shadow",
+        "compositions": 1,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 1,
+        "workspaces": 1
+      },
+      {
+        "capability": "procedural.progress",
+        "compositions": 1,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 6,
+        "workspaces": 1
+      },
+      {
+        "capability": "procedural.progress",
+        "compositions": 2,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 2,
+        "workspaces": 2
+      },
+      {
+        "capability": "procedural.progress",
+        "compositions": 1,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 1,
+        "workspaces": 1
+      },
+      {
+        "capability": "procedural.progress",
+        "compositions": 1,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 1,
+        "workspaces": 1
+      },
+      {
+        "capability": "procedural.seed",
+        "compositions": 4,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 6,
+        "workspaces": 1
+      },
+      {
+        "capability": "procedural.turbulence-frequency",
+        "compositions": 2,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 2,
+        "workspaces": 1
+      },
+      {
+        "capability": "scene.geometry",
+        "compositions": 2,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 2,
+        "workspaces": 2
+      },
+      {
+        "capability": "structure.identity-change",
+        "compositions": 1,
+        "residualCode": "switch-or-clip-required",
+        "status": "structural-reclassification",
+        "witnesses": 1,
+        "workspaces": 1
+      },
+      {
+        "capability": "transform.translate-x",
+        "compositions": 3,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 4,
+        "workspaces": 1
+      },
+      {
+        "capability": "transform.translate-y",
+        "compositions": 1,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 1,
+        "workspaces": 1
+      },
+      {
+        "capability": "typography.shadow",
+        "compositions": 4,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 4,
+        "workspaces": 3
+      },
+      {
+        "capability": "vector.path-morph",
+        "compositions": 2,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 5,
+        "workspaces": 1
+      },
+      {
+        "capability": "vector.stroke-progress",
+        "compositions": 4,
+        "residualCode": "typed-property-behaviour-required",
+        "status": "residual",
+        "witnesses": 12,
+        "workspaces": 2
+      },
+      {
+        "capability": "visual.raster-graph",
+        "compositions": 6,
+        "residualCode": "retained-raster-decomposition-required",
+        "status": "imperative-residual",
+        "witnesses": 6,
+        "workspaces": 2
+      },
+      {
+        "capability": "visual.scene-mutation",
+        "compositions": 2,
+        "residualCode": "typed-scene-behaviour-required",
+        "status": "imperative-residual",
+        "witnesses": 2,
+        "workspaces": 2
+      }
+    ],
+    "functionValuedConfigs": 0,
+    "rawExecutableAstNodes": 0,
+    "sourceDependentVisualComputations": 430,
+    "unitCapabilities": [
+      {
+        "capability": "visual.container",
+        "compositions": 79,
+        "residualCode": "typed-container-unit-required",
+        "status": "residual",
+        "witnesses": 329,
+        "workspaces": 10
+      },
+      {
+        "capability": "visual.local-composite",
+        "compositions": 7,
+        "residualCode": "recursive-class-extraction-required",
+        "status": "residual",
+        "witnesses": 20,
+        "workspaces": 4
+      },
+      {
+        "capability": "visual.scene-element",
+        "compositions": 5,
+        "residualCode": "typed-scene-unit-required",
+        "status": "residual",
+        "witnesses": 74,
+        "workspaces": 5
+      },
+      {
+        "capability": "visual.vector-element",
+        "compositions": 12,
+        "residualCode": "typed-vector-unit-required",
+        "status": "residual",
+        "witnesses": 86,
+        "workspaces": 5
+      }
+    ]
+  },
+  "residuals": {
+    "functionValuedConfigs": 0,
+    "rawExecutableAstNodes": 0,
+    "sourceDependentVisualComputations": 430
+  },
+  "reuseEvidence": {
+    "behaviourKinds": 0,
+    "evidenceReadyMotifs": 2,
+    "evidenceReadyUnpromoted": 2,
+    "indexedKindsWithMultipleWorkspaceWitnesses": 0,
+    "motifCandidates": 5,
+    "unitKinds": 0
+  },
+  "schemaVersion": 6
+}

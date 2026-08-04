@@ -1,182 +1,182 @@
 {
-  "format": "cut3-static-library-index",
-  "version": 2,
-  "indexSha256": "01003bd9b205cc9838dff3a951abb86a5760ba8e57d7529e152beb34a18e0c50",
   "entries": [
     {
+      "export": "Blur",
       "kind": "behaviour.blur",
-      "type": "behaviour",
       "role": "infrastructure",
       "source": "behaviours/blur.js",
-      "export": "Blur"
+      "type": "behaviour"
     },
     {
+      "export": "Opacity",
       "kind": "behaviour.opacity",
-      "type": "behaviour",
       "role": "infrastructure",
       "source": "behaviours/opacity.js",
-      "export": "Opacity"
+      "type": "behaviour"
     },
     {
+      "export": "Rotate",
       "kind": "behaviour.rotate",
-      "type": "behaviour",
       "role": "infrastructure",
       "source": "behaviours/rotate.js",
-      "export": "Rotate"
+      "type": "behaviour"
     },
     {
+      "export": "Scale",
       "kind": "behaviour.scale",
-      "type": "behaviour",
       "role": "infrastructure",
       "source": "behaviours/scale.js",
-      "export": "Scale"
+      "type": "behaviour"
     },
     {
+      "export": "TextReveal",
       "kind": "behaviour.text-reveal",
-      "type": "behaviour",
       "role": "infrastructure",
       "source": "behaviours/text-reveal.js",
-      "export": "TextReveal"
+      "type": "behaviour"
     },
     {
+      "export": "Translate",
       "kind": "behaviour.translate",
-      "type": "behaviour",
       "role": "infrastructure",
       "source": "behaviours/translate.js",
-      "export": "Translate"
+      "type": "behaviour"
     },
     {
+      "export": "VisibleDuring",
       "kind": "behaviour.visible-during",
-      "type": "behaviour",
       "role": "infrastructure",
       "source": "behaviours/visible-during.js",
-      "export": "VisibleDuring"
+      "type": "behaviour"
     },
     {
+      "export": "Audio",
       "kind": "unit.audio",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/audio.js",
-      "export": "Audio"
+      "type": "unit"
     },
     {
+      "export": "Box",
       "kind": "unit.box",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/box.js",
-      "export": "Box"
+      "type": "unit"
     },
     {
+      "export": "Canvas",
       "kind": "unit.canvas",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/canvas.js",
-      "export": "Canvas"
+      "type": "unit"
     },
     {
+      "export": "Group",
       "kind": "unit.group",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/group.js",
-      "export": "Group"
+      "type": "unit"
     },
     {
+      "export": "Image",
       "kind": "unit.image",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/image.js",
-      "export": "Image"
+      "type": "unit"
     },
     {
+      "export": "Layer",
       "kind": "unit.layer",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/layer.js",
-      "export": "Layer"
+      "type": "unit"
     },
     {
+      "export": "Repeat",
       "kind": "unit.repeat",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/repeat.js",
-      "export": "Repeat"
+      "type": "unit"
     },
     {
+      "export": "Sequence",
       "kind": "unit.sequence",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/sequence.js",
-      "export": "Sequence"
+      "type": "unit"
     },
     {
+      "export": "SolidFill",
       "kind": "unit.solid-fill",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/solid-fill.js",
-      "export": "SolidFill"
+      "type": "unit"
     },
     {
+      "export": "Sprite",
       "kind": "unit.sprite",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/sprite.js",
-      "export": "Sprite"
+      "type": "unit"
     },
     {
+      "export": "Surface",
       "kind": "unit.surface",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/surface.js",
-      "export": "Surface"
+      "type": "unit"
     },
     {
+      "export": "Svg",
       "kind": "unit.svg",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/svg.js",
-      "export": "Svg"
+      "type": "unit"
     },
     {
+      "export": "Switch",
       "kind": "unit.switch",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/switch.js",
-      "export": "Switch"
+      "type": "unit"
     },
     {
+      "export": "Text",
       "kind": "unit.text",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/text.js",
-      "export": "Text"
+      "type": "unit"
     },
     {
+      "export": "TextNode",
       "kind": "unit.text-node",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/text-node.js",
-      "export": "TextNode"
+      "type": "unit"
     },
     {
+      "export": "ThreeScene",
       "kind": "unit.three-scene",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/three/scene.js",
-      "export": "ThreeScene"
+      "type": "unit"
     },
     {
+      "export": "Video",
       "kind": "unit.video",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/video.js",
-      "export": "Video"
+      "type": "unit"
     },
     {
+      "export": "Vignette",
       "kind": "unit.vignette",
-      "type": "unit",
       "role": "infrastructure",
       "source": "units/vignette.js",
-      "export": "Vignette"
+      "type": "unit"
     }
-  ]
+  ],
+  "format": "cut3-static-library-index",
+  "indexSha256": "01003bd9b205cc9838dff3a951abb86a5760ba8e57d7529e152beb34a18e0c50",
+  "version": 2
 }

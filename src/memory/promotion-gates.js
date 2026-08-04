@@ -43,7 +43,7 @@ import {
 
 const traverse = traverseModule.default ?? traverseModule;
 
-export const PROMOTION_GATE_EVALUATOR_VERSION = 'promotion-gates-v1';
+export const PROMOTION_GATE_EVALUATOR_VERSION = 'promotion-gates-v2-authentic-tree';
 export const RECONSTRUCTION_EVIDENCE_VERSION = 1;
 
 const HASH = /^[a-f0-9]{64}$/u;
@@ -136,6 +136,13 @@ const CANONICAL_LABEL_ARGUMENTS = Object.freeze({
   plainOptions: 2,
   positiveInteger: 1,
 });
+const OPEN_STYLE_INPUT = /^(?:appearance|backend|channel|className|component|css|factory|factoryId|path|property|props|read|render|renderer|signal|style|value)$/u;
+const RENDER_STATE_FIELD = /^(?:appearance|backend|component|css|factory|factoryId|props|render|renderer|style)$/u;
+const THIN_BEHAVIOUR_HELPERS = new Set([
+  'animationValue',
+  'sample',
+  'sampled',
+]);
 const FINAL_SECRET_NAMES = Object.freeze([
   'CUT3_MEMORY_GATE_HMAC_KEY',
   'CUT3_GATE_HMAC_KEY',
@@ -158,7 +165,7 @@ const EVIDENCE_AUTHORITY_NAMES = Object.freeze([
 ]);
 
 /**
- * Evaluate one exact staged revision and issue all five authenticated receipts.
+ * Evaluate one exact staged revision and issue all authenticated receipts.
  *
  * Local mode receives raw dataset text transiently and builds reconstruction
  * evidence with the real compiler and frame verifier. A transient class that
@@ -196,6 +203,7 @@ export async function evaluateAndIssuePromotionGates(input = {}, options = {}) {
     compilerFidelity: evidence.compilerFidelity,
     reconstruction: evidence.reconstruction,
     atomicity: staticEvaluation.atomicity,
+    authenticity: staticEvaluation.authenticity,
     privacy: staticEvaluation.privacy,
     module: staticEvaluation.module,
   });
@@ -322,6 +330,7 @@ async function prepareStagedCandidate(value, repositoryRoot, options) {
     type: normalized.type,
     source: normalized.source,
     export: normalized.export,
+    role: 'memory',
     moduleSha256,
   };
   const discovery = options.discovery ?? await discoverLibrary({
@@ -424,8 +433,9 @@ async function prepareStagedCandidate(value, repositoryRoot, options) {
 async function evaluateStaticGates(prepared, repositoryRoot, evidence = {}) {
   const module = await evaluateModuleGate(prepared, repositoryRoot);
   const atomicity = evaluateAtomicityGate(prepared);
+  const authenticity = evaluateAuthenticityGate(prepared);
   const privacy = evaluatePrivacyGate(prepared, evidence.datasetText);
-  return deepFreeze({ module, atomicity, privacy });
+  return deepFreeze({ module, atomicity, authenticity, privacy });
 }
 
 async function evaluateModuleGate(prepared, repositoryRoot) {
@@ -523,6 +533,521 @@ function atomicityDetails(channels, violations) {
     violations: violations.length,
     violationSetSha256: sha256(stableStringify(violations)),
   };
+}
+
+/**
+ * Reject classes which merely expose a renderer/mechanism as a different
+ * class name.  This gate deliberately proves only architectural non-thinness;
+ * reconstruction evidence and human feedback remain the authorities for the
+ * usefulness and taste of the visual motif.
+ */
+function evaluateAuthenticityGate(prepared) {
+  const violations = [];
+  const facts = {
+    authoredVisualDecisions: 0,
+    authoredTemporalLaw: false,
+    frameDriven: false,
+    internalUnitNodes: 0,
+    temporalOperations: 0,
+    treeDepth: 0,
+  };
+  if (!prepared.candidateClass) {
+    violations.push('candidate-class-unavailable');
+  } else {
+    if (candidateLibraryRole(prepared) === 'infrastructure') {
+      violations.push('foundation-kind-not-memory');
+    }
+    inspectOpenStyleInputs(prepared.candidateClass, violations);
+    inspectRendererState(prepared.candidateClass, violations);
+    if (prepared.type === 'unit') inspectAuthenticUnit(prepared, facts, violations);
+    else inspectAuthenticBehaviour(prepared, facts, violations);
+  }
+
+  const normalized = [...new Set(violations)].sort();
+  const priorities = [
+    'candidate-class-unavailable',
+    'foundation-kind-not-memory',
+    'open-style-input',
+    'renderer-state-in-memory-class',
+    'generic-channel-adapter',
+    'signal-forwarder',
+    'behaviour-not-frame-driven',
+    'temporal-law-not-authored',
+    'temporal-signature-too-thin',
+    'unit-tree-unprovable',
+    'unit-tree-too-small',
+    'unit-tree-too-shallow',
+    'orphan-unit-node',
+    'multi-parent-unit-node',
+    'behaviour-owner-mismatch',
+    'insufficient-authored-visual-decisions',
+  ];
+  const primary = priorities.find((code) => normalized.includes(code)) ?? normalized[0] ?? 'ok';
+  return gateResult(normalized.length === 0, primary, {
+    authoredVisualDecisions: facts.authoredVisualDecisions,
+    authoredTemporalLaw: facts.authoredTemporalLaw,
+    frameDriven: facts.frameDriven,
+    internalUnitNodes: facts.internalUnitNodes,
+    temporalOperations: facts.temporalOperations,
+    treeDepth: facts.treeDepth,
+    violations: normalized.length,
+    violationSetSha256: sha256(stableStringify(normalized)),
+  });
+}
+
+function candidateLibraryRole(prepared) {
+  const entry = prepared.discovery?.publicEntries?.find((candidate) => (
+    candidate.kind === prepared.kind
+      && candidate.type === prepared.type
+      && candidate.source === prepared.source
+      && candidate.export === prepared.export
+  ));
+  return entry?.role ?? null;
+}
+
+function inspectOpenStyleInputs(classNode, violations) {
+  const constructor = classNode.body.body.find((member) => (
+    member.type === 'ClassMethod' && member.kind === 'constructor'
+  ));
+  if (!constructor) return;
+  const names = [];
+  constructor.params.forEach((parameter) => collectPatternNames(parameter, names));
+  if (names.some((name) => OPEN_STYLE_INPUT.test(name))) violations.push('open-style-input');
+}
+
+function collectPatternNames(node, names) {
+  if (!node) return;
+  if (node.type === 'Identifier') {
+    names.push(node.name);
+    return;
+  }
+  if (node.type === 'AssignmentPattern') {
+    collectPatternNames(node.left, names);
+    return;
+  }
+  if (node.type === 'RestElement') {
+    collectPatternNames(node.argument, names);
+    return;
+  }
+  if (node.type === 'ObjectPattern') {
+    for (const property of node.properties) {
+      if (property.type === 'RestElement') collectPatternNames(property.argument, names);
+      else {
+        const key = propertyName(property.key);
+        if (key) names.push(key);
+        collectPatternNames(property.value, names);
+      }
+    }
+    return;
+  }
+  if (node.type === 'ArrayPattern') node.elements.forEach((entry) => collectPatternNames(entry, names));
+}
+
+function inspectRendererState(classNode, violations) {
+  walkAst(classNode, (node) => {
+    if ((node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression')
+        && node.object?.type === 'ThisExpression'
+        && RENDER_STATE_FIELD.test(propertyName(node.property) ?? '')) {
+      violations.push('renderer-state-in-memory-class');
+    }
+  });
+}
+
+function inspectAuthenticUnit(prepared, facts, violations) {
+  const constructor = prepared.candidateClass.body.body.find((member) => (
+    member.type === 'ClassMethod' && member.kind === 'constructor'
+  ));
+  if (!constructor) {
+    violations.push('unit-tree-unprovable');
+    return;
+  }
+  const child = constructor.params[0];
+  const childName = child?.type === 'Identifier' ? child.name : null;
+  if (!childName) violations.push('unit-tree-unprovable');
+  const imports = importedClassBindings(prepared);
+  const nodes = new Map();
+  const variables = new Map();
+  walkAst(constructor.body, (node) => {
+    if (node.type === 'VariableDeclarator' && node.id?.type === 'Identifier'
+        && node.init?.type === 'NewExpression' && isImportedUnit(node.init, imports)) {
+      variables.set(node.id.name, node.init);
+    }
+    if (node.type === 'NewExpression' && isImportedUnit(node, imports)) {
+      nodes.set(astNodeId(node), node);
+    }
+  });
+
+  const superCall = findSuperCall(constructor);
+  const root = resolveUnitExpression(superCall?.arguments?.[0], variables, imports, childName);
+  if (!root || root.external) {
+    violations.push('unit-tree-unprovable');
+    return;
+  }
+
+  const graph = new Map();
+  for (const [id, node] of nodes) {
+    const children = [];
+    for (const argument of node.arguments ?? []) {
+      collectUnitExpressions(argument, variables, imports, childName, children);
+    }
+    graph.set(id, uniqueUnitReferences(children));
+  }
+  const parentCounts = new Map();
+  for (const children of graph.values()) {
+    for (const childReference of children) {
+      parentCounts.set(
+        childReference.id,
+        (parentCounts.get(childReference.id) ?? 0) + 1,
+      );
+    }
+  }
+  if ([...parentCounts.values()].some((count) => count > 1)) {
+    violations.push('multi-parent-unit-node');
+  }
+  const reachable = new Set();
+  const active = new Set();
+  const traversal = { cycle: false, externalChild: false };
+  const depth = visitStaticUnitGraph(root, graph, reachable, active, traversal);
+  facts.internalUnitNodes = reachable.size;
+  facts.treeDepth = depth;
+  facts.authoredVisualDecisions = countAuthoredVisualDecisions(reachable, nodes);
+  if (traversal.cycle || !traversal.externalChild) violations.push('unit-tree-unprovable');
+  if (reachable.size < 2) violations.push('unit-tree-too-small');
+  if (depth < 2) violations.push('unit-tree-too-shallow');
+  if ([...nodes.keys()].some((id) => !reachable.has(id))) violations.push('orphan-unit-node');
+  if (facts.authoredVisualDecisions < 2) {
+    violations.push('insufficient-authored-visual-decisions');
+  }
+  inspectBehaviourOwners(constructor, imports, violations);
+}
+
+function importedClassBindings(prepared) {
+  const bindings = new Map();
+  for (const statement of prepared.ast?.program?.body ?? []) {
+    if (statement.type !== 'ImportDeclaration') continue;
+    const resolved = path.posix.normalize(path.posix.join(
+      path.posix.dirname(prepared.source), statement.source.value,
+    ));
+    for (const specifier of statement.specifiers ?? []) {
+      if (specifier.local?.name) bindings.set(specifier.local.name, resolved);
+    }
+  }
+  return bindings;
+}
+
+function isImportedUnit(node, imports) {
+  return node?.callee?.type === 'Identifier'
+    && /^units\//u.test(imports.get(node.callee.name) ?? '');
+}
+
+function isImportedBehaviour(node, imports) {
+  return node?.callee?.type === 'Identifier'
+    && /^behaviours\//u.test(imports.get(node.callee.name) ?? '');
+}
+
+function astNodeId(node) {
+  return `${node.start ?? 'x'}:${node.end ?? 'x'}`;
+}
+
+function findSuperCall(constructor) {
+  let found = null;
+  walkAst(constructor.body, (node) => {
+    if (!found && node.type === 'CallExpression' && node.callee?.type === 'Super') found = node;
+  });
+  return found;
+}
+
+function resolveUnitExpression(node, variables, imports, childName) {
+  if (!node) return null;
+  if (node.type === 'NewExpression' && isImportedUnit(node, imports)) {
+    return { id: astNodeId(node), external: false };
+  }
+  if (node.type === 'Identifier' && variables.has(node.name)) {
+    return { id: astNodeId(variables.get(node.name)), external: false };
+  }
+  if (node.type === 'Identifier' && childName && node.name === childName) {
+    return { id: `parameter:${node.name}`, external: true };
+  }
+  return null;
+}
+
+function collectUnitExpressions(node, variables, imports, childName, output) {
+  const direct = resolveUnitExpression(node, variables, imports, childName);
+  if (direct) {
+    output.push(direct);
+    return;
+  }
+  if (!node || typeof node !== 'object') return;
+  if (node.type === 'ObjectExpression') return;
+  if (Array.isArray(node)) {
+    node.forEach((entry) => collectUnitExpressions(entry, variables, imports, childName, output));
+    return;
+  }
+  if (node.type === 'ArrayExpression') {
+    node.elements.forEach((entry) => collectUnitExpressions(entry, variables, imports, childName, output));
+  }
+}
+
+function uniqueUnitReferences(values) {
+  const seen = new Set();
+  return values.filter((value) => {
+    if (seen.has(value.id)) return false;
+    seen.add(value.id);
+    return true;
+  });
+}
+
+function visitStaticUnitGraph(reference, graph, reachable, active, traversal) {
+  if (reference.external) {
+    traversal.externalChild = true;
+    return 1;
+  }
+  if (active.has(reference.id)) {
+    traversal.cycle = true;
+    return 0;
+  }
+  if (reachable.has(reference.id)) return 1;
+  reachable.add(reference.id);
+  active.add(reference.id);
+  const children = graph.get(reference.id) ?? [];
+  const childDepth = children.length === 0
+    ? 0
+    : Math.max(...children.map((child) => (
+      visitStaticUnitGraph(child, graph, reachable, active, traversal)
+    )));
+  active.delete(reference.id);
+  return 1 + childDepth;
+}
+
+function countAuthoredVisualDecisions(reachable, nodes) {
+  const decisions = new Set();
+  const visualKey = /(?:accent|align|background|blur|border|color|fill|fit|font|gap|gradient|height|inset|layout|opacity|padding|radius|shadow|size|spacing|stroke|tone|transform|weight|width)/iu;
+  for (const id of reachable) {
+    const node = nodes.get(id);
+    walkAst(node, (nested) => {
+      if (nested.type !== 'ObjectProperty') return;
+      const key = propertyName(nested.key);
+      if (!key || !visualKey.test(key) || !isAuthoredValue(nested.value)) return;
+      decisions.add(`${nested.start ?? 'x'}:${nested.end ?? 'x'}:${key}`);
+    });
+  }
+  return decisions.size;
+}
+
+function isAuthoredValue(node) {
+  if (!node) return false;
+  if (['BooleanLiteral', 'NumericLiteral', 'StringLiteral'].includes(node.type)) return true;
+  if (node.type === 'UnaryExpression' && node.argument?.type === 'NumericLiteral') return true;
+  if (node.type === 'ArrayExpression') return node.elements.some(isAuthoredValue);
+  if (node.type === 'ObjectExpression') return node.properties.some((property) => (
+    property.type === 'ObjectProperty' && isAuthoredValue(property.value)
+  ));
+  return false;
+}
+
+function inspectBehaviourOwners(constructor, imports, violations) {
+  walkAst(constructor.body, (node) => {
+    if (node.type !== 'CallExpression' || node.callee?.type !== 'MemberExpression') return;
+    const method = propertyName(node.callee.property);
+    if (!['add', 'addBehaviour'].includes(method)) return;
+    const owner = node.callee.object?.type === 'Identifier' ? node.callee.object.name : null;
+    for (const argument of node.arguments ?? []) {
+      if (argument?.type !== 'NewExpression' || !isImportedBehaviour(argument, imports)) continue;
+      const bound = argument.arguments?.[0]?.type === 'Identifier'
+        ? argument.arguments[0].name : null;
+      if (!owner || bound !== owner) violations.push('behaviour-owner-mismatch');
+    }
+  });
+}
+
+function inspectAuthenticBehaviour(prepared, facts, violations) {
+  const onFrame = prepared.candidateClass.body.body.find((member) => (
+    member.type === 'ClassMethod' && propertyName(member.key) === 'onFrame'
+  ));
+  if (!onFrame) {
+    violations.push('behaviour-not-frame-driven');
+    return;
+  }
+  const constants = new Set();
+  let branches = 0;
+  let helperForwarders = 0;
+  let operations = 0;
+  walkAst(onFrame.body, (node) => {
+    if (['BinaryExpression', 'LogicalExpression', 'UnaryExpression', 'UpdateExpression'].includes(node.type)) {
+      operations += 1;
+    }
+    if (node.type === 'ConditionalExpression' || node.type === 'IfStatement'
+        || node.type === 'SwitchStatement') branches += 1;
+    if (node.type === 'NumericLiteral') constants.add(node.value);
+    if (node.type === 'CallExpression') {
+      const name = propertyName(node.callee) ?? propertyName(node.callee?.property);
+      if (THIN_BEHAVIOUR_HELPERS.has(name)) helperForwarders += 1;
+      if (node.callee?.type === 'MemberExpression'
+          && node.callee.object?.type === 'Identifier'
+          && node.callee.object.name === 'Math') operations += 1;
+    }
+  });
+  const frameProfile = behaviourFrameProfile(onFrame, prepared);
+  facts.frameDriven = frameProfile.frameDriven;
+  facts.authoredTemporalLaw = frameProfile.authoredTemporalLaw;
+  facts.temporalOperations = operations + branches;
+  if (helperForwarders > 0) violations.push('signal-forwarder');
+  if (!facts.frameDriven) violations.push('behaviour-not-frame-driven');
+  if (facts.frameDriven && !facts.authoredTemporalLaw) {
+    violations.push('temporal-law-not-authored');
+  }
+  if (facts.temporalOperations < 3 || constants.size < 2) {
+    violations.push('temporal-signature-too-thin');
+  }
+  const constructor = prepared.candidateClass.body.body.find((member) => (
+    member.type === 'ClassMethod' && member.kind === 'constructor'
+  ));
+  if (constructor) {
+    const names = [];
+    constructor.params.slice(1).forEach((parameter) => collectPatternNames(parameter, names));
+    if (names.some((name) => OPEN_STYLE_INPUT.test(name))) {
+      violations.push('generic-channel-adapter');
+    }
+  }
+}
+
+function behaviourFrameProfile(onFrame, prepared) {
+  const contextName = onFrame.params?.[0]?.type === 'Identifier'
+    ? onFrame.params[0].name : null;
+  if (!contextName) return { authoredTemporalLaw: false, frameDriven: false };
+  const derived = new Set();
+  const bindings = new Map();
+  walkAst(onFrame.body, (node) => {
+    if (node.type === 'VariableDeclarator' && node.id?.type === 'Identifier' && node.init) {
+      bindings.set(node.id.name, node.init);
+    }
+  });
+  let changed = true;
+  while (changed) {
+    changed = false;
+    walkAst(onFrame.body, (node) => {
+      if (node.type !== 'VariableDeclarator' || node.id?.type !== 'Identifier'
+          || derived.has(node.id.name)) return;
+      if (expressionDependsOnFrame(node.init, derived, prepared, contextName)) {
+        derived.add(node.id.name);
+        changed = true;
+      }
+    });
+  }
+
+  const writes = [];
+  walkAst(onFrame.body, (node) => {
+    if (node.type === 'AssignmentExpression' && unitMemberChannel(node.left)) {
+      writes.push(node.right);
+      return;
+    }
+    if (node.type !== 'CallExpression') return;
+    const helper = node.callee?.type === 'Identifier' ? node.callee.name : null;
+    if (!Object.hasOwn(CANONICAL_WRITERS, helper) || !canonicalWriterImport(prepared, helper)) return;
+    writes.push(node.arguments.at(-1));
+  });
+  const frameDriven = writes.some((expression) => (
+    expressionDependsOnFrame(expression, derived, prepared, contextName)
+  ));
+  const authoredTemporalLaw = writes.some((expression) => expressionHasAuthoredTemporalLaw(
+    expression,
+    bindings,
+    derived,
+    prepared,
+    contextName,
+    new Set(),
+  ));
+  return { authoredTemporalLaw, frameDriven };
+}
+
+function expressionHasAuthoredTemporalLaw(
+  node,
+  bindings,
+  derived,
+  prepared,
+  contextName,
+  visiting,
+) {
+  if (!node) return false;
+  if (node.type === 'Identifier' && bindings.has(node.name)) {
+    if (visiting.has(node.name)) return false;
+    visiting.add(node.name);
+    const result = expressionHasAuthoredTemporalLaw(
+      bindings.get(node.name), bindings, derived, prepared, contextName, visiting,
+    );
+    visiting.delete(node.name);
+    return result;
+  }
+  if (node.type === 'BinaryExpression') {
+    const leftDerived = expressionDependsOnFrame(node.left, derived, prepared, contextName);
+    const rightDerived = expressionDependsOnFrame(node.right, derived, prepared, contextName);
+    if ((node.operator === '*' && leftDerived && rightDerived)
+        || (['**', '%'].includes(node.operator) && (leftDerived || rightDerived))) {
+      return true;
+    }
+  }
+  if ((node.type === 'ConditionalExpression' || node.type === 'IfStatement')
+      && expressionDependsOnFrame(node.test, derived, prepared, contextName)) {
+    return true;
+  }
+  if (node.type === 'CallExpression'
+      && node.callee?.type === 'MemberExpression'
+      && node.callee.object?.type === 'Identifier'
+      && node.callee.object.name === 'Math'
+      && /^(?:abs|acos|asin|atan|atan2|ceil|cos|exp|floor|log|pow|round|sign|sin|sqrt|tan|trunc)$/u
+        .test(propertyName(node.callee.property) ?? '')
+      && node.arguments.some((argument) => (
+        expressionDependsOnFrame(argument, derived, prepared, contextName)
+      ))) {
+    return true;
+  }
+  let authored = false;
+  for (const [key, value] of Object.entries(node)) {
+    if (authored || ['loc', 'start', 'end', 'extra'].includes(key)) continue;
+    if (Array.isArray(value)) {
+      authored = value.some((entry) => entry && typeof entry === 'object'
+        && expressionHasAuthoredTemporalLaw(
+          entry, bindings, derived, prepared, contextName, visiting,
+        ));
+    } else if (value && typeof value === 'object' && typeof value.type === 'string') {
+      authored = expressionHasAuthoredTemporalLaw(
+        value, bindings, derived, prepared, contextName, visiting,
+      );
+    }
+  }
+  return authored;
+}
+
+function expressionDependsOnFrame(node, derived, prepared, contextName) {
+  let depends = false;
+  walkAst(node, (nested) => {
+    if (depends) return;
+    if (nested.type === 'Identifier' && derived.has(nested.name)) {
+      depends = true;
+      return;
+    }
+    if (nested.type !== 'CallExpression'
+        || nested.callee?.type !== 'Identifier'
+        || nested.callee.name !== 'absoluteFrame'
+        || nested.arguments?.[0]?.type !== 'Identifier'
+        || nested.arguments[0].name !== contextName) return;
+    depends = hasCanonicalImport(prepared, 'absoluteFrame', 'core/signals.js');
+  });
+  return depends;
+}
+
+function hasCanonicalImport(prepared, importedName, expectedSource) {
+  return prepared.ast?.program?.body?.some((statement) => (
+    statement.type === 'ImportDeclaration'
+      && path.posix.normalize(path.posix.join(
+        path.posix.dirname(prepared.source), statement.source.value,
+      )) === expectedSource
+      && statement.specifiers.some((specifier) => (
+        specifier.type === 'ImportSpecifier'
+          && propertyName(specifier.imported) === importedName
+          && specifier.local?.name === importedName
+      ))
+  )) === true;
 }
 
 function evaluatePrivacyGate(prepared, datasetText) {
@@ -1209,9 +1734,12 @@ function inspectConstructorContract(prepared, violations) {
     violations.push('unit-super-arity-invalid');
   } else if (superArguments.length === 1) {
     const child = constructor.params[0];
-    if (child?.type !== 'Identifier'
-        || superArguments[0]?.type !== 'Identifier'
-        || superArguments[0].name !== child.name) {
+    const directChild = child?.type === 'Identifier'
+      && superArguments[0]?.type === 'Identifier'
+      && superArguments[0].name === child.name;
+    const nestedTree = child?.type === 'Identifier'
+      && superArguments[0]?.type === 'NewExpression';
+    if (!directChild && !nestedTree) {
       violations.push('unit-child-constructor-invalid');
     }
   }
@@ -1529,6 +2057,7 @@ function publicCandidateIdentity(prepared) {
     type: prepared.type,
     source: prepared.source,
     export: prepared.export,
+    role: 'memory',
     candidateSha256: prepared.candidateSha256,
     moduleSha256: prepared.moduleSha256,
     dependencyClosureSha256: prepared.dependencyClosureSha256,

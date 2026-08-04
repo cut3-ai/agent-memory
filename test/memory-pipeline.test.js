@@ -38,10 +38,20 @@ test('memory pipeline emits deterministic privacy-safe independent-census artifa
   assert.equal(first.classValidation.valid, true);
   assert.equal(first.manifest.reconstructionProven, false);
   assert.equal(first.manifest.automaticPromotionAllowed, false);
-  assert.equal(first.manifest.refinementAuthority, 'experiment-profile-lab');
+  assert.equal(first.manifest.schemaVersion, 6);
+  assert.equal(first.manifest.refinementAuthority, 'deterministic-stylistic-motif-miner');
+  assert.equal(first.manifest.modelGenerationAuthority, false);
+  assert.equal(first.manifest.counts.motifCandidates, 0);
+  assert.equal(first.manifest.counts.evidenceReadyMotifs, 0);
+  assert.equal(first.manifest.counts.candidateUnits, 0);
+  assert.equal(first.manifest.counts.candidateBehaviours, 0);
+  assert.equal(Object.hasOwn(first.manifest.counts, 'authenticMotifCandidates'), false);
+  assert.equal(first.manifest.counts.indexedMemoryUnits, 0);
+  assert.equal(first.manifest.counts.indexedMemoryBehaviours, 0);
   assert.equal(first.index.entries.some((entry) => entry.kind === 'behaviour.opacity'), true);
+  assert.equal(first.index.entries.every((entry) => entry.role === 'infrastructure'), true);
   for (const entry of first.index.entries) {
-    assert.deepEqual(Object.keys(entry).sort(), ['export', 'kind', 'source', 'type']);
+    assert.deepEqual(Object.keys(entry).sort(), ['export', 'kind', 'role', 'source', 'type']);
   }
 
   const files = (await fs.readdir(first.runDirectory)).sort();

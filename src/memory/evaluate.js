@@ -8,23 +8,39 @@ export function evaluateMemoryCandidate(
   contractValidation = {},
   options = {},
 ) {
-  const entries = navigationEntries(classIndex);
+  const navigation = navigationEntries(classIndex);
+  const entries = navigation.filter((entry) => entry.role === 'memory');
   const indexedKinds = new Set(entries.map((entry) => entry.kind));
   const unitGroups = census.units ?? [];
   const behaviourGroups = census.behaviours ?? [];
   const totalUnits = sum(unitGroups, 'witnesses');
   const totalBehaviours = sum(behaviourGroups, 'witnesses');
+  const candidateGroups = authenticCandidateGroups(census);
+  const candidateUnitGroups = candidateGroups.filter((entry) => entry.kind === 'unit');
+  const candidateBehaviourGroups = candidateGroups.filter(
+    (entry) => entry.kind === 'behaviour',
+  );
+  const candidateUnits = sum(candidateUnitGroups, 'witnesses');
+  const candidateBehaviours = sum(candidateBehaviourGroups, 'witnesses');
+  const infrastructureUnits = sum(
+    unitGroups.filter((entry) => entry.infrastructureKind),
+    'witnesses',
+  );
+  const infrastructureBehaviours = sum(
+    behaviourGroups.filter((entry) => entry.infrastructureKind),
+    'witnesses',
+  );
   const mappedUnits = sum(
-    unitGroups.filter((entry) => indexedKinds.has(memoryKind(entry))),
+    candidateUnitGroups.filter((entry) => indexedKinds.has(entry.candidateKind)),
     'witnesses',
   );
   const mappedBehaviours = sum(
-    behaviourGroups.filter((entry) => indexedKinds.has(memoryKind(entry))),
+    candidateBehaviourGroups.filter((entry) => indexedKinds.has(entry.candidateKind)),
     'witnesses',
   );
-  const reusableKinds = new Set([...unitGroups, ...behaviourGroups]
-    .filter((entry) => indexedKinds.has(memoryKind(entry)) && entry.workspaces >= 2)
-    .map(memoryKind));
+  const reusableKinds = new Set(candidateGroups
+    .filter((entry) => indexedKinds.has(entry.candidateKind) && entry.workspaces >= 2)
+    .map((entry) => entry.candidateKind));
   const receiptEvaluation = evaluateReconstructionReceipts(
     census,
     options.reconstructionReceipts ?? [],
@@ -50,11 +66,14 @@ export function evaluateMemoryCandidate(
       ...(contractValidation.imports?.violations ?? []),
     ];
   const body = {
-    schemaVersion: 4,
+    schemaVersion: 6,
     proofLevel: 'static-class-contract-independent-ast-census-and-receipts',
     classContract: {
       valid: contractValidation.valid === true,
       violations: contractViolations.length,
+      indexedInfrastructure: navigation.filter(
+        (entry) => entry.role === 'infrastructure',
+      ).length,
       indexedUnits: entries.filter((entry) => entry.type === 'unit').length,
       indexedBehaviours: entries.filter((entry) => entry.type === 'behaviour').length,
     },
@@ -66,14 +85,22 @@ export function evaluateMemoryCandidate(
       structuralReclassifications: census.counts.structuralReclassifications ?? 0,
       imperativeResiduals: census.counts.imperativeResiduals ?? 0,
     },
+    infrastructure: {
+      unitWitnesses: infrastructureUnits,
+      behaviourWitnesses: infrastructureBehaviours,
+      countedAsMemory: false,
+    },
     mapping: {
       proof: 'navigation-only',
+      scope: 'stylistic-candidates-to-indexed-memory',
+      candidateUnitWitnesses: candidateUnits,
       mappedUnitWitnesses: mappedUnits,
-      unmappedUnitWitnesses: totalUnits - mappedUnits,
-      unitKindMappingCoverage: ratio(mappedUnits, totalUnits),
+      unmappedUnitWitnesses: candidateUnits - mappedUnits,
+      unitKindMappingCoverage: ratio(mappedUnits, candidateUnits),
+      candidateBehaviourWitnesses: candidateBehaviours,
       mappedBehaviourWitnesses: mappedBehaviours,
-      unmappedBehaviourWitnesses: totalBehaviours - mappedBehaviours,
-      behaviourKindMappingCoverage: ratio(mappedBehaviours, totalBehaviours),
+      unmappedBehaviourWitnesses: candidateBehaviours - mappedBehaviours,
+      behaviourKindMappingCoverage: ratio(mappedBehaviours, candidateBehaviours),
     },
     reuseEvidence: {
       indexedKindsWithMultipleWorkspaceWitnesses: reusableKinds.size,
@@ -81,8 +108,13 @@ export function evaluateMemoryCandidate(
       behaviourKinds: [...reusableKinds].filter(
         (kind) => kind.startsWith('behaviour.'),
       ).length,
-      candidatesAwaitingFeedback: (census.memoryCandidates ?? []).filter(
-        (entry) => entry.independentReuse,
+      motifCandidates: (census.memoryCandidates ?? []).length,
+      evidenceReadyMotifs: (census.memoryCandidates ?? []).filter(
+        (entry) => entry.eligibility?.evidenceReady === true,
+      ).length,
+      evidenceReadyUnpromoted: (census.memoryCandidates ?? []).filter(
+        (entry) => entry.eligibility?.evidenceReady === true
+          && entry.eligibility?.promotionEligible !== true,
       ).length,
     },
     reconstruction,
@@ -130,8 +162,24 @@ function navigationEntries(index) {
   ];
 }
 
+function authenticCandidateGroups(census) {
+  const grouped = new Map();
+  for (const entry of census.memoryCandidates ?? []) {
+    const kind = candidateKind(entry);
+    if (!kind) continue;
+    grouped.set(kind, {
+      ...entry,
+      kind: entry.kind ?? (kind.startsWith('behaviour.') ? 'behaviour' : 'unit'),
+      candidateKind: kind,
+    });
+  }
+  return [...grouped.values()];
+}
+
 function residualGroups(groups, indexedKinds) {
-  return groups.filter((entry) => !indexedKinds.has(memoryKind(entry))).map((entry) => ({
+  return groups.filter((entry) => (
+    !entry.infrastructureKind && !indexedKinds.has(indexedMemoryKind(entry))
+  )).map((entry) => ({
     capability: entry.capability ?? 'unknown',
     status: entry.status ?? 'residual',
     residualCode: entry.residualCode ?? 'class-not-indexed',
@@ -158,9 +206,15 @@ function sum(entries, property) {
 }
 
 function ratio(numerator, denominator) {
-  return denominator === 0 ? 1 : Number((numerator / denominator).toFixed(6));
+  return denominator === 0 ? 0 : Number((numerator / denominator).toFixed(6));
 }
 
-function memoryKind(entry) {
-  return entry?.memoryKind ?? entry?.kind ?? null;
+function candidateKind(entry) {
+  if (!entry || entry.infrastructureKind) return null;
+  return Object.hasOwn(entry, 'candidateKind') ? entry.candidateKind : null;
+}
+
+function indexedMemoryKind(entry) {
+  if (!entry || entry.infrastructureKind) return null;
+  return Object.hasOwn(entry, 'memoryKind') ? entry.memoryKind : null;
 }

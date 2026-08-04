@@ -1,11 +1,11 @@
 import traverseModule from '@babel/traverse';
 
 import { sha256, stableStringify } from '../lib.js';
-import { parseComposition } from '../normalize.js';
+import { numericDirection, parseComposition } from '../normalize.js';
 
 const traverse = traverseModule.default ?? traverseModule;
 
-export const CORPUS_RULESET_VERSION = 'class-memory-ast-census-v3';
+export const CORPUS_RULESET_VERSION = 'stylistic-subtree-memory-census-v6';
 
 const ENTRY_NAMES = Object.freeze([
   'GeneratedComposition',
@@ -75,11 +75,25 @@ const PROPERTY_CAPABILITIES = Object.freeze({
   top: 'layout.position-y',
   WebkitTextStroke: 'typography.stroke',
 });
-const PROPERTY_MEMORY_KIND = Object.freeze({
+const PROPERTY_INFRASTRUCTURE_KIND = Object.freeze({
   opacity: 'behaviour.opacity',
   rotate: 'behaviour.rotate',
   scale: 'behaviour.scale',
 });
+const MOTIF_STYLE_PROPERTIES = new Set([
+  ...Object.keys(PROPERTY_CAPABILITIES),
+  'alignItems', 'border', 'borderColor', 'borderRadius', 'borderWidth',
+  'bottom', 'display', 'flexDirection', 'fontFamily', 'fontWeight', 'gap',
+  'height', 'inset', 'justifyContent', 'lineHeight', 'margin', 'objectFit',
+  'overflow', 'padding', 'position', 'right', 'textAlign', 'transform',
+  'transformOrigin', 'width', 'zIndex',
+]);
+const AUTHORED_STYLE_PROPERTIES = new Set([
+  'background', 'backgroundColor', 'border', 'borderColor', 'borderRadius',
+  'borderWidth', 'boxShadow', 'color', 'filter', 'fontFamily', 'fontSize',
+  'fontStyle', 'fontWeight', 'letterSpacing', 'lineHeight', 'mixBlendMode',
+  'textAlign', 'textShadow', 'textTransform', 'WebkitTextStroke',
+]);
 
 /** Parse workspace JSONL without importing either legacy CBA implementation. */
 export function buildCorpusCensus(inputText) {
@@ -93,7 +107,7 @@ export function buildCorpusCensus(inputText) {
   const candidates = compositions.flatMap((item) => item.candidates);
   const helpers = compositions.flatMap((item) => item.helpers);
   const body = {
-    schemaVersion: 3,
+    schemaVersion: 6,
     rulesetVersion: CORPUS_RULESET_VERSION,
     corpusSha256: sha256(String(inputText ?? '')),
     counts: {
@@ -104,9 +118,13 @@ export function buildCorpusCensus(inputText) {
       uniqueStructuralSources: new Set(compositions.map((item) => item.structuralHash)).size,
       renderModes: countValues(compositions.map((item) => item.renderMode)),
       unitWitnesses: units.length,
-      mappedUnitWitnesses: units.filter((item) => item.memoryKind).length,
+      mappedUnitWitnesses: 0,
+      infrastructureUnitWitnesses: units.filter((item) => item.infrastructureKind).length,
       atomicBehaviourWitnesses: behaviours.length,
-      mappedBehaviourWitnesses: behaviours.filter((item) => item.memoryKind).length,
+      mappedBehaviourWitnesses: 0,
+      infrastructureBehaviourWitnesses: behaviours.filter(
+        (item) => item.infrastructureKind,
+      ).length,
       structuralReclassifications: behaviours.filter(
         (item) => item.status === 'structural-reclassification',
       ).length,
@@ -122,6 +140,12 @@ export function buildCorpusCensus(inputText) {
       numericHelperBehaviourCandidates: 0,
       combinedVisualBehaviourCandidates: 0,
       cardinalitySpecificUnitCandidates: 0,
+      stylisticUnitCandidateWitnesses: candidates.filter(
+        (item) => item.kind === 'unit',
+      ).length,
+      stylisticBehaviourCandidateWitnesses: candidates.filter(
+        (item) => item.kind === 'behaviour',
+      ).length,
     },
     units: summarizeWitnesses(units),
     behaviours: summarizeWitnesses(behaviours),
@@ -203,7 +227,7 @@ function analyzeComposition(record) {
   const reachable = findReachableFunctions(parsed.ast);
   const units = [];
   const behaviours = [];
-  const candidates = [];
+  const provisionalCandidates = [];
   const seenControls = new WeakSet();
   let controlStatements = 0;
   let visualSinks = 0;
@@ -226,6 +250,18 @@ function analyzeComposition(record) {
       formulaKind: valuePath ? classifyFormula(valuePath) : 'imperative',
       ...classification,
     });
+    if (valuePath) {
+      const temporalCandidate = classifyTemporalCandidate(valuePath, classification);
+      if (temporalCandidate) {
+        provisionalCandidates.push(candidateWitness(
+          compositionKey,
+          workspaceKey,
+          node,
+          temporalCandidate,
+          provisionalCandidates.length,
+        ));
+      }
+    }
   };
   const addControlUnit = (path, kind) => {
     if (seenControls.has(path.node)) return;
@@ -257,12 +293,12 @@ function analyzeComposition(record) {
       visualSinks += analyzeDynamicChildren(path, addBehaviour);
       const candidate = classifyCompositeCandidate(path, tag, style, parsed.stripped);
       if (candidate) {
-        candidates.push(candidateWitness(
+        provisionalCandidates.push(candidateWitness(
           compositionKey,
           workspaceKey,
           path.node,
           candidate,
-          candidates.length,
+          provisionalCandidates.length,
         ));
       }
     },
@@ -317,7 +353,7 @@ function analyzeComposition(record) {
     visualSinks,
     units,
     behaviours,
-    candidates,
+    candidates: keepSmallestConnectedCandidates(provisionalCandidates),
     helpers: classifyHelperDeclarations(parsed.ast),
   };
 }
@@ -483,16 +519,15 @@ function classifyProperty(name) {
   if (name === 'key') {
     return {
       capability: 'structure.identity-change',
-      memoryKind: null,
       status: 'structural-reclassification',
       residualCode: 'switch-or-clip-required',
       visual: false,
     };
   }
   const capability = PROPERTY_CAPABILITIES[name] ?? 'visual.dynamic-property';
-  const memoryKind = PROPERTY_MEMORY_KIND[name] ?? null;
-  return memoryKind
-    ? mappedVisual(capability, memoryKind)
+  const infrastructureKind = PROPERTY_INFRASTRUCTURE_KIND[name] ?? null;
+  return infrastructureKind
+    ? mappedVisual(capability, infrastructureKind)
     : visualResidual(capability, 'typed-property-behaviour-required');
 }
 
@@ -525,39 +560,401 @@ function classifyImperativeEffect(callback, effectKind) {
 
 function classifyCompositeCandidate(path, tag, style, source) {
   const directStyle = sourceSlice(source, style?.node);
-  if (/radial-gradient/i.test(directStyle)
-      && /transparent|rgba?\([^)]*,\s*0\s*\)/i.test(directStyle)) {
-    return 'unit.vignette';
-  }
-  if ((tag === 'AbsoluteFill' || tag === 'div') && hasStyleKey(style, ['background', 'backgroundColor'])) {
-    const facts = descendantFacts(path.node);
-    const fullFrame = tag === 'AbsoluteFill'
-      || (/\bposition\s*:\s*['"]absolute['"]/i.test(directStyle)
-        && (/\binset\s*:\s*0\b/i.test(directStyle)
-          || /\bwidth\s*:\s*['"]100%['"]/i.test(directStyle)));
-    if (fullFrame && !facts.media && !facts.text && !facts.custom
-        && !facts.elements && !facts.dynamicContent) return 'unit.solid-fill';
-  }
-  if (/dialogue|subtitle|caption/i.test(tag)) return 'unit.dialogue-card';
-  if (/ranking|rankcard|countdowncard/i.test(tag)) return 'unit.ranking-card';
-  if (/scatter|timedword|textchunk/i.test(tag)) return 'unit.scatter-text';
-  return null;
+  const localSource = sourceSlice(source, path.node);
+  const directChildren = (path.node.children ?? [])
+    .filter((child) => child.type === 'JSXElement').length;
+  const facts = descendantFacts(path.node);
+  const styles = motifStyleProperties(path.node);
+  const directStyles = stylePropertyNames(style?.node);
+  const authoredStyles = styles.filter((name) => AUTHORED_STYLE_PROPERTIES.has(name));
+  const authoredAtRoot = directStyles.filter((name) => AUTHORED_STYLE_PROPERTIES.has(name));
+  const rootIsContainer = /^(?:article|aside|div|figure|section)$/u.test(tag);
+  const fullFrame = tag === 'AbsoluteFill'
+    || (/position\s*:\s*["'](?:absolute|fixed)["']/u.test(directStyle)
+      && (/inset\s*:\s*0\b/u.test(directStyle)
+        || (/top\s*:\s*0\b/u.test(directStyle)
+          && /left\s*:\s*0\b/u.test(directStyle)
+          && /width\s*:\s*["']100%["']/u.test(directStyle)
+          && /height\s*:\s*["']100%["']/u.test(directStyle))));
+  const coherent = rootIsContainer
+    && !fullFrame
+    && directChildren >= 1
+    && facts.text
+    && styles.length >= 3
+    && authoredStyles.length >= 2
+    && authoredAtRoot.length >= 1;
+  if (!coherent) return null;
+
+  let family = null;
+  if (/\b(?:rank(?:ing)?|rankNumber|rankLabel|countdown|top\s*\d+)\b/iu.test(localSource)
+      && directChildren >= 2) family = 'ranking-card';
+  else if (/\b(?:dialogue|subtitle|caption|speech|speaker)\b/iu.test(localSource)
+      && styles.some((name) => ['background', 'backgroundColor', 'boxShadow'].includes(name))) {
+    family = 'dialogue-card';
+  } else if (/\b(?:chunks?|words?|tokens?)\b/iu.test(localSource)
+      && /\b(?:start|end|delay|offset|timing)(?:Ms|Frame|Time)?\b/u.test(localSource)
+      && styles.includes('position')) family = 'timed-text-card';
+  if (!family) return null;
+
+  // Content is value data. Tree identity records only element/attribute shape,
+  // so JSXText and expression payload changes do not manufacture new classes.
+  const structuralHash = sha256(stableStringify(jsxTreeShape(path.node)));
+  const fingerprint = motifStyleFingerprint(path);
+  return {
+    kind: 'unit',
+    family,
+    structuralHash,
+    styleFingerprintSha256: fingerprint.sha256,
+    styleFingerprintProven: fingerprint.proven,
+    identityFingerprintSha256: fingerprint.sha256,
+    identityFingerprintProven: fingerprint.proven,
+    identityBasis: 'connected-styled-subtree',
+    treeEvidence: {
+      boundary: 'connected-jsx-subtree',
+      connected: true,
+      directChildren,
+      styleProperties: styles.length,
+    },
+  };
 }
 
-function candidateWitness(compositionKey, workspaceKey, node, memoryKind, index) {
+function classifyTemporalCandidate(valuePath, classification) {
+  const facts = temporalFacts(valuePath);
+  const hasAuthoredShape = facts.shapes.some(isStagedNonLinearShape);
+  // Bare spring()/sin()/cos are foundation timing mechanics. A memory
+  // Behaviour needs an additional authored, non-monotonic multi-stage law;
+  // otherwise the class would only wrap a Signal or another library call.
+  if (!hasAuthoredShape) return null;
+  let family = null;
+  if (facts.drivers.includes('spring')) family = 'shaped-spring-law';
+  else if (facts.drivers.includes('oscillation')) family = 'shaped-oscillatory-law';
+  else if (facts.drivers.includes('keyframes')) family = 'staged-curve';
+  if (!family) return null;
+
+  const channel = temporalChannel(classification);
+  const fingerprint = sha256(stableStringify({
+    family,
+    channel,
+    drivers: facts.drivers,
+    shapes: facts.shapes,
+    formula: canonicalFormulaClosure(valuePath),
+  }));
+  return {
+    kind: 'behaviour',
+    family,
+    channel,
+    structuralHash: sha256(stableStringify({ family, channel, ...facts })),
+    temporalFingerprintSha256: fingerprint,
+    temporalFingerprintProven: true,
+    identityFingerprintSha256: fingerprint,
+    identityFingerprintProven: true,
+    identityBasis: 'single-stylistic-channel-law',
+    temporalEvidence: {
+      boundary: 'single-stylistic-channel-law',
+      singleChannel: true,
+      drivers: facts.drivers,
+      shapes: facts.shapes,
+    },
+  };
+}
+
+function temporalFacts(valuePath) {
+  const drivers = new Set();
+  const shapes = new Set();
+  const seenBindings = new Set();
+  const followBinding = (identifierPath) => {
+    const binding = identifierPath.scope.getBinding(identifierPath.node.name);
+    if (!binding || seenBindings.has(binding)) return;
+    const nested = bindingValuePath(binding);
+    if (!nested?.node) return;
+    seenBindings.add(binding);
+    visit(nested);
+  };
+  const visit = (path) => {
+    if (!path?.node) return;
+    const inspect = (node) => {
+      if (!['CallExpression', 'OptionalCallExpression'].includes(node.type)) return;
+      const name = calleeName(node.callee);
+      if (name === 'spring') drivers.add('spring');
+      if (name === 'Math.sin' || name === 'Math.cos') drivers.add('oscillation');
+      if (name !== 'interpolate') return;
+      drivers.add('keyframes');
+      const values = numericArrayValues(node.arguments?.[2]);
+      if (values) shapes.add(`${numericDirection(values)}-${values.length}-points`);
+    };
+    inspect(path.node);
+    walk(path.node, inspect);
+    if (path.isReferencedIdentifier()) followBinding(path);
+    path.traverse({
+      ReferencedIdentifier(identifierPath) {
+        followBinding(identifierPath);
+      },
+    });
+  };
+  visit(valuePath);
+  return {
+    drivers: [...drivers].sort(),
+    shapes: [...shapes].sort(),
+  };
+}
+
+function numericArrayValues(node) {
+  if (node?.type !== 'ArrayExpression') return null;
+  const values = node.elements.map((element) => {
+    if (element?.type === 'NumericLiteral') return element.value;
+    if (element?.type === 'UnaryExpression'
+        && element.operator === '-'
+        && element.argument?.type === 'NumericLiteral') return -element.argument.value;
+    return null;
+  });
+  return values.length > 0 && values.every((value) => value !== null) ? values : null;
+}
+
+function isStagedNonLinearShape(shape) {
+  const match = /^(?:mixed|peak|valley)-(\d+)-points$/u.exec(String(shape));
+  return Boolean(match && Number(match[1]) >= 4);
+}
+
+function temporalChannel(classification) {
+  const infrastructure = classification.infrastructureKind;
+  if (infrastructure === 'behaviour.opacity') return 'opacity';
+  if (infrastructure === 'behaviour.scale') return 'transform.scale';
+  if (infrastructure === 'behaviour.translate') return 'transform.translate';
+  if (infrastructure === 'behaviour.rotate') return 'transform.rotate';
+  return classification.capability ?? 'visual.dynamic-property';
+}
+
+function candidateWitness(compositionKey, workspaceKey, node, candidate, index) {
+  const candidateKind = `${candidate.kind}.${candidate.family}.${candidate.identityFingerprintSha256.slice(0, 12)}`;
   return {
     witness: witnessId(compositionKey, 'candidate', node?.start, index),
     compositionKey,
     workspaceKey,
-    memoryKind,
-    structuralHash: structuralAstHash(node),
+    kind: candidate.kind,
+    family: candidate.family,
+    candidateKind,
+    identityBasis: candidate.identityBasis,
+    identityFingerprintSha256: candidate.identityFingerprintSha256,
+    identityFingerprintProven: candidate.identityFingerprintProven,
+    structuralHash: candidate.structuralHash,
+    boundarySpan: candidateSpan(node),
+    ...(candidate.styleFingerprintSha256 ? {
+      styleFingerprintSha256: candidate.styleFingerprintSha256,
+      styleFingerprintProven: candidate.styleFingerprintProven,
+    } : {}),
+    ...(candidate.temporalFingerprintSha256 ? {
+      temporalFingerprintSha256: candidate.temporalFingerprintSha256,
+      temporalFingerprintProven: candidate.temporalFingerprintProven,
+      channel: candidate.channel,
+    } : {}),
+    ...(candidate.treeEvidence ? { treeEvidence: candidate.treeEvidence } : {}),
+    ...(candidate.temporalEvidence ? { temporalEvidence: candidate.temporalEvidence } : {}),
     variantHash: sha256(stableStringify(stripAstMetadata(node, false))),
   };
 }
 
+function keepSmallestConnectedCandidates(candidates) {
+  return candidates.filter((candidate) => {
+    if (candidate.kind !== 'unit' || candidate.identityBasis !== 'connected-styled-subtree') {
+      return true;
+    }
+    return !candidates.some((nested) => (
+      nested !== candidate
+      && nested.kind === 'unit'
+      && nested.identityBasis === 'connected-styled-subtree'
+      && nested.family === candidate.family
+      && strictlyContains(candidate.boundarySpan, nested.boundarySpan)
+    ));
+  });
+}
+
+function candidateSpan(node) {
+  return Number.isInteger(node?.start) && Number.isInteger(node?.end)
+    ? { start: node.start, end: node.end }
+    : null;
+}
+
+function strictlyContains(outer, inner) {
+  return Number.isInteger(outer?.start)
+    && Number.isInteger(outer?.end)
+    && Number.isInteger(inner?.start)
+    && Number.isInteger(inner?.end)
+    && outer.start <= inner.start
+    && outer.end >= inner.end
+    && (outer.start < inner.start || outer.end > inner.end);
+}
+
+function motifStyleProperties(node) {
+  const names = new Set();
+  walk(node, (nested) => {
+    if (nested.type !== 'JSXAttribute' || jsxName(nested.name) !== 'style') return;
+    const expression = nested.value?.type === 'JSXExpressionContainer'
+      ? nested.value.expression
+      : nested.value;
+    stylePropertyNames(expression).forEach((name) => names.add(name));
+  });
+  return [...names].sort();
+}
+
+function stylePropertyNames(node) {
+  if (node?.type !== 'ObjectExpression') return [];
+  return node.properties.flatMap((property) => {
+    if (property.type !== 'ObjectProperty' || property.computed) return [];
+    const name = propertyName(property.key);
+    return MOTIF_STYLE_PROPERTIES.has(name) ? [name] : [];
+  }).sort();
+}
+
+function motifStyleFingerprint(elementPath) {
+  const styles = [];
+  const temporalLaws = [];
+  let proven = true;
+  elementPath.traverse({
+    JSXAttribute(attributePath) {
+      if (jsxName(attributePath.node.name) !== 'style') return;
+      const value = attributePath.get('value');
+      if (!value.isJSXExpressionContainer()) {
+        proven = false;
+        return;
+      }
+      const expression = resolveObjectPath(value.get('expression'));
+      if (!expression?.isObjectExpression()) {
+        proven = false;
+        return;
+      }
+      if (expression.node.properties.some((property) => property.type === 'SpreadElement')) {
+        proven = false;
+      }
+      styles.push(canonicalStyleAst(expression.node));
+      for (const property of expression.get('properties')) {
+        if (!property.isObjectProperty()) continue;
+        const propertyValue = property.get('value');
+        if (!pathDependsOnFrame(propertyValue)) continue;
+        temporalLaws.push({
+          property: propertyName(property.node.key),
+          formula: canonicalFormulaClosure(propertyValue),
+        });
+      }
+    },
+  });
+  if (styles.length === 0) proven = false;
+  return {
+    sha256: sha256(stableStringify({
+      treeShape: jsxTreeShape(elementPath.node),
+      styles: styles.sort((left, right) => (
+        stableStringify(left).localeCompare(stableStringify(right))
+      )),
+      temporalLaws: temporalLaws.sort((left, right) => (
+        left.property.localeCompare(right.property)
+        || stableStringify(left.formula).localeCompare(stableStringify(right.formula))
+      )),
+    })),
+    proven,
+  };
+}
+
+function jsxTreeShape(node) {
+  if (node?.type === 'JSXElement') {
+    return {
+      kind: 'element',
+      tag: jsxName(node.openingElement?.name),
+      attributes: (node.openingElement?.attributes ?? []).map((attribute) => (
+        attribute.type === 'JSXAttribute' ? jsxName(attribute.name) : '...'
+      )).sort(),
+      children: (node.children ?? []).flatMap((child) => {
+        if (child.type === 'JSXText') return child.value.trim() ? ['content'] : [];
+        if (child.type === 'JSXExpressionContainer') {
+          return child.expression?.type === 'JSXEmptyExpression' ? [] : ['content'];
+        }
+        const nested = jsxTreeShape(child);
+        return nested ? [nested] : [];
+      }),
+    };
+  }
+  if (node?.type === 'JSXFragment') {
+    return {
+      kind: 'fragment',
+      children: (node.children ?? []).flatMap((child) => {
+        const nested = jsxTreeShape(child);
+        if (nested) return [nested];
+        if (child.type === 'JSXText' && child.value.trim()) return ['content'];
+        if (child.type === 'JSXExpressionContainer') return ['content'];
+        return [];
+      }),
+    };
+  }
+  return null;
+}
+
+function canonicalStyleAst(node) {
+  return sortObjectProperties(stripAstMetadata(node, false));
+}
+
+function sortObjectProperties(value) {
+  if (Array.isArray(value)) return value.map(sortObjectProperties);
+  if (!value || typeof value !== 'object') return value;
+  const output = Object.fromEntries(Object.entries(value)
+    .map(([key, nested]) => [key, sortObjectProperties(nested)]));
+  if (output.type === 'ObjectExpression' && Array.isArray(output.properties)) {
+    output.properties.sort((left, right) => (
+      astPropertyName(left).localeCompare(astPropertyName(right))
+      || stableStringify(left).localeCompare(stableStringify(right))
+    ));
+  }
+  return output;
+}
+
+function astPropertyName(node) {
+  if (node?.type === 'SpreadElement') return '...';
+  return propertyName(node?.key);
+}
+
+function canonicalFormulaClosure(valuePath) {
+  const dependencies = [];
+  const seen = new Set();
+  const collect = (path) => {
+    if (!path?.node) return;
+    if (path.isReferencedIdentifier()) {
+      const binding = path.scope.getBinding(path.node.name);
+      if (binding && !seen.has(binding)) {
+        const nested = bindingValuePath(binding);
+        if (nested?.node) {
+          seen.add(binding);
+          dependencies.push(stripAstMetadata(nested.node, false));
+          collect(nested);
+        }
+      }
+    }
+    path.traverse({
+      ReferencedIdentifier(identifierPath) {
+        const binding = identifierPath.scope.getBinding(identifierPath.node.name);
+        if (!binding || seen.has(binding)) return;
+        const nested = bindingValuePath(binding);
+        if (!nested?.node) return;
+        seen.add(binding);
+        dependencies.push(stripAstMetadata(nested.node, false));
+        collect(nested);
+      },
+    });
+  };
+  collect(valuePath);
+  return {
+    expression: stripAstMetadata(valuePath.node, false),
+    dependencies: dependencies.sort((left, right) => (
+      stableStringify(left).localeCompare(stableStringify(right))
+    )),
+  };
+}
+
 function publicComposition(composition) {
-  const mappedUnits = composition.units.filter((item) => item.memoryKind).length;
-  const mappedBehaviours = composition.behaviours.filter((item) => item.memoryKind).length;
+  const mappedUnits = 0;
+  const mappedBehaviours = 0;
+  const infrastructureUnits = composition.units.filter(
+    (item) => item.infrastructureKind,
+  ).length;
+  const infrastructureBehaviours = composition.behaviours.filter(
+    (item) => item.infrastructureKind,
+  ).length;
   const body = {
     compositionKey: composition.compositionKey,
     workspaceKey: composition.workspaceKey,
@@ -567,11 +964,13 @@ function publicComposition(composition) {
     visualSinks: composition.visualSinks,
     unitWitnesses: composition.units.length,
     mappedUnitWitnesses: mappedUnits,
-    residualUnitWitnesses: composition.units.length - mappedUnits,
+    infrastructureUnitWitnesses: infrastructureUnits,
+    residualUnitWitnesses: composition.units.length - mappedUnits - infrastructureUnits,
     behaviourWitnesses: composition.behaviours.length,
     mappedBehaviourWitnesses: mappedBehaviours,
+    infrastructureBehaviourWitnesses: infrastructureBehaviours,
     residualBehaviourWitnesses: composition.behaviours.filter(
-      (item) => item.status !== 'mapped-class-candidate',
+      (item) => !item.infrastructureKind,
     ).length,
     structuralReclassifications: composition.behaviours.filter(
       (item) => item.status === 'structural-reclassification',
@@ -590,14 +989,14 @@ function summarizeWitnesses(witnesses) {
     const key = stableStringify({
       sourceKind: witness.sourceKind,
       capability: witness.capability,
-      memoryKind: witness.memoryKind,
+      infrastructureKind: witness.infrastructureKind ?? null,
       status: witness.status,
       residualCode: witness.residualCode ?? null,
     });
     const current = grouped.get(key) ?? {
       sourceKind: witness.sourceKind,
       capability: witness.capability,
-      memoryKind: witness.memoryKind,
+      infrastructureKind: witness.infrastructureKind ?? null,
       status: witness.status,
       residualCode: witness.residualCode ?? null,
       witnesses: 0,
@@ -612,7 +1011,7 @@ function summarizeWitnesses(witnesses) {
   return [...grouped.values()].map((entry) => ({
     sourceKind: entry.sourceKind,
     capability: entry.capability,
-    memoryKind: entry.memoryKind,
+    infrastructureKind: entry.infrastructureKind,
     status: entry.status,
     ...(entry.residualCode ? { residualCode: entry.residualCode } : {}),
     witnesses: entry.witnesses,
@@ -627,31 +1026,84 @@ function summarizeWitnesses(witnesses) {
 function summarizeCandidates(witnesses) {
   const grouped = new Map();
   for (const witness of witnesses) {
-    const current = grouped.get(witness.memoryKind) ?? {
-      memoryKind: witness.memoryKind,
+    const current = grouped.get(witness.candidateKind) ?? {
+      kind: witness.kind,
+      family: witness.family,
+      candidateKind: witness.candidateKind,
+      identityBasis: witness.identityBasis,
+      identityFingerprintSha256: witness.identityFingerprintSha256,
+      identityFingerprintProven: true,
+      styleFingerprintSha256: witness.styleFingerprintSha256,
+      temporalFingerprintSha256: witness.temporalFingerprintSha256,
+      channel: witness.channel,
       witnesses: 0,
       workspaces: new Set(),
       compositions: new Set(),
       structures: new Set(),
       variants: new Set(),
+      drivers: new Set(),
+      shapes: new Set(),
     };
     current.witnesses += 1;
+    current.identityFingerprintProven &&= witness.identityFingerprintProven;
     current.workspaces.add(witness.workspaceKey);
     current.compositions.add(witness.compositionKey);
     current.structures.add(witness.structuralHash);
     current.variants.add(witness.variantHash);
-    grouped.set(witness.memoryKind, current);
+    (witness.temporalEvidence?.drivers ?? []).forEach((value) => current.drivers.add(value));
+    (witness.temporalEvidence?.shapes ?? []).forEach((value) => current.shapes.add(value));
+    grouped.set(witness.candidateKind, current);
   }
-  return [...grouped.values()].map((entry) => ({
-    memoryKind: entry.memoryKind,
-    witnesses: entry.witnesses,
-    workspaces: entry.workspaces.size,
-    compositions: entry.compositions.size,
-    structuralVariants: entry.structures.size,
-    valueVariants: entry.variants.size,
-    independentReuse: entry.witnesses >= 2 && entry.workspaces.size >= 2,
-    promotion: 'awaiting-reconstruction-and-feedback',
-  })).sort((left, right) => left.memoryKind.localeCompare(right.memoryKind));
+  return [...grouped.values()].map((entry) => {
+    const isUnit = entry.kind === 'unit';
+    const independentReuse = entry.witnesses >= 2 && entry.workspaces.size >= 2;
+    const evidenceReady = independentReuse
+      && entry.identityFingerprintProven
+      && entry.structures.size === 1;
+    const blockers = [
+      ...(!independentReuse ? ['insufficient-independent-workspaces'] : []),
+      ...(!entry.identityFingerprintProven ? [isUnit
+        ? 'style-fingerprint-unproven'
+        : 'temporal-fingerprint-unproven'] : []),
+      ...(entry.structures.size !== 1 ? [isUnit
+        ? 'tree-shape-not-invariant'
+        : 'temporal-signature-not-invariant'] : []),
+      isUnit ? 'semantic-parameterization-unproven' : 'unit-attachment-contract-unproven',
+      'executable-class-not-emitted',
+      'reconstruction-not-proven',
+      'human-feedback-not-provided',
+    ];
+    return {
+      kind: entry.kind,
+      family: entry.family,
+      candidateKind: entry.candidateKind,
+      boundary: entry.identityBasis,
+      identityFingerprintSha256: entry.identityFingerprintSha256,
+      ...(entry.styleFingerprintSha256 ? {
+        styleFingerprintSha256: entry.styleFingerprintSha256,
+      } : {}),
+      ...(entry.temporalFingerprintSha256 ? {
+        temporalFingerprintSha256: entry.temporalFingerprintSha256,
+        channel: entry.channel,
+        temporalEvidence: {
+          singleChannel: true,
+          drivers: [...entry.drivers].sort(),
+          shapes: [...entry.shapes].sort(),
+        },
+      } : {}),
+      witnesses: entry.witnesses,
+      workspaces: entry.workspaces.size,
+      compositions: entry.compositions.size,
+      structuralVariants: entry.structures.size,
+      valueVariants: entry.variants.size,
+      independentReuse,
+      eligibility: {
+        evidenceReady,
+        promotionEligible: false,
+        blockers: [...new Set(blockers)].sort(),
+      },
+    };
+  }).sort((left, right) => left.candidateKind.localeCompare(right.candidateKind));
 }
 
 function findReachableFunctions(ast) {
@@ -1046,16 +1498,20 @@ function witnessId(compositionKey, kind, start, index) {
   return sha256(`${compositionKey}:${kind}:${start ?? 'unknown'}:${index}`).slice(0, 24);
 }
 
-function mapped(capability, memoryKind) {
-  return { capability, memoryKind, status: 'mapped-class-candidate' };
+function mapped(capability, infrastructureKind) {
+  return {
+    capability,
+    infrastructureKind,
+    status: 'infrastructure-mapped',
+  };
 }
 
 function residual(capability, residualCode) {
-  return { capability, memoryKind: null, status: 'residual', residualCode };
+  return { capability, status: 'residual', residualCode };
 }
 
-function mappedVisual(capability, memoryKind) {
-  return { ...mapped(capability, memoryKind), visual: true };
+function mappedVisual(capability, infrastructureKind) {
+  return { ...mapped(capability, infrastructureKind), visual: true };
 }
 
 function visualResidual(capability, residualCode) {
@@ -1065,7 +1521,6 @@ function visualResidual(capability, residualCode) {
 function imperativeResidual(capability, residualCode) {
   return {
     capability,
-    memoryKind: null,
     status: 'imperative-residual',
     residualCode,
     visual: true,

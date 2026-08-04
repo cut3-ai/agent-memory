@@ -6,12 +6,13 @@ import { discoverLibrary } from './discover.js';
 import { assertValidLibrary, verifyDiscovery } from './verify.js';
 
 export const NAVIGATION_INDEX_FORMAT = 'cut3-static-library-index';
-export const NAVIGATION_INDEX_VERSION = 1;
+export const NAVIGATION_INDEX_VERSION = 2;
 
 export function buildNavigationIndex(discovery) {
   const entries = (discovery.publicEntries ?? []).map((entry) => ({
     kind: entry.kind,
     type: entry.type,
+    role: entry.role,
     source: entry.source,
     export: entry.export,
   })).sort(compareIndexEntries);
@@ -63,9 +64,12 @@ export function validateNavigationIndex(index) {
       errors.push(indexIssue('invalid-index-entry', location));
       return;
     }
-    assertExactKeys(entry, ['kind', 'type', 'source', 'export'], location, errors);
+    assertExactKeys(entry, ['kind', 'type', 'role', 'source', 'export'], location, errors);
     if (!['unit', 'behaviour'].includes(entry.type)) {
       errors.push(indexIssue('invalid-entry-type', `${location}.type`));
+    }
+    if (!['infrastructure', 'memory'].includes(entry.role)) {
+      errors.push(indexIssue('invalid-entry-role', `${location}.role`));
     }
     if (typeof entry.kind !== 'string' || !entry.kind.startsWith(`${entry.type}.`)) {
       errors.push(indexIssue('invalid-entry-kind', `${location}.kind`));

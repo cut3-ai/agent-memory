@@ -17,16 +17,16 @@ const LOWER_IS_BETTER = Object.freeze([
 ]);
 
 const HIGHER_IS_BETTER = Object.freeze([
-  'publicBrickStructuralExactCases',
+  'foundationBrickStructuralExactCases',
   'structurallyMatchedCases',
   'exactCases',
   'matchedFrames',
-  'publicUnitCoverage',
-  'publicUnitOccurrences',
-  'publicUnitKinds',
-  'reusableBehaviours',
-  'reusableKinds',
-  'publicBehaviourCoverage',
+  'foundationUnitCoverage',
+  'foundationUnitOccurrences',
+  'foundationUnitKinds',
+  'foundationBehaviours',
+  'foundationBehaviourKinds',
+  'foundationBehaviourCoverage',
 ]);
 
 /**

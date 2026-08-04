@@ -7,6 +7,7 @@ import {
   createPromotionGateIssuer,
   createPromotionGateVerifier,
 } from '../src/memory/promotion.js';
+import { PROMOTION_GATE_NAMES } from '../src/memory/gate-receipts.js';
 
 const H = Object.freeze({
   candidate: '0'.repeat(64),
@@ -64,13 +65,7 @@ function receipt(signal, options = {}) {
 }
 
 function signedGates(overrides = {}, authority = gateIssuer) {
-  return Object.fromEntries([
-    'compilerFidelity',
-    'reconstruction',
-    'atomicity',
-    'privacy',
-    'module',
-  ].map((name) => [name, authority.issue({
+  return Object.fromEntries(PROMOTION_GATE_NAMES.map((name) => [name, authority.issue({
     gateName: name,
     candidateSha256: H.candidate,
     moduleSha256: H.module,
@@ -102,7 +97,7 @@ test('negative user evidence always discards and cannot be overridden by gates',
   assert.deepEqual(decision.reasons, ['human-negative']);
 });
 
-test('positive or neutral promotes only after grace and all five bound gates', () => {
+test('positive or neutral promotes only after grace and all bound gates', () => {
   for (const signal of ['positive', 'neutral']) {
     assert.equal(decide(receipt(signal)).action, 'promote');
     const pending = decide(receipt(signal, { state: 'pending' }));
@@ -110,7 +105,7 @@ test('positive or neutral promotes only after grace and all five bound gates', (
     assert.deepEqual(pending.reasons, ['feedback-grace-incomplete']);
   }
 
-  for (const gate of ['compilerFidelity', 'reconstruction', 'atomicity', 'privacy', 'module']) {
+  for (const gate of PROMOTION_GATE_NAMES) {
     const gates = signedGates({ [gate]: { passed: false } });
     const decision = decide(receipt('positive'), { gates });
     assert.equal(decision.action, 'quarantine', gate);
@@ -130,7 +125,7 @@ test('gate receipts bind candidate, module, dependency closure and one evidence 
 });
 
 test('legacy hash-only gates, missing verifier, tampering, and wrong gate names fail closed', () => {
-  const legacy = Object.fromEntries(['compilerFidelity', 'reconstruction', 'atomicity', 'privacy', 'module']
+  const legacy = Object.fromEntries(PROMOTION_GATE_NAMES
     .map((name) => [name, {
       passed: true,
       receiptSha256: 'a'.repeat(64),

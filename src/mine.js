@@ -2,13 +2,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { RULES, detectMatches } from './detectors.js';
+import {
+  RULES,
+  detectInfrastructureMatches,
+  detectMatches,
+} from './detectors.js';
 import { extractObservation } from './extract.js';
-import { round, sha256, stableStringify } from './lib.js';
+import { sha256, stableStringify } from './lib.js';
 import { completeLinkClusters } from './similarity.js';
 import { detectTimelineArrangements } from './timeline.js';
 
-export const ALGORITHM_VERSION = 'memory-miner-v1.1.0-atomic';
+export const ALGORITHM_VERSION = 'memory-miner-v2.0.0-authentic-tree';
 export const ALGORITHM_DIGEST = computeAlgorithmDigest();
 
 export function mineDataset(inputText, options = {}) {
@@ -18,8 +22,15 @@ export function mineDataset(inputText, options = {}) {
   const ingested = ingestJsonl(inputText);
 
   for (const observation of ingested.observations) {
-    observation.atomicMatches = detectMatches(observation);
-    observation.signals = [...new Set(observation.atomicMatches.map((match) => match.id))]
+    observation.memoryMatches = detectMatches(observation);
+    observation.infrastructureMatches = detectInfrastructureMatches(observation);
+    // Compatibility for aggregate evidence callers. Only memoryMatches are
+    // used to build candidates; atomic channels remain infrastructure.
+    observation.atomicMatches = [
+      ...observation.memoryMatches,
+      ...observation.infrastructureMatches,
+    ];
+    observation.signals = [...new Set(observation.memoryMatches.map((match) => match.id))]
       .sort((left, right) => left.localeCompare(right));
   }
 
@@ -37,7 +48,7 @@ export function mineDataset(inputText, options = {}) {
 
   const runId = sha256(`${inputText}\n${ALGORITHM_VERSION}\n${ALGORITHM_DIGEST}\n${stableStringify(config)}`).slice(0, 20);
   const manifest = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     runId,
     algorithmVersion: ALGORITHM_VERSION,
     algorithmDigest: ALGORITHM_DIGEST,
@@ -62,7 +73,26 @@ export function mineDataset(inputText, options = {}) {
       structuralDuplicateGroups: structuralGroups.filter((group) => group.uniqueSources > 1).length,
       compositionClusters: compositionClusters.length,
       timelineArrangements: timelineArrangements.length,
+      infrastructureChannelOccurrences: ingested.observations.reduce(
+        (total, observation) => total + observation.infrastructureMatches.length,
+        0,
+      ),
+      connectedMotifOccurrences: ingested.observations.reduce(
+        (total, observation) => total + observation.memoryMatches.filter(
+          (match) => match.kind === 'unit',
+        ).length,
+        0,
+      ),
+      stylisticBehaviourOccurrences: ingested.observations.reduce(
+        (total, observation) => total + observation.memoryMatches.filter(
+          (match) => match.kind === 'behaviour',
+        ).length,
+        0,
+      ),
       candidates: candidates.length,
+      evidenceReadyCandidates: candidates.filter(
+        (candidate) => candidate.eligibility.evidenceReady,
+      ).length,
       errors: ingested.errors.length,
     },
   };
@@ -161,6 +191,8 @@ export function sanitizeObservation(observation) {
   const sanitized = structuredClone(observation);
   delete sanitized.private;
   delete sanitized.atomicMatches;
+  delete sanitized.memoryMatches;
+  delete sanitized.infrastructureMatches;
   sanitized.track.id = `track-${sha256(sanitized.track.id).slice(0, 12)}`;
   sanitized.track.comment = null;
   sanitized.code.parseError = sanitized.code.parseError ? 'parse-error' : null;
@@ -284,87 +316,110 @@ function uniqueSourceRepresentatives(observations) {
 }
 
 function buildCandidates({ observations }) {
-  const ruleCandidates = RULES.flatMap((definition) => {
-    const evidence = observations.filter((observation) => observation.signals.includes(definition.id));
-    const matches = evidence.flatMap((observation) => (
-      observation.atomicMatches
+  const candidates = RULES.flatMap((definition) => {
+    const matches = observations.flatMap((observation) => (
+      observation.memoryMatches
         .filter((match) => match.id === definition.id)
         .map((match) => ({ observation, match }))
     ));
-    return matches.length > 0
-      ? [candidateFromEvidence(definition, evidence, matches)]
-      : [];
+    const variants = new Map();
+    for (const witness of matches) {
+      const signature = witness.match.identityFingerprintSha256
+        ?? witness.match.temporalFingerprintSha256
+        ?? witness.match.styleFingerprintSha256
+        ?? witness.match.structuralHash;
+      if (!variants.has(signature)) variants.set(signature, []);
+      variants.get(signature).push(witness);
+    }
+    return [...variants.entries()].map(([signature, witnesses]) => (
+      candidateFromEvidence(definition, signature, witnesses)
+    ));
   });
 
-  const maturityRank = { strong: 0, promising: 1, experimental: 2 };
-  return ruleCandidates.sort((left, right) => (
-    maturityRank[left.maturity] - maturityRank[right.maturity]
-    || right.confidence.score - left.confidence.score
-    || left.kind.localeCompare(right.kind)
+  return candidates.sort((left, right) => (
+    Number(right.eligibility.evidenceReady) - Number(left.eligibility.evidenceReady)
+    || right.evidence.workspaces - left.evidence.workspaces
+    || right.evidence.occurrences - left.evidence.occurrences
     || left.id.localeCompare(right.id)
   ));
 }
 
-function candidateFromEvidence(definition, evidence, matches) {
-  const sourceCount = new Set(evidence.map((item) => item.sourceHash)).size;
-  const implementationCount = new Set(matches.map(({ match }) => match.variantHash ?? match.structuralHash)).size;
-  const workspaceCount = new Set(evidence.map((item) => item.workspace.index)).size;
+function candidateFromEvidence(definition, signature, matches) {
+  const isUnit = definition.kind === 'unit';
+  const isBehaviour = definition.kind === 'behaviour';
+  const observations = [...new Map(matches.map(({ observation }) => (
+    [observation.observationId, observation]
+  ))).values()];
+  const sourceCount = new Set(observations.map((item) => item.sourceHash)).size;
+  const implementationCount = new Set(matches.map(
+    ({ match }) => match.identityFingerprintSha256 ?? match.structuralHash,
+  )).size;
+  const workspaceCount = new Set(observations.map((item) => item.workspace.index)).size;
   const occurrenceKeys = new Set(matches.map(({ observation, match }) => (
     `${observation.observationId}:${match.span.start}:${match.span.end}:${match.channel ?? ''}`
   )));
   const independentSupport = new Set(matches.map(({ observation, match }) => (
-    `${observation.workspace.index}:${match.variantHash ?? match.structuralHash}`
+    `${observation.workspace.index}:${match.identityFingerprintSha256 ?? match.structuralHash}`
   ))).size;
-  const validCount = evidence.filter((item) => item.code.parseStatus === 'valid').length;
-  const variantCounts = countValues(matches.map(({ match }) => match.variantHash ?? match.structuralHash));
-  const dominantVariantCount = Math.max(0, ...Object.values(variantCounts));
-  const localCohesion = matches.length === 0 ? 0 : dominantVariantCount / matches.length;
   const spansAvailable = matches.every(({ match }) => (
     Number.isInteger(match.span?.start)
     && Number.isInteger(match.span?.end)
     && match.span.end > match.span.start
   ));
-  const extractionState = spansAvailable
-    ? 'atomic-occurrences-located'
-    : 'recognized-not-extracted';
-  const baseExtractability = spansAvailable ? 0.8 : 0.35;
-  const components = {
-    support: Math.min(1, Math.log2(1 + independentSupport) / Math.log2(25)),
-    diversity: Math.min(1, implementationCount / 10),
-    crossWorkspace: Math.min(1, workspaceCount / 5),
-    cohesion: localCohesion,
-    extractability: evidence.length === 0 ? 0 : baseExtractability * (validCount / evidence.length),
-  };
-  const penalties = [];
-  if (evidence.some((item) => item.code.features.hasMathRandom || item.code.features.hasNondeterministicClock)) {
-    penalties.push({ code: 'nondeterministic-runtime', value: 0.15 });
-  }
-  const penalty = penalties.reduce((sum, item) => sum + item.value, 0);
-  const score = round(Math.max(0,
-    0.25 * components.support
-    + 0.15 * components.diversity
-    + 0.15 * components.crossWorkspace
-    + 0.30 * components.cohesion
-    + 0.15 * components.extractability
-    - penalty,
-  ), 4);
-  const tier = score >= 0.78
-      && independentSupport >= 3
-      && workspaceCount >= 2
-      && penalties.length === 0
-      && extractionState === 'extracted'
-    ? 'strong-review'
-    : score >= 0.58 && independentSupport >= 2 && workspaceCount >= 2
-      ? 'review'
-      : 'inventory-only';
-  const maturity = tier === 'strong-review' ? 'strong' : tier === 'review' ? 'promising' : 'experimental';
-  const observationIds = evidence.map((item) => item.observationId).sort();
+  const coherentBoundaries = matches.every(({ match }) => (
+    (isUnit
+      && match.occurrenceKind === 'connected-styled-subtree'
+      && match.treeEvidence?.connected === true
+      && match.treeEvidence.directChildren >= 1)
+    || (isBehaviour
+      && match.occurrenceKind === 'single-stylistic-channel-law'
+      && match.temporalEvidence?.singleChannel === true
+      && match.writes?.length === 1)
+  ));
+  const fingerprintProven = matches.every(
+    ({ match }) => match.identityFingerprintProven === true,
+  );
+  const atomicChannels = [...new Set(matches.flatMap(
+    ({ match }) => match.atomicChannels ?? [],
+  ))].sort((left, right) => left.localeCompare(right));
+  const singleChannel = !isBehaviour || atomicChannels.length === 1;
+  const evidenceReady = spansAvailable
+    && coherentBoundaries
+    && fingerprintProven
+    && singleChannel
+    && workspaceCount >= 2
+    && sourceCount >= 2;
+  const blockers = [
+    ...(!spansAvailable ? ['connected-boundary-unavailable'] : []),
+    ...(!coherentBoundaries ? [isUnit
+      ? 'coherent-tree-boundary-unproven'
+      : 'stylistic-temporal-boundary-unproven'] : []),
+    ...(!fingerprintProven ? [isUnit
+      ? 'style-fingerprint-unproven'
+      : 'temporal-fingerprint-unproven'] : []),
+    ...(!singleChannel ? ['single-channel-boundary-unproven'] : []),
+    ...(workspaceCount < 2 ? ['insufficient-independent-workspaces'] : []),
+    ...(sourceCount < 2 ? ['insufficient-independent-sources'] : []),
+    isUnit ? 'semantic-parameterization-unproven' : 'unit-attachment-contract-unproven',
+    'executable-class-not-emitted',
+    'reconstruction-not-proven',
+    'human-feedback-not-provided',
+  ];
+  const observationIds = observations.map((item) => item.observationId).sort();
   const sampleOccurrences = matches
     .map(({ observation, match }) => ({
       observationId: observation.observationId,
       span: { ...match.span },
       dependencySpans: (match.dependencySpans ?? []).map((span) => ({ ...span })),
-      ...(match.channel ? { channel: match.channel } : {}),
+      atomicChannels: [...(match.atomicChannels ?? [])],
+      ...(match.treeEvidence ? { treeEvidence: { ...match.treeEvidence } } : {}),
+      ...(match.temporalEvidence ? {
+        temporalEvidence: {
+          ...match.temporalEvidence,
+          drivers: [...(match.temporalEvidence.drivers ?? [])],
+          shapes: [...(match.temporalEvidence.shapes ?? [])],
+        },
+      } : {}),
     }))
     .sort((left, right) => (
       left.observationId.localeCompare(right.observationId)
@@ -374,45 +429,49 @@ function candidateFromEvidence(definition, evidence, matches) {
     .slice(0, 8);
 
   return {
-    id: definition.id,
+    id: `${definition.kind}.${definition.family}.${signature.slice(0, 12)}`,
+    detectorId: definition.id,
+    family: definition.family,
     kind: definition.kind,
     status: 'observed',
-    state: 'suggested',
+    state: evidenceReady ? 'evidence-ready' : 'inventory',
     feedback: 'unknown',
     trusted: false,
-    maturity,
     description: definition.description,
-    intents: [...definition.intents].sort(),
     atomicity: { ...definition.atomicity },
-    ...(definition.kind === 'unit' ? {
-      propsSchema: definition.propsSchema,
-      providesCapabilities: [...definition.providesCapabilities],
-    } : {
-      configSchema: definition.configSchema,
-      requiresCapabilities: [...definition.requiresCapabilities],
-      writes: [...definition.writes],
-    }),
-    confidence: {
-      score,
-      tier,
-      meaning: 'Repeatability and extractability evidence; not visual quality or human approval.',
-      components: Object.fromEntries(Object.entries(components).map(([key, value]) => [key, round(value, 4)])),
-      penalties,
+    identity: {
+      basis: isUnit ? 'connected-styled-subtree' : 'single-stylistic-channel-law',
+      fingerprintSha256: signature,
+      ...(isUnit ? { styleFingerprintSha256: signature } : {
+        temporalFingerprintSha256: signature,
+        channel: atomicChannels[0] ?? null,
+      }),
+    },
+    eligibility: {
+      evidenceReady,
+      promotionEligible: false,
+      blockers: [...new Set(blockers)].sort(),
     },
     extraction: {
-      state: extractionState,
+      state: spansAvailable && coherentBoundaries
+        ? (isUnit ? 'connected-subtree-located' : 'single-channel-law-located')
+        : (isUnit ? 'connected-subtree-unavailable' : 'single-channel-law-unavailable'),
       spansAvailable,
-      localCohesion: round(localCohesion, 4),
-      atomicOccurrences: occurrenceKeys.size,
+      connectedBoundaries: coherentBoundaries,
+      occurrences: occurrenceKeys.size,
       spanSource: 'normalized-composition',
     },
     evidence: {
-      observations: evidence.length,
+      observations: observations.length,
+      occurrences: occurrenceKeys.size,
       independentOccurrences: independentSupport,
-      supportBasis: 'local-ast-occurrences',
+      supportBasis: isUnit
+        ? 'connected-styled-subtree-variants'
+        : 'single-stylistic-channel-law-variants',
       uniqueSources: sourceCount,
       distinctImplementations: implementationCount,
       workspaces: workspaceCount,
+      atomicChannels,
       acceptedPositive: 0,
       acceptedNeutral: 0,
       rejected: 0,
@@ -420,12 +479,6 @@ function candidateFromEvidence(definition, evidence, matches) {
       sampleOccurrences,
     },
   };
-}
-
-function countValues(values) {
-  const counts = {};
-  for (const value of values) counts[value] = (counts[value] ?? 0) + 1;
-  return counts;
 }
 
 function buildPreviewIndex(runId, candidates) {
@@ -438,26 +491,19 @@ function buildPreviewIndex(runId, candidates) {
     warning: 'Discovery evidence is not human approval. Review before creating production memory entries.',
     entries: candidates.map((candidate) => ({
       id: candidate.id,
+      detectorId: candidate.detectorId,
+      family: candidate.family,
       kind: candidate.kind,
       status: candidate.status,
       state: candidate.state,
       feedback: candidate.feedback,
       trusted: candidate.trusted,
-      maturity: candidate.maturity,
-      confidence: candidate.confidence,
+      identity: candidate.identity,
+      eligibility: candidate.eligibility,
       extraction: candidate.extraction,
       evidence: candidate.evidence,
       description: candidate.description,
-      intents: candidate.intents,
       atomicity: candidate.atomicity,
-      ...(candidate.kind === 'unit' ? {
-        propsSchema: candidate.propsSchema,
-        providesCapabilities: candidate.providesCapabilities,
-      } : {
-        configSchema: candidate.configSchema,
-        requiresCapabilities: candidate.requiresCapabilities,
-        writes: candidate.writes,
-      }),
     })),
   };
 }

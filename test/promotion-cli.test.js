@@ -12,6 +12,7 @@ import {
   candidateRevisionSha256,
 } from '../src/library/promotion-ledger.js';
 import { createPromotionGateAuthority } from '../src/memory/gate-receipts.js';
+import { PROMOTION_GATE_NAMES } from '../src/memory/gate-receipts.js';
 
 const run = promisify(execFile);
 const SECRET = 'cli-only-promotion-gate-secret-that-is-long-enough';
@@ -59,6 +60,7 @@ test('promotion CLI requires a local gate authority and rejects forged JSON rece
   const revision = {
     candidateSha256: candidateRevisionSha256({
       ...candidate,
+      role: 'memory',
       moduleSha256,
       dependencyClosureSha256,
     }),
@@ -155,7 +157,7 @@ function signedGates(revision, authority) {
 }
 
 function gateNames() {
-  return ['compilerFidelity', 'reconstruction', 'atomicity', 'privacy', 'module'];
+  return PROMOTION_GATE_NAMES;
 }
 
 async function exists(filename) {

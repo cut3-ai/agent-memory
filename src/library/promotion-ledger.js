@@ -8,7 +8,7 @@ import {
 } from '../memory/gate-receipts.js';
 
 export const PROMOTION_LEDGER_FORMAT = 'cut3-promotion-ledger';
-export const PROMOTION_LEDGER_VERSION = 2;
+export const PROMOTION_LEDGER_VERSION = 3;
 export const DEFAULT_PROMOTION_LEDGER_FILE = 'promotion-ledger.json';
 export const DEPENDENCY_CLOSURE_VERSION = 1;
 
@@ -17,6 +17,7 @@ const SAFE_EXPORT = /^(?:default|[$A-Z_a-z][$\w]*)$/u;
 const SAFE_KIND = /^(?:unit|behaviour)\.[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/u;
 const SAFE_GATE_AUTHORITY = /^[A-Za-z0-9._-]{1,100}$/u;
 const AUTHORITIES = new Set(['reviewed-core', 'human-feedback']);
+const ROLES = new Set(['infrastructure', 'memory']);
 
 /**
  * Load the public allowlist as JSON. Missing ledger means an empty public
@@ -76,7 +77,7 @@ export function createReviewedCoreLedger(discovery, reviewedKinds, options = {})
     const discovered = byKind.get(kind);
     if (!discovered) throw new Error(`Reviewed class is not discovered: ${kind}`);
     const moduleSha256 = modules.get(discovered.source);
-    const identity = publicIdentity(discovered, moduleSha256);
+    const identity = publicIdentity(discovered, moduleSha256, 'infrastructure');
     const dependencyClosure = buildDependencyClosure(discovery, discovered.source);
     return {
       ...identity,
@@ -121,6 +122,7 @@ export function validatePromotionLedger(value) {
       'type',
       'source',
       'export',
+      'role',
       'moduleSha256',
       'dependencyClosure',
       'revisionSha256',
@@ -141,6 +143,7 @@ export function validatePromotionLedger(value) {
     if (typeof entry.export !== 'string' || !SAFE_EXPORT.test(entry.export)) {
       issue(errors, 'invalid-entry-export', `${location}.export`);
     }
+    if (!ROLES.has(entry.role)) issue(errors, 'invalid-entry-role', `${location}.role`);
     if (!isHash(entry.moduleSha256)) issue(errors, 'invalid-module-sha256', `${location}.moduleSha256`);
     validateDependencyClosure(entry.dependencyClosure, entry, `${location}.dependencyClosure`, errors);
     if (!isHash(entry.revisionSha256)) {
@@ -153,6 +156,10 @@ export function validatePromotionLedger(value) {
       issue(errors, 'revision-sha256-mismatch', `${location}.revisionSha256`);
     }
     if (!AUTHORITIES.has(entry.authority)) issue(errors, 'invalid-entry-authority', `${location}.authority`);
+    if ((entry.authority === 'reviewed-core' && entry.role !== 'infrastructure')
+        || (entry.authority === 'human-feedback' && entry.role !== 'memory')) {
+      issue(errors, 'entry-role-authority-mismatch', `${location}.role`);
+    }
     if (entry.authority === 'reviewed-core' && entry.decisionSha256 !== null) {
       issue(errors, 'unexpected-seed-decision', `${location}.decisionSha256`);
     }
@@ -223,7 +230,7 @@ export function resolvePromotedEntries(discovery, ledgerValidation) {
         issue(errors, 'promoted-dependency-revision-mismatch', ledgerEntry.kind);
         continue;
       }
-      promotedEntries.push(discovered);
+      promotedEntries.push({ ...discovered, role: ledgerEntry.role });
       promotedKinds.add(discovered.kind);
     }
   }
@@ -262,7 +269,7 @@ export function appendPromotionDecision(ledger, discovery, decision, authorizati
   const discovered = uniqueDiscoveredKinds(discovery.entries).get(decision.candidate?.kind);
   if (!discovered) throw new Error('Promotion candidate is not a discovered class');
   const moduleSha256 = moduleHashes(discovery.modules).get(discovered.source);
-  const identity = publicIdentity(discovered, moduleSha256);
+  const identity = publicIdentity(discovered, moduleSha256, 'memory');
   const dependencyClosure = buildDependencyClosure(discovery, discovered.source);
   const dependencyClosureSha256 = dependencyClosure.closureSha256;
   const revisionSha256 = candidateRevisionSha256({
@@ -313,7 +320,7 @@ function assertSignedGateAuthorization(decision, authorization, expected) {
 function assertPromotionDecision(decision) {
   if (decision?.action !== 'promote'
       || decision?.eligibleForPromotion !== true
-      || decision?.policyVersion !== 'human-feedback-v5-generation-bound'
+      || decision?.policyVersion !== 'human-feedback-v6-authenticity-bound'
       || !Array.isArray(decision.reasons)
       || decision.reasons.length !== 0) {
     throw new Error('Only an eligible promote decision can update the ledger');
@@ -333,7 +340,7 @@ function assertPromotionDecision(decision) {
       || !isHash(decision.candidate?.evidenceSha256)) {
     throw new Error('Promotion decision lacks dependency or evidence revision binding');
   }
-  for (const gate of ['compilerFidelity', 'reconstruction', 'atomicity', 'privacy', 'module']) {
+  for (const gate of PROMOTION_GATE_NAMES) {
     const receipt = decision.gates?.[gate];
     if (receipt?.passed !== true
         || typeof receipt.authorityId !== 'string'
@@ -350,6 +357,7 @@ function assertPromotionDecision(decision) {
 }
 
 export function candidateRevisionSha256(value) {
+  if (!ROLES.has(value?.role)) throw new TypeError('candidate role must be infrastructure or memory');
   if (!isHash(value?.dependencyClosureSha256)) {
     throw new TypeError('dependencyClosureSha256 must be a lowercase SHA-256');
   }
@@ -358,6 +366,7 @@ export function candidateRevisionSha256(value) {
     type: value.type,
     source: value.source,
     export: value.export,
+    role: value.role,
     moduleSha256: value.moduleSha256,
     dependencyClosureSha256: value.dependencyClosureSha256,
   }));
@@ -439,12 +448,13 @@ function uniqueDiscoveredKinds(entries) {
   return byKind;
 }
 
-function publicIdentity(entry, moduleSha256) {
+function publicIdentity(entry, moduleSha256, role) {
   return {
     kind: entry.kind,
     type: entry.type,
     source: entry.source,
     export: entry.export,
+    role,
     moduleSha256,
   };
 }
@@ -456,6 +466,7 @@ function normalizeLedgerEntry(entry) {
     type: entry.type,
     source: entry.source,
     export: entry.export,
+    role: entry.role,
     moduleSha256: entry.moduleSha256,
     dependencyClosure: normalizeDependencyClosure(entry.dependencyClosure),
     revisionSha256: entry.revisionSha256,
@@ -573,6 +584,7 @@ function hasValidRevisionIdentity(entry) {
     && typeof entry.type === 'string'
     && typeof entry.source === 'string'
     && typeof entry.export === 'string'
+    && ROLES.has(entry.role)
     && isHash(entry.moduleSha256)
     && isHash(entry.dependencyClosure?.closureSha256);
 }

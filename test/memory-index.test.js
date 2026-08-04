@@ -47,7 +47,8 @@ test('memory index delegates to AST-only library discovery', async (context) => 
     'unit.text',
   ]);
   index.entries.forEach((entry) => {
-    assert.deepEqual(Object.keys(entry), ['kind', 'type', 'source', 'export']);
+    assert.deepEqual(Object.keys(entry), ['kind', 'type', 'role', 'source', 'export']);
+    assert.equal(entry.role, 'infrastructure');
   });
 
   const report = await verifyClassIndex(root, index, { promotionLedger });

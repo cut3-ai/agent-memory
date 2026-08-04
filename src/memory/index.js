@@ -42,3 +42,11 @@ export {
   PromotionGateConfigurationError,
   verifyPromotionGateReceipt,
 } from './promotion.js';
+
+export {
+  buildCorpusCensus,
+  CORPUS_RULESET_VERSION,
+  ingestCompositionTracks,
+} from './corpus.js';
+export { evaluateMemoryCandidate } from './evaluate.js';
+export { MEMORY_ALGORITHM_VERSION, runMemoryPipeline } from './pipeline.js';

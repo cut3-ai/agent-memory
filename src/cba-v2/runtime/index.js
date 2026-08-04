@@ -1,6 +1,7 @@
 export {
   NATIVE_FRAGMENT,
   NativeUnit,
+  isArrayValue,
   plainVisualValue,
   readElementProp,
   readStyleValue,

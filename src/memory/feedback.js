@@ -5,7 +5,7 @@ import {
   verifyPromotionGateReceipt,
 } from './gate-receipts.js';
 
-export const FEEDBACK_POLICY_VERSION = 'human-feedback-v5-generation-bound';
+export const FEEDBACK_POLICY_VERSION = 'human-feedback-v6-authenticity-bound';
 export const MINIMUM_STABILITY_WINDOW_MS = 0;
 export const MINIMUM_FEEDBACK_GRACE_MS = 30_000;
 
@@ -17,6 +17,7 @@ const GATE_FAILURE_REASONS = Object.freeze({
   compilerFidelity: 'compiler-fidelity-gate-failed',
   reconstruction: 'reconstruction-gate-failed',
   atomicity: 'atomicity-gate-failed',
+  authenticity: 'authenticity-gate-failed',
   privacy: 'privacy-gate-failed',
   module: 'module-gate-failed',
 });

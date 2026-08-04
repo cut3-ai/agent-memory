@@ -38,6 +38,7 @@ const SIGNAL_ALIASES = {
     'transition.whiteFlash',
   ],
   rankingCard: [
+    'motif.ranking-card',
     'card.ranking',
     'unit.card.rankingHero',
     'card.RankingHero',
@@ -45,6 +46,7 @@ const SIGNAL_ALIASES = {
     'card.RankingCard',
   ],
   timedScatter: [
+    'motif.timed-text-card',
     'text.scatter-chunk',
     'text.timed-word-scatter',
     'unit.text.timedScatterWords',
@@ -53,6 +55,7 @@ const SIGNAL_ALIASES = {
     'text.revealTimedGroups',
   ],
   dialogueBox: [
+    'motif.dialogue-card',
     'text.dialogue-card',
     'unit.text.dialogueBox',
     'text.DialogueBox',

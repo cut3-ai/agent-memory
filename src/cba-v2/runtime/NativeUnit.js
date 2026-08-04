@@ -1,24 +1,29 @@
-import { Unit, isUnit } from '../../../core/Unit.js';
+import { Unit, isUnit, requireUnit } from '../../../core/Unit.js';
 import { projectUnit } from '../../../core/frame.js';
 
 export const NATIVE_FRAGMENT = Symbol.for('@cut3/agent-memory.cba-v2.fragment');
 const TRANSFORM_PLAN = Symbol('cba-v2.transform-plan');
 
+/** Stable intrinsic for generated helpers even when source shadows `Array`. */
+export function isArrayValue(value) { return Array.isArray(value); }
+
 /** Lossless boundary for elements which do not yet have a public Unit class. */
 export class NativeUnit extends Unit {
   static kind = 'unit.internal.native';
 
-  constructor(type, props = null, ...content) {
-    super();
-    for (const unit of collectUnits(content)) this.addUnit(unit);
+  constructor(type, props = null, content = [], unit = null) {
+    if (!Array.isArray(content)) throw new TypeError('NativeUnit content must be an array');
+    if (unit === null) super();
+    else super(requireUnit(unit, 'NativeUnit child'));
     // The lossless evaluator boundary may retain component functions and child
     // Unit references. Keep those implementation details outside the public,
     // serializable Unit state inspected by the domain engine.
     Object.defineProperties(this, {
       type: { value: type, enumerable: false, writable: false },
       props: { value: props ?? {}, enumerable: false, writable: false },
-      content: { value: content, enumerable: false, writable: false },
+      content: { value: [...content], enumerable: false, writable: false },
     });
+    requireNativeRenderFrontier(this);
   }
 }
 
@@ -118,9 +123,22 @@ export function renderNativeTree(value, React, context = {}, renderUnit = null, 
     for (const [key, nested] of Object.entries(patch)) {
       if (!['opacity', 'style', 'transform'].includes(key)) props[key] = nested;
     }
-    const children = value.content.map((child) => (
-      renderNativeTree(child, React, context, renderUnit, options)
-    ));
+    // Primitive positions stay in the lossless content plan, but every Unit
+    // slot is authorized by the real ownership tree. Rendering therefore
+    // cannot silently use a parallel flat Unit graph.
+    const frontier = requireNativeRenderFrontier(value);
+    let unitIndex = 0;
+    const renderContent = (child) => {
+      if (Array.isArray(child)) return child.map(renderContent);
+      if (!isUnit(child)) return child;
+      const owned = frontier[unitIndex++];
+      if (owned !== child) throw new TypeError('NativeUnit content is not its Unit-tree projection');
+      return renderNativeTree(owned, React, context, renderUnit, options);
+    };
+    const children = value.content.map(renderContent);
+    if (unitIndex !== frontier.length) {
+      throw new TypeError('NativeUnit content does not cover its Unit-tree projection');
+    }
     const type = value.type === NATIVE_FRAGMENT ? React.Fragment : value.type;
     if (typeof type === 'function') {
       const componentProps = { ...props };
@@ -169,6 +187,9 @@ export function renderNativeTree(value, React, context = {}, renderUnit = null, 
   });
   const output = renderUnit(adapterContext);
   if (output === unhandled) {
+    if (value.children.length === 1) {
+      return renderNativeTree(value.children[0], React, context, renderUnit, options);
+    }
     throw new TypeError(`No static cba-v2 adapter for ${value.constructor.name}`);
   }
   return output;
@@ -207,6 +228,30 @@ function formatTransform(kind, value) {
 
 function isRecord(value) { return Boolean(value && typeof value === 'object' && !Array.isArray(value)); }
 function renderedChild(value) { return value !== null && value !== undefined && value !== false; }
+function requireNativeRenderFrontier(unit) {
+  const contentUnits = [...collectUnits(unit.content)];
+  if (contentUnits.length === 0) {
+    if (unit.children.length !== 0) {
+      throw new TypeError('NativeUnit has a Unit tree without render slots');
+    }
+    return [];
+  }
+  if (contentUnits.length === 1) {
+    if (unit.children.length !== 1 || unit.children[0] !== contentUnits[0]) {
+      throw new TypeError('NativeUnit render slot is not its owned child');
+    }
+    return [unit.children[0]];
+  }
+  const group = unit.children.length === 1 ? unit.children[0] : null;
+  if (group?.constructor?.kind !== 'unit.group'
+      || Reflect.ownKeys(group).length !== 0
+      || group.behaviours.length !== 0
+      || group.children.length !== contentUnits.length
+      || group.children.some((child, index) => child !== contentUnits[index])) {
+    throw new TypeError('NativeUnit render slots require one transparent Group child');
+  }
+  return group.children;
+}
 function* collectUnits(values) {
   for (const value of values) {
     if (Array.isArray(value)) yield* collectUnits(value);

@@ -91,6 +91,8 @@ test('public artifact validation allows bounded schema metadata and real module 
     candidateSha256: 'a'.repeat(64),
     counts: { compositions: 12, matchedFrames: 400 },
     candidateKind: 'unit.box',
+    channel: 'transform.scale',
+    infrastructureKind: 'behaviour.opacity',
     candidate: { kind: 'unit.text-card' },
     capability: 'visual.container',
     sourceKind: 'jsx.container',

@@ -16,6 +16,7 @@ import {
   createPromotionGateAuthority,
   orchestrateMemoryPromotion,
 } from '../src/memory/promotion.js';
+import { PROMOTION_GATE_NAMES } from '../src/memory/gate-receipts.js';
 
 const EVIDENCE = 'e'.repeat(64);
 const GATE_SECRET = 'test-only-promotion-gate-secret-with-32-bytes';
@@ -374,6 +375,7 @@ function revisionFor(candidate) {
   return {
     candidateSha256: candidateRevisionSha256({
       ...candidate,
+      role: 'memory',
       moduleSha256,
       dependencyClosureSha256,
     }),
@@ -407,13 +409,7 @@ function discoveryFor(candidate) {
 }
 
 function passingGates(revision, authority = gateAuthority) {
-  return Object.fromEntries([
-    'compilerFidelity',
-    'reconstruction',
-    'atomicity',
-    'privacy',
-    'module',
-  ].map((name) => [name, authority.issue({
+  return Object.fromEntries(PROMOTION_GATE_NAMES.map((name) => [name, authority.issue({
     gateName: name,
     candidateSha256: revision.candidateSha256,
     moduleSha256: revision.moduleSha256,

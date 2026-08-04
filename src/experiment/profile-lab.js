@@ -39,7 +39,7 @@ import {
   settleProviderCallIntent,
 } from './profile-progress.js';
 
-export const PROFILE_LAB_VERSION = 'cba-profile-search-v4';
+export const PROFILE_LAB_VERSION = 'cba-foundation-profile-search-v5';
 export const DEFAULT_PROFILE_LAB_ATTEMPT_ID = 'legacy-default';
 
 const PROFILE_LAB_ATTEMPT_ID = /^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/u;
@@ -78,11 +78,13 @@ export async function runCbaProfileLab(inputText, options = {}) {
   if (discovery.promotion?.ok !== true) {
     throw new Error('Promotion ledger verification failed');
   }
-  const treeShaking = await verifyDomTreeShaking({
+  const domDriverStaticReachability = await verifyDomTreeShaking({
     rootDir: repositoryRoot,
     entries: ['core/drivers/react.js'],
   });
-  if (!treeShaking.ok) throw new Error('DOM tree-shaking verification failed');
+  if (!domDriverStaticReachability.ok) {
+    throw new Error('DOM driver static import reachability verification failed');
+  }
   const navigationIndex = buildNavigationIndex(discovery);
   const indexReport = validateNavigationIndex(navigationIndex);
   if (!indexReport.ok) throw new Error('Generated navigation index failed validation');
@@ -90,7 +92,12 @@ export async function runCbaProfileLab(inputText, options = {}) {
     libraryVerified: libraryReport.ok,
     promotionVerified: discovery.promotion.ok,
     indexVerified: indexReport.ok,
-    indexedKinds: new Set(navigationIndex.entries.map(({ kind }) => kind)),
+    foundationKinds: new Set(navigationIndex.entries
+      .filter(({ role }) => role === 'infrastructure')
+      .map(({ kind }) => kind)),
+    memoryKinds: new Set(navigationIndex.entries
+      .filter(({ role }) => role === 'memory')
+      .map(({ kind }) => kind)),
   });
 
   const baseline = evaluateTuningProfile(
@@ -117,7 +124,7 @@ export async function runCbaProfileLab(inputText, options = {}) {
   );
   assertPublicArtifact(preflight);
   if (!preflight.passed) {
-    throw new Error('All-feature profile failed the local public-brick preflight');
+    throw new Error('All-feature profile failed the local foundation-brick preflight');
   }
   const revealCandidateIds = createSequentialProfileFrontier(
     CBA_V2_SEARCH_SPACE,
@@ -129,6 +136,8 @@ export async function runCbaProfileLab(inputText, options = {}) {
   }));
   const checkpointBindingSha256 = sha256(stableStringify({
     algorithm: PROFILE_LAB_VERSION,
+    optimizationScope: 'foundation-lowering-only',
+    authenticMemoryClassesGenerated: 0,
     attemptId,
     datasetSha256: dataset.inputSha256,
     evaluatorSha256: evaluator.sha256,
@@ -261,6 +270,8 @@ export async function runCbaProfileLab(inputText, options = {}) {
     schemaVersion: 1,
     experimentId,
     algorithm: PROFILE_LAB_VERSION,
+    optimizationScope: 'foundation-lowering-only',
+    authenticMemoryClassesGenerated: 0,
     attemptId,
     checkpointBindingSha256,
     datasetSha256: dataset.inputSha256,
@@ -303,8 +314,9 @@ export async function runCbaProfileLab(inputText, options = {}) {
     verificationLevel: 'generated-esm-parse-and-render-tree-all-frames',
     pixelComparisonPerformed: false,
     treeMatchedIncludingFallback: full.structurallyMatchedCases === full.cases,
-    publicBrickStructuralOneToOneVerified:
-      full.publicBrickStructuralExactCases === full.cases,
+    foundationBrickStructuralOneToOneVerified:
+      full.foundationBrickStructuralExactCases === full.cases,
+    authenticMemoryStructuralExactCases: full.authenticMemoryStructuralExactCases,
     oneToOneVisualVerified: false,
     models,
   };
@@ -344,18 +356,23 @@ export async function runCbaProfileLab(inputText, options = {}) {
       failures: discovery.promotion.errors.length,
       ledgerSha256: discovery.promotion.ledgerSha256,
     },
-    treeShaking: {
-      valid: treeShaking.ok,
-      reachableFiles: treeShaking.files.length,
-      externalImports: treeShaking.externalImports.length,
-      failures: treeShaking.errors.length,
+    domDriverStaticReachability: {
+      valid: domDriverStaticReachability.ok,
+      method: 'static-esm-import-reachability',
+      bundlerOptimizationProven: false,
+      reachableFiles: domDriverStaticReachability.files.length,
+      externalImports: domDriverStaticReachability.externalImports.length,
+      failures: domDriverStaticReachability.errors.length,
     },
     navigationEntries: navigationIndex.entries.length,
     navigationIndexValid: indexReport.ok,
     invalidBehaviourOwners: full.invalidOwners,
-    publicBrickStructuralExactCases: full.publicBrickStructuralExactCases,
+    foundationBrickStructuralExactCases: full.foundationBrickStructuralExactCases,
+    authenticMemoryStructuralExactCases: full.authenticMemoryStructuralExactCases,
     fallbackMatchedCases: full.fallbackMatchedCases,
-    publicUnitCoverage: full.publicUnitCoverage,
+    foundationUnitCoverage: full.foundationUnitCoverage,
+    authenticMemoryUnitOccurrences: full.authenticMemoryUnitOccurrences,
+    authenticMemoryBehaviourOccurrences: full.authenticMemoryBehaviourOccurrences,
     nativeUnits: full.nativeUnits,
     localBehaviours: full.localBehaviours,
     residualVisualComputations: full.residualVisualComputations,
@@ -446,13 +463,17 @@ function evaluateTuningProfile(dataset, split, profile, assurance) {
 }
 
 function createCapabilityPreflight(baseline, profile, evaluation) {
-  const baselineTrainPublicBrickCases = baseline.metrics.train.publicBrickStructuralExactCases;
-  const allFeatureTrainPublicBrickCases = evaluation.metrics.train.publicBrickStructuralExactCases;
-  const baselineValidationPublicBrickCases = (
-    baseline.metrics.validation.publicBrickStructuralExactCases
+  const baselineTrainFoundationBrickCases = (
+    baseline.metrics.train.foundationBrickStructuralExactCases
   );
-  const allFeatureValidationPublicBrickCases = (
-    evaluation.metrics.validation.publicBrickStructuralExactCases
+  const allFeatureTrainFoundationBrickCases = (
+    evaluation.metrics.train.foundationBrickStructuralExactCases
+  );
+  const baselineValidationFoundationBrickCases = (
+    baseline.metrics.validation.foundationBrickStructuralExactCases
+  );
+  const allFeatureValidationFoundationBrickCases = (
+    evaluation.metrics.validation.foundationBrickStructuralExactCases
   );
   const fidelityPreserved = ['train', 'validation'].every((split) => {
     const left = baseline.metrics[split];
@@ -467,14 +488,14 @@ function createCapabilityPreflight(baseline, profile, evaluation) {
     schemaVersion: 1,
     mode: 'local-aggregate-gate',
     profileId: profile.id,
-    baselineTrainPublicBrickCases,
-    allFeatureTrainPublicBrickCases,
-    trainPublicBrickCaseDelta: allFeatureTrainPublicBrickCases
-      - baselineTrainPublicBrickCases,
-    baselineValidationPublicBrickCases,
-    allFeatureValidationPublicBrickCases,
-    validationPublicBrickCaseDelta: allFeatureValidationPublicBrickCases
-      - baselineValidationPublicBrickCases,
+    baselineTrainFoundationBrickCases,
+    allFeatureTrainFoundationBrickCases,
+    trainFoundationBrickCaseDelta: allFeatureTrainFoundationBrickCases
+      - baselineTrainFoundationBrickCases,
+    baselineValidationFoundationBrickCases,
+    allFeatureValidationFoundationBrickCases,
+    validationFoundationBrickCaseDelta: allFeatureValidationFoundationBrickCases
+      - baselineValidationFoundationBrickCases,
     generalizationSplit: 'validation',
     fidelityPreserved,
     deterministicImprovement: isProfileImprovement(evaluation.metrics, baseline.metrics),
@@ -484,7 +505,7 @@ function createCapabilityPreflight(baseline, profile, evaluation) {
   };
   return deepFreeze({
     ...body,
-    passed: body.validationPublicBrickCaseDelta > 0
+    passed: body.validationFoundationBrickCaseDelta > 0
       && body.fidelityPreserved
       && body.deterministicImprovement,
   });
