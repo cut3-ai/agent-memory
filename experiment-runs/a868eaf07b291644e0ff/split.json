@@ -1,0 +1,94 @@
+{
+  "assignments": [
+    {
+      "compositionCount": 7,
+      "groupKey": "group-ef75214f6f762281",
+      "split": "validation",
+      "workspaceKey": "workspace-0b04c17d489d9325"
+    },
+    {
+      "compositionCount": 8,
+      "groupKey": "group-c74ea2312eca39f2",
+      "split": "train",
+      "workspaceKey": "workspace-1b69360b413236c3"
+    },
+    {
+      "compositionCount": 10,
+      "groupKey": "group-ecf4347883602a9d",
+      "split": "heldout",
+      "workspaceKey": "workspace-39296c0494b78968"
+    },
+    {
+      "compositionCount": 12,
+      "groupKey": "group-a86ee2734a7592db",
+      "split": "validation",
+      "workspaceKey": "workspace-42c4feb64b4bf973"
+    },
+    {
+      "compositionCount": 1,
+      "groupKey": "group-1f598d406e23027e",
+      "split": "heldout",
+      "workspaceKey": "workspace-558feb9e0f3c76ed"
+    },
+    {
+      "compositionCount": 19,
+      "groupKey": "group-cc291d13729eb0cc",
+      "split": "train",
+      "workspaceKey": "workspace-7f400df970f0cb83"
+    },
+    {
+      "compositionCount": 8,
+      "groupKey": "group-1dc592cbfe2ac17a",
+      "split": "train",
+      "workspaceKey": "workspace-98b1d80554ba1c45"
+    },
+    {
+      "compositionCount": 12,
+      "groupKey": "group-024d2d519bd3e4e7",
+      "split": "train",
+      "workspaceKey": "workspace-9e345b0faae157c8"
+    },
+    {
+      "compositionCount": 9,
+      "groupKey": "group-4283af2bee4efd32",
+      "split": "train",
+      "workspaceKey": "workspace-a27981307066080e"
+    },
+    {
+      "compositionCount": 14,
+      "groupKey": "group-f865b324dc867157",
+      "split": "train",
+      "workspaceKey": "workspace-e844a2132d43fa5a"
+    }
+  ],
+  "counts": {
+    "compositions": 100,
+    "splits": {
+      "heldout": {
+        "compositions": 11,
+        "workspaces": 2
+      },
+      "train": {
+        "compositions": 70,
+        "workspaces": 6
+      },
+      "validation": {
+        "compositions": 19,
+        "workspaces": 2
+      }
+    },
+    "workspaceGroups": 10,
+    "workspaces": 10
+  },
+  "grouping": "connected-components-by-exact-composition-source-hash",
+  "inputSha256": "daf9c07a6501ffee0ecb846c22e8ed8ea558fb04c7988cd30011b53670351ccf",
+  "requestedRatios": {
+    "heldout": 0.2,
+    "train": 0.6,
+    "validation": 0.2
+  },
+  "schemaVersion": 1,
+  "splitHash": "318edd762ee9344803d58ef5b16f9cc43f7edf86c92b92198b5d3770d630bae4",
+  "splitVersion": "workspace-split-v1",
+  "strategy": "workspace-level-content-hash-ranking"
+}

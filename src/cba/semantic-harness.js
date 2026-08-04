@@ -5,26 +5,39 @@ import { createReactDriver } from '../../core/drivers/react.js';
 import { BEHAVIOUR_CATALOG, UNIT_CATALOG } from './catalog.js';
 
 export function verifyAllFrames(compilation, video) {
-  const baseline = createEvaluator('baseline', compilation, video);
-  const generated = createEvaluator('cba', compilation, video);
   const totalFrames = Math.max(1, Math.ceil(video.lengthMs / 1000 * video.fps));
+  let baseline;
+  let generated;
+  try {
+    baseline = createEvaluator('baseline', compilation, video);
+    generated = createEvaluator('cba', compilation, video);
+  } catch (error) {
+    baseline?.dispose();
+    generated?.dispose();
+    return failedVerification(totalFrames, 'evaluator-setup', error);
+  }
   let matchedFrames = 0;
   let effectTraceMismatches = 0;
   let canvasTraceMismatches = 0;
+  let baselineRenderErrors = 0;
+  let generatedRenderErrors = 0;
   let firstMismatch = null;
   let maximumOrphanBehaviours = 0;
   let maximumPendingBehaviours = 0;
   let fallbackBehaviours = 0;
 
   for (let frame = 0; frame < totalFrames; frame += 1) {
-    const left = baseline.render(frame);
-    const right = generated.render(frame);
+    const left = renderSafely(baseline, frame);
+    const right = renderSafely(generated, frame);
+    if (left.errorCode) baselineRenderErrors += 1;
+    if (right.errorCode) generatedRenderErrors += 1;
     maximumOrphanBehaviours = Math.max(maximumOrphanBehaviours, right.diagnostics.orphanBehaviours);
     maximumPendingBehaviours = Math.max(maximumPendingBehaviours, right.diagnostics.pendingBehaviours);
     fallbackBehaviours += right.diagnostics.fallbackBehaviours;
-    const treeMatches = left.snapshot === right.snapshot;
-    const effectsMatch = left.effectTrace === right.effectTrace;
-    const canvasMatches = left.canvasTrace === right.canvasTrace;
+    const rendered = !left.errorCode && !right.errorCode;
+    const treeMatches = rendered && left.snapshot === right.snapshot;
+    const effectsMatch = rendered && left.effectTrace === right.effectTrace;
+    const canvasMatches = rendered && left.canvasTrace === right.canvasTrace;
     if (treeMatches && effectsMatch && canvasMatches) {
       matchedFrames += 1;
     } else {
@@ -35,6 +48,8 @@ export function verifyAllFrames(compilation, video) {
         treeMatches,
         effectsMatch,
         canvasMatches,
+        ...(left.errorCode ? { baselineError: left.errorCode } : {}),
+        ...(right.errorCode ? { generatedError: right.errorCode } : {}),
       };
     }
   }
@@ -51,10 +66,48 @@ export function verifyAllFrames(compilation, video) {
     maximumOrphanBehaviours,
     maximumPendingBehaviours,
     fallbackBehaviours,
+    baselineRenderErrors,
+    generatedRenderErrors,
   };
 }
 
-function createEvaluator(kind, compilation, video) {
+function renderSafely(evaluator, frame) {
+  try {
+    return evaluator.render(frame);
+  } catch (error) {
+    return {
+      snapshot: null,
+      effectTrace: null,
+      canvasTrace: null,
+      diagnostics: { orphanBehaviours: 0, pendingBehaviours: 0, fallbackBehaviours: 0 },
+      errorCode: error?.name || 'RenderError',
+    };
+  }
+}
+
+function failedVerification(totalFrames, phase, error) {
+  return {
+    totalFrames,
+    matchedFrames: 0,
+    exact: false,
+    effectTraceMismatches: totalFrames,
+    canvasTraceMismatches: totalFrames,
+    firstMismatch: {
+      frame: 0,
+      treeMatches: false,
+      effectsMatch: false,
+      canvasMatches: false,
+      evaluatorError: `${phase}:${error?.name || 'Error'}`,
+    },
+    maximumOrphanBehaviours: 0,
+    maximumPendingBehaviours: 0,
+    fallbackBehaviours: 0,
+    baselineRenderErrors: totalFrames,
+    generatedRenderErrors: totalFrames,
+  };
+}
+
+export function createEvaluator(kind, compilation, video) {
   const state = {
     frame: 0,
     fps: video.fps,
@@ -254,7 +307,53 @@ function createGlobals(state, hooks, React, externalComponents) {
     state.randomState = (1664525 * state.randomState + 1013904223) >>> 0;
     return state.randomState / 0x100000000;
   };
+  class ImageStub {
+    constructor() {
+      this.src = '';
+      this.width = 1;
+      this.height = 1;
+      this.complete = true;
+    }
+  }
+  const windowObject = { Image: ImageStub, devicePixelRatio: 1 };
   const globals = {
+    Array,
+    ArrayBuffer,
+    BigInt,
+    Boolean,
+    Date,
+    Error,
+    EvalError,
+    Float32Array,
+    Float64Array,
+    Int8Array,
+    Int16Array,
+    Int32Array,
+    JSON,
+    Map,
+    Number,
+    Object,
+    Promise,
+    RangeError,
+    ReferenceError,
+    RegExp,
+    Set,
+    String,
+    Symbol,
+    SyntaxError,
+    TypeError,
+    URIError,
+    Uint8Array,
+    Uint16Array,
+    Uint32Array,
+    URL,
+    URLSearchParams,
+    WeakMap,
+    WeakSet,
+    isFinite,
+    isNaN,
+    parseFloat,
+    parseInt,
     React,
     Math: math,
     console: { log() {}, warn() {}, error() {} },
@@ -276,8 +375,8 @@ function createGlobals(state, hooks, React, externalComponents) {
     GOOGLE_FONTS: new Proxy({}, { get: (_target, property) => String(property) }),
     THREE: createThreeStub(),
     document: createDocumentStub(state),
-    window: {},
-    Image: class ImageStub { constructor() { this.src = ''; } },
+    window: windowObject,
+    Image: ImageStub,
     Path2D: class Path2DStub {},
     requestAnimationFrame: (callback) => {
       state.canvasTrace.push(['requestAnimationFrame', typeof callback]);
@@ -289,7 +388,7 @@ function createGlobals(state, hooks, React, externalComponents) {
   };
 
   for (const fullName of externalComponents) setComponentGlobal(globals, fullName);
-  return new Proxy(globals, {
+  const proxy = new Proxy(globals, {
     has: () => true,
     get(target, property) {
       if (property === Symbol.unscopables) return undefined;
@@ -300,6 +399,14 @@ function createGlobals(state, hooks, React, externalComponents) {
       return value;
     },
   });
+  // vm code publishes the entrypoint through `globalThis.__composition`.
+  // Without an explicit self-reference the permissive Proxy fabricates a
+  // separate `globalThis` stub, so the evaluator later calls another stub and
+  // every comparison becomes vacuously equal.
+  globals.globalThis = proxy;
+  globals.global = proxy;
+  globals.self = proxy;
+  return proxy;
 }
 
 function setComponentGlobal(globals, fullName) {
@@ -337,7 +444,7 @@ function resolveTree(value, React, hooks, state, path) {
   }
 
   const props = { ...value.props };
-  if (props.ref) assignRef(props.ref, createHostNode(value.type, state));
+  if (props.ref) assignRef(props.ref, createHostNode(value.type, state, props));
   delete props.ref;
   delete props.key;
   return {
@@ -352,9 +459,46 @@ function assignRef(ref, node) {
   else if (ref && typeof ref === 'object') ref.current = node;
 }
 
-function createHostNode(type, state) {
+function createHostNode(type, state, props = {}) {
   if (type === 'canvas') return createCanvasStub(state);
-  return { __host: String(type) };
+  const vector = (initial = 0) => ({
+    x: initial,
+    y: initial,
+    z: initial,
+    set(x, y = x, z = x) {
+      this.x = x;
+      this.y = y;
+      this.z = z;
+      return this;
+    },
+    setScalar(value) {
+      this.x = value;
+      this.y = value;
+      this.z = value;
+      return this;
+    },
+    copy(value = {}) {
+      this.x = value.x ?? this.x;
+      this.y = value.y ?? this.y;
+      this.z = value.z ?? this.z;
+      return this;
+    },
+  });
+  const uniforms = new Proxy(props.uniforms ?? {}, {
+    get(target, property) {
+      target[property] ??= { value: 0 };
+      return target[property];
+    },
+  });
+  return {
+    __host: String(type),
+    rotation: vector(),
+    position: vector(),
+    scale: vector(1),
+    material: { opacity: 1, uniforms },
+    uniforms,
+    intensity: 0,
+  };
 }
 
 function createCanvasStub(state) {
@@ -399,10 +543,32 @@ function createCanvasContext(state, canvas) {
 }
 
 function createDocumentStub(state) {
+  const createNode = (type) => {
+    const children = [];
+    return {
+      type,
+      style: {},
+      children,
+      appendChild(child) { children.push(child); return child; },
+      removeChild(child) {
+        const index = children.indexOf(child);
+        if (index >= 0) children.splice(index, 1);
+        return child;
+      },
+      setAttribute() {},
+      remove() {},
+      getContext: () => null,
+    };
+  };
+  const body = createNode('body');
+  const head = createNode('head');
   return {
     createElement: (type) => type === 'canvas'
       ? createCanvasStub(state)
-      : { style: {}, getContext: () => null },
+      : createNode(type),
+    body,
+    head,
+    documentElement: createNode('html'),
   };
 }
 
@@ -413,9 +579,36 @@ function createThreeStub() {
       if (property === 'MathUtils') return { degToRad: (value) => value * Math.PI / 180 };
       if (!cache.has(property)) {
         cache.set(property, class ThreeValue {
-          constructor(...args) { this.type = String(property); this.args = args; }
+          constructor(...args) {
+            this.type = String(property);
+            this.args = args;
+            this.holes = [];
+            if (args[0] && typeof args[0] === 'object' && !Array.isArray(args[0])) {
+              Object.assign(this, args[0]);
+            }
+          }
           set(...args) { this.args = args; return this; }
           clone() { return new this.constructor(...this.args); }
+          moveTo(...args) { this.lastPoint = args; return this; }
+          lineTo(...args) { this.lastPoint = args; return this; }
+          bezierCurveTo(...args) { this.lastPoint = args.slice(-2); return this; }
+          quadraticCurveTo(...args) { this.lastPoint = args.slice(-2); return this; }
+          absarc(...args) { this.lastArc = args; return this; }
+          closePath() { this.closed = true; return this; }
+          center() { return this; }
+          computeVertexNormals() { return this; }
+          translate() { return this; }
+          rotateX() { return this; }
+          rotateY() { return this; }
+          rotateZ() { return this; }
+          scale() { return this; }
+          setAttribute(name, value) {
+            this.attributes ??= {};
+            this.attributes[name] = value;
+            return this;
+          }
+          getAttribute(name) { return this.attributes?.[name]; }
+          dispose() {}
         });
       }
       return cache.get(property);

@@ -107,5 +107,10 @@ function materialize(value, render, sample, seen = new WeakMap()) {
 function isPlainObject(value) {
   if (!value || typeof value !== 'object') return false;
   const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
+  if (prototype === null) return true;
+  // Generated compositions may execute in an isolated VM/browser realm.
+  // Its Object.prototype is not reference-equal to this module's prototype,
+  // but it is still the terminal Object prototype of that realm.
+  return Object.getPrototypeOf(prototype) === null
+    && prototype.constructor?.name === 'Object';
 }

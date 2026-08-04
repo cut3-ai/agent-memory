@@ -1,0 +1,3428 @@
+{
+  "candidateImplementation": {
+    "compiler": {
+      "combinedSha256": "92fc2ff1b253ad719b3c6e5b2667251362c464a2da86d1106f8c57b673a67852",
+      "sourceDigests": {
+        "src/cba/compiler.js": "ab01afc74058601e99ec216f52a38b26b5de9f6b9df72335797910dbe45aaeb4",
+        "src/normalize.js": "58445b0f33bc080c186522b6f9f7aedd7e5f9425328298bbfc48581f84278bab"
+      }
+    },
+    "implementationHash": "dbddc185fbb551126c1369cf06e02e8e33992b9f8451dc75f5c2dee193fed8fa",
+    "memory": {
+      "combinedSha256": "aeb6bb01990bb30789beb6853ed3f85ae80c9ce6e2eb006ef9356566549a4c41",
+      "sourceDigests": {
+        "schemas/index-entry.schema.json": "29b721c4b070ff1f560dfdce434cb162e97e90228de330d9dc05e03d3e17cd67",
+        "schemas/observation.schema.json": "1aad08304db57963c6808ca43963a9b71c2f14a3d4cb78b33ec998f0f16340f9",
+        "schemas/preview-index.schema.json": "850419bd10fe0146bf688dc7f281134b7f10dbccccfb44edf1bb3aa24933f88f",
+        "schemas/run-manifest.schema.json": "4ac4828a55003a6f08560bae19451e02f3b1d286a497ec4d09c6824bf4e2cbe3",
+        "schemas/timeline-arrangement.schema.json": "ec7dc9e5a2642e2985e1c4272147e88537dd8342fd62b14210400e33eb59b5c9"
+      }
+    },
+    "packageLockSha256": "63488974fb4b64326d465e6a5fd571a93d8b963df5c61519525825a616b3d1b0",
+    "pipeline": {
+      "combinedSha256": "346071294e33dbe6ab1f1335240e70c3d197357d04cc045f511b41bf0866a245",
+      "sourceDigests": {
+        "src/cba/evaluate.js": "f363f9249d0338904633454033ac627247b263f0c0b5ef1be1f4e50a63b6f4d8",
+        "src/cba/pipeline.js": "77e302ba5c0501d723862573f135c435f4245116794f77b20307d15f9db9262a"
+      }
+    },
+    "runtime": {
+      "combinedSha256": "056df9f014651c80d39a467a62d62f24b62bd3334d55200234335eb7c0fb227c",
+      "sourceDigests": {
+        "core/Behaviour.js": "0e91f307ef6195ad55a00e061a379e57be0fffb988ca4c688e8fcdb1e27a418c",
+        "core/drivers/react.js": "88f0bf23d68d544abf9a763f8e8410fc1c237c0c05f7d52989377c83dce3e90a",
+        "core/drivers/remotion.js": "899ce00c401816b78768a79bbb2e27de18efd73322faae0352d1509ed31c3675",
+        "core/runtime.js": "3fe1984439538882650c607d4c9e9702f608f62020ac20ab61cc57787b802ba0",
+        "core/Unit.js": "9a555c35cebefcb151574dd93166babddf6567676ca81c37fa7cb9cb8db7e82a",
+        "src/cba/catalog.js": "980768d91bcf11454c69df00602e2ca1ce3ea59691aef32d635f0443c7d283fc"
+      }
+    },
+    "schemaVersion": 1
+  },
+  "oneToOneBlockers": [
+    "generated modules are not linked or executed by the round-0 evaluator",
+    "pixel equivalence is not measured by the round-0 evaluator",
+    "visual formulas still use residual private expression closures",
+    "closure-free mined recipes are not available"
+  ],
+  "oneToOneVerified": false,
+  "proofLevel": "compiler-structural-and-all-frame-semantic",
+  "schemaVersion": 1,
+  "splits": {
+    "heldout": {
+      "backends": {
+        "dom": 46,
+        "react": 11,
+        "three": 24
+      },
+      "compiled": 11,
+      "compileFailures": 0,
+      "compositionResults": [
+        {
+          "compiled": true,
+          "compositionKey": "composition-42a1317a86ba85d388c2",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 261,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 261
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-483c2dbacc8d62679c92",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 228,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 228
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-486fb7112fc6e9036001",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 300,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 300
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-5d845a9f8e7de2925741",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 100,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 100
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-7eceeb957e8badbd2efd",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 210,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 210
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-88a839cb371a848ecf6d",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 150,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 150
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-9b8d181c6f0987cca2cd",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 120,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 120
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-a5f670d8122439b6985a",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 132,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 132
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-c43c15e8f674f34bbe02",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 210,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 210
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-d166a1f132a2fc3d8b32",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 330,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 330
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-e56b01a49f9a3d3c1dca",
+          "controls": 3,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 41,
+            "expected": 41
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": true,
+              "effectsMatch": true,
+              "frame": 0,
+              "treeMatches": false
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 0,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 180
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 12,
+            "complete": true,
+            "emitted": 11,
+            "expected": 11
+          }
+        }
+      ],
+      "compositions": 11,
+      "factories": {
+        "behaviourKinds": 7,
+        "behaviours": {
+          "behaviour.content.value": 10,
+          "behaviour.css.opacity": 4,
+          "behaviour.css.property": 44,
+          "behaviour.dom.attribute": 10,
+          "behaviour.three.property": 1,
+          "behaviour.transform.scale": 1,
+          "behaviour.transform.translate": 2
+        },
+        "unitKinds": 7,
+        "units": {
+          "unit.control.repeat": 10,
+          "unit.control.switch": 1,
+          "unit.dom.element": 20,
+          "unit.dom.text": 3,
+          "unit.remotion.layer": 23,
+          "unit.three.element": 23,
+          "unit.three.scene": 1
+        }
+      },
+      "inventory": {
+        "atomicBehaviours": 72,
+        "controlsExpected": 63,
+        "controlsPreserved": 63,
+        "jsxUnitsEmitted": 81,
+        "jsxUnitsExpected": 81,
+        "visualSinksEmitted": 71,
+        "visualSinksExpected": 71
+      },
+      "minedRecipes": {
+        "coverage": 0,
+        "coveredExpressionClosures": 0,
+        "eligibleRecipes": 0,
+        "reason": "round-0 has no closure-free mined recipe implementation",
+        "residualExpressionClosures": 71
+      },
+      "rates": {
+        "compile": 1,
+        "jsxUnitAccounting": 1,
+        "semanticExactCompositions": 0.909091,
+        "semanticMatchedFrames": 0.918955,
+        "structuralExact": 1,
+        "visualSinkAccounting": 1
+      },
+      "residualExpressionClosures": 71,
+      "runtime": {
+        "factoryResolutionMeasured": false,
+        "framesExecuted": 2221,
+        "generatedModulesLinked": false,
+        "pixelFramesCompared": 0,
+        "potentialFrames": 2221
+      },
+      "semantic": {
+        "baselineRenderErrors": 0,
+        "canvasTraceMismatches": 0,
+        "compositionsWithFallbackBehaviours": 0,
+        "compositionsWithOrphanBehaviours": 0,
+        "compositionsWithPendingBehaviours": 0,
+        "compositionsWithRenderErrors": 0,
+        "effectTraceMismatches": 0,
+        "evaluatedCompositions": 11,
+        "evaluatedFrames": 2221,
+        "evaluatorFailures": 0,
+        "exactCompositions": 10,
+        "fallbackBehaviours": 0,
+        "generatedRenderErrors": 0,
+        "matchedFrames": 2041,
+        "maximumOrphanBehaviours": 0,
+        "maximumPendingBehaviours": 0,
+        "renderErrors": 0,
+        "totalFrames": 2221
+      },
+      "verification": {
+        "generatedParse": 11,
+        "loweredEquivalent": 11,
+        "preLoweringEquivalent": 11,
+        "structuralTransformExact": 11
+      },
+      "workspaces": 2
+    },
+    "train": {
+      "backends": {
+        "canvas": 2,
+        "dom": 401,
+        "react": 62,
+        "svg": 103,
+        "three": 35
+      },
+      "compiled": 70,
+      "compileFailures": 0,
+      "compositionResults": [
+        {
+          "compiled": true,
+          "compositionKey": "composition-0025d0ad443adf5d23cb",
+          "controls": 1,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 11,
+            "expected": 11
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 36,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 36
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 5,
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-18821ce54b9588acdfc3",
+          "controls": 8,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 16,
+            "expected": 16
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 271,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 271
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 2,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-1a5549027daff0c76a8c",
+          "controls": 8,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 38,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 38
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 3,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-1cd6222f523c3be59cf9",
+          "controls": 5,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 420,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": false,
+              "effectsMatch": true,
+              "frame": 0,
+              "treeMatches": true
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 0,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 420
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-27339befda881af36daa",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 38,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 38
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 5,
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-2a2cc0d3159b83557bfd",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 8,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 8
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-2c66478b002b8d8dc92d",
+          "controls": 7,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 10,
+            "expected": 10
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 210,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 210
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-30dd84a4e13ee5e39481",
+          "controls": 7,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 10,
+            "expected": 10
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 210,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 210
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-336929fd4bbfb326f2a2",
+          "controls": 7,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 23,
+            "expected": 23
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 366,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 366
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 21,
+            "complete": true,
+            "emitted": 18,
+            "expected": 18
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-35dea463f56eece112cd",
+          "controls": 5,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 5,
+            "expected": 5
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 109,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 109
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 2,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-3858a2e309825d6318bf",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 12,
+            "expected": 12
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 30,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 30
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 10,
+            "complete": true,
+            "emitted": 7,
+            "expected": 7
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-3d1dec0c087c17246372",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 16,
+            "expected": 16
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 791,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 791
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 3,
+            "complete": true,
+            "emitted": 3,
+            "expected": 3
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-42f736529870f0ba3694",
+          "controls": 1,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 7,
+            "expected": 7
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 36,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 36
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 3,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-443de52820c23db0e6d1",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 5,
+            "expected": 5
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 49,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 49
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 2,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-44882041a4d75302d703",
+          "controls": 1,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 239,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 239
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 4,
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-475e1073978d235c2e7e",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 8,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 8
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-487ab48f41a989efb694",
+          "controls": 7,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 18,
+            "expected": 18
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 260,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 260
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 15,
+            "complete": true,
+            "emitted": 13,
+            "expected": 13
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-4a424bd58fe318e2da3d",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 8,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 8
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-4ba49f30b8cbe16400a5",
+          "controls": 1,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 210,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 210
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 4,
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-4e1507b684d58e5f19f6",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 67,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 67
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-4e32396a1af6a28580ad",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 42,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 42
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-5133285b64606aeb5253",
+          "controls": 2,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 12,
+            "expected": 12
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 42,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 42
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 5,
+            "expected": 5
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-51ca4bc333d9032ba360",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 31,
+            "expected": 31
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 284,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 284
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 21,
+            "complete": true,
+            "emitted": 18,
+            "expected": 18
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-53dca66df6ab719ef4ba",
+          "controls": 1,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 24,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 24
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 2,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-53fc9af34a119a591a87",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 8,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 8
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-54cb8721cf7563461509",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 3,
+            "expected": 3
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 67,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 67
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 0,
+            "complete": true,
+            "emitted": 0,
+            "expected": 0
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-58c180c11e15c24aff87",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": true,
+              "effectsMatch": true,
+              "frame": 0,
+              "treeMatches": false
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 0,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 67
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 2,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-595d11146ca12b0b6635",
+          "controls": 1,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 5,
+            "expected": 5
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 38,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 38
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 3,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-61d8e58ae847eb59844b",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 62,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 62
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 3,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-6942cd214d3a422c2281",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 5,
+            "expected": 5
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 159,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 159
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 2,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-6c3a2dda2b2022e267b8",
+          "controls": 10,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 17,
+            "expected": 17
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 38,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 38
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 7,
+            "complete": true,
+            "emitted": 7,
+            "expected": 7
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-70caa84d3b60c2f1e827",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 8,
+            "expected": 8
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 37,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 37
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 5,
+            "expected": 5
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-75729c8d93afd6e834e9",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 36,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 36
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-825caa0e5a2eb0a149eb",
+          "controls": 7,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 15,
+            "expected": 15
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 262,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 262
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 14,
+            "complete": true,
+            "emitted": 11,
+            "expected": 11
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-89032afc81948822ab8a",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 19,
+            "expected": 19
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 67,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 67
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 0,
+            "complete": true,
+            "emitted": 0,
+            "expected": 0
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-8d24e73f11d6376756e9",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 8,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 8
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-8f32395462aa31727c8f",
+          "controls": 5,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 17,
+            "expected": 17
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 270,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 270
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 19,
+            "complete": true,
+            "emitted": 17,
+            "expected": 17
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-94a5e091b6e8ecdefb23",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 8,
+            "expected": 8
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 38,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 38
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 4,
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-968aa74e523f03bbffec",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 24,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 24
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-979f1f2d612372df1a67",
+          "controls": 1,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 5,
+            "expected": 5
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 210,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 210
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 5,
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-9fdbf7ff87c21948d53f",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 7,
+            "expected": 7
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 210,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 210
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-a370e5046f19f75fdbaa",
+          "controls": 4,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 8,
+            "expected": 8
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 300,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 300
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 9,
+            "complete": true,
+            "emitted": 8,
+            "expected": 8
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-a42022a85e15bdbae35e",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 20,
+            "expected": 20
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 210,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 210
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 19,
+            "complete": true,
+            "emitted": 17,
+            "expected": 17
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-a96465b5bedca4f9ee42",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 10,
+            "expected": 10
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 109,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 109
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 5,
+            "complete": true,
+            "emitted": 3,
+            "expected": 3
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-ace3817c0ea510fbf139",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 62,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 62
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 2,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-ace826a8602d62533f4a",
+          "controls": 4,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 10,
+            "expected": 10
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 38,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 38
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 5,
+            "complete": true,
+            "emitted": 3,
+            "expected": 3
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-af8ee717fed41d4957a2",
+          "controls": 1,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 5,
+            "expected": 5
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 150,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 150
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-b22e9e38ddffa49f93f1",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 16,
+            "expected": 16
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 240,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 240
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 3,
+            "complete": true,
+            "emitted": 3,
+            "expected": 3
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-b3f1503ad08afbd31499",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 426,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 426
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 3,
+            "complete": true,
+            "emitted": 3,
+            "expected": 3
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-b5e0a24ca405553846fa",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 17,
+            "expected": 17
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 323,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 323
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 14,
+            "complete": true,
+            "emitted": 12,
+            "expected": 12
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-b6197568e684dca7a401",
+          "controls": 4,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 9,
+            "expected": 9
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 37,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 37
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 3,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-bf2f9b75ac66ad3d27ee",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 8,
+            "expected": 8
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 37,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 37
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 5,
+            "complete": true,
+            "emitted": 3,
+            "expected": 3
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-c2d09277cc1fe853a9f0",
+          "controls": 7,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 5,
+            "expected": 5
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 271,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 271
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 8,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-c4c3811fbeb7ac3a1a7f",
+          "controls": 1,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 11,
+            "expected": 11
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 210,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 210
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-c569f8737edfae86ef63",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 10,
+            "expected": 10
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": true,
+              "effectsMatch": true,
+              "frame": 0,
+              "treeMatches": false
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 0,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 42
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 2,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-c78d9ebf6187ad0c1c5f",
+          "controls": 10,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 11,
+            "expected": 11
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": true,
+              "effectsMatch": true,
+              "frame": 9,
+              "treeMatches": false
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 9,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 60
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 9,
+            "complete": true,
+            "emitted": 5,
+            "expected": 5
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-c8f0d19ad5fd71a79d12",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 30,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 30
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 2,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-cf3bae5fe444b2820f6f",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 8,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 8
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-d1657fe1f78a0ca6e8a7",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 42,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 42
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-d5ef5eb3989aed6a51ea",
+          "controls": 21,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 180,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": false,
+              "effectsMatch": true,
+              "frame": 0,
+              "treeMatches": true
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 0,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 180
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-d92e2c6c44587fa9e2a8",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 36,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 36
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 2,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-db52bffba738cc7c3f2c",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 61,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 61
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 2,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-dba341b496feffb6259f",
+          "controls": 8,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 7,
+            "expected": 7
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 37,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 37
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 4,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-dbbd6256ce825466b56e",
+          "controls": 5,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 9,
+            "expected": 9
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 38,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 38
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 5,
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-dbfdffc59b7b90a92c6e",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 5,
+            "expected": 5
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 37,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 37
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 2,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-ec321f2d0949dfd15da1",
+          "controls": 7,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 11,
+            "expected": 11
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 450,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 450
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 2,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-f26cac2decc3bf98a0a0",
+          "controls": 8,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 13,
+            "expected": 13
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": true,
+              "effectsMatch": true,
+              "frame": 0,
+              "treeMatches": false
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 0,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 707
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 3,
+            "complete": true,
+            "emitted": 3,
+            "expected": 3
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-f9d36f1cfbe47032fe5b",
+          "controls": 8,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 16,
+            "expected": 16
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 420,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 420
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 2,
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-fb4bd88a53c362a1d256",
+          "controls": 7,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 16,
+            "expected": 16
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 260,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 260
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 15,
+            "complete": true,
+            "emitted": 12,
+            "expected": 12
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-fd14146c5b701d96d54f",
+          "controls": 2,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 14,
+            "expected": 14
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 186,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 186
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 4,
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          }
+        }
+      ],
+      "compositions": 70,
+      "factories": {
+        "behaviourKinds": 11,
+        "behaviours": {
+          "behaviour.canvas.draw": 2,
+          "behaviour.content.value": 1,
+          "behaviour.css.opacity": 116,
+          "behaviour.css.property": 23,
+          "behaviour.dom.attribute": 3,
+          "behaviour.svg.attribute": 28,
+          "behaviour.three.effect": 2,
+          "behaviour.three.property": 4,
+          "behaviour.transform.rotate": 48,
+          "behaviour.transform.scale": 61,
+          "behaviour.transform.translate": 58
+        },
+        "unitKinds": 16,
+        "units": {
+          "unit.canvas.surface": 2,
+          "unit.control.repeat": 43,
+          "unit.control.switch": 19,
+          "unit.dom.element": 207,
+          "unit.dom.text": 13,
+          "unit.media.audio": 5,
+          "unit.media.image": 33,
+          "unit.media.video": 5,
+          "unit.react.fragment": 2,
+          "unit.react.local-component": 5,
+          "unit.remotion.layer": 122,
+          "unit.remotion.timeline-slot": 9,
+          "unit.svg.element": 86,
+          "unit.svg.root": 17,
+          "unit.three.element": 32,
+          "unit.three.scene": 3
+        }
+      },
+      "inventory": {
+        "atomicBehaviours": 346,
+        "controlsExpected": 206,
+        "controlsPreserved": 206,
+        "jsxUnitsEmitted": 603,
+        "jsxUnitsExpected": 603,
+        "visualSinksEmitted": 287,
+        "visualSinksExpected": 287
+      },
+      "minedRecipes": {
+        "coverage": 0,
+        "coveredExpressionClosures": 0,
+        "eligibleRecipes": 0,
+        "reason": "round-0 has no closure-free mined recipe implementation",
+        "residualExpressionClosures": 287
+      },
+      "rates": {
+        "compile": 1,
+        "jsxUnitAccounting": 1,
+        "semanticExactCompositions": 0.914286,
+        "semanticMatchedFrames": 0.858997,
+        "structuralExact": 1,
+        "visualSinkAccounting": 1
+      },
+      "residualExpressionClosures": 287,
+      "runtime": {
+        "factoryResolutionMeasured": false,
+        "framesExecuted": 10404,
+        "generatedModulesLinked": false,
+        "pixelFramesCompared": 0,
+        "potentialFrames": 10404
+      },
+      "semantic": {
+        "baselineRenderErrors": 0,
+        "canvasTraceMismatches": 600,
+        "compositionsWithFallbackBehaviours": 0,
+        "compositionsWithOrphanBehaviours": 0,
+        "compositionsWithPendingBehaviours": 0,
+        "compositionsWithRenderErrors": 0,
+        "effectTraceMismatches": 0,
+        "evaluatedCompositions": 70,
+        "evaluatedFrames": 10404,
+        "evaluatorFailures": 0,
+        "exactCompositions": 64,
+        "fallbackBehaviours": 0,
+        "generatedRenderErrors": 0,
+        "matchedFrames": 8937,
+        "maximumOrphanBehaviours": 0,
+        "maximumPendingBehaviours": 0,
+        "renderErrors": 0,
+        "totalFrames": 10404
+      },
+      "verification": {
+        "generatedParse": 70,
+        "loweredEquivalent": 70,
+        "preLoweringEquivalent": 70,
+        "structuralTransformExact": 70
+      },
+      "workspaces": 6
+    },
+    "validation": {
+      "backends": {
+        "canvas": 5,
+        "dom": 167,
+        "react": 36,
+        "three": 20
+      },
+      "compiled": 19,
+      "compileFailures": 0,
+      "compositionResults": [
+        {
+          "compiled": true,
+          "compositionKey": "composition-051e753e7da778b41db3",
+          "controls": 10,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 12,
+            "expected": 12
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 136,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 136
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 8,
+            "complete": true,
+            "emitted": 8,
+            "expected": 8
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-26f2dfebff90f9a80bd7",
+          "controls": 8,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 24,
+            "expected": 24
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 356,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 356
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 12,
+            "complete": true,
+            "emitted": 12,
+            "expected": 12
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-43fa25f3d36f07f56060",
+          "controls": 4,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 19,
+            "expected": 19
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 336,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 336
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 3,
+            "complete": true,
+            "emitted": 3,
+            "expected": 3
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-48c76fd94a29685e3d70",
+          "controls": 8,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 23,
+            "expected": 23
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 317,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 317
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 3,
+            "complete": true,
+            "emitted": 3,
+            "expected": 3
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-54fb46a2c68ea976ddcd",
+          "controls": 10,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 134,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": false,
+              "effectsMatch": true,
+              "frame": 0,
+              "treeMatches": true
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 0,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 134
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-5b3489322f301d3b0d6a",
+          "controls": 9,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": true,
+              "effectsMatch": true,
+              "frame": 0,
+              "treeMatches": false
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 0,
+            "maximumOrphanBehaviours": 1,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 69
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 4,
+            "complete": true,
+            "emitted": 3,
+            "expected": 3
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-5c156182c6d3df063f7a",
+          "controls": 10,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": true,
+              "effectsMatch": true,
+              "frame": 0,
+              "treeMatches": false
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 0,
+            "maximumOrphanBehaviours": 2,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 136
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 5,
+            "complete": true,
+            "emitted": 3,
+            "expected": 3
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-5c4c24ed862208d8baf1",
+          "controls": 10,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 16,
+            "expected": 16
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 136,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 136
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 6,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-74641565f338c5efb15a",
+          "controls": 6,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 10,
+            "expected": 10
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 67,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 67
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 5,
+            "complete": true,
+            "emitted": 5,
+            "expected": 5
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-946f4400213acd91a1a5",
+          "controls": 0,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 29,
+            "expected": 29
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": true,
+              "effectsMatch": true,
+              "frame": 0,
+              "treeMatches": false
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 0,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 300
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 7,
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-9d74dcae40ecaadaae1b",
+          "controls": 8,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 6,
+            "expected": 6
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": true,
+              "effectsMatch": true,
+              "frame": 0,
+              "treeMatches": false
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 0,
+            "maximumOrphanBehaviours": 1,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 130
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 5,
+            "complete": true,
+            "emitted": 4,
+            "expected": 4
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-b126443f2c769c80b856",
+          "controls": 10,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 10,
+            "expected": 10
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 188,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 188
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 3,
+            "complete": true,
+            "emitted": 3,
+            "expected": 3
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-b76f673affc5eb04999b",
+          "controls": 5,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 134,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": false,
+              "effectsMatch": true,
+              "frame": 0,
+              "treeMatches": true
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 0,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 134
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-b848fb0ec67c2d576329",
+          "controls": 10,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 137,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": false,
+              "effectsMatch": true,
+              "frame": 0,
+              "treeMatches": true
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 0,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 137
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-bdebffe500da5ebecb06",
+          "controls": 17,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 1,
+            "effectTraceMismatches": 0,
+            "exact": false,
+            "fallbackBehaviours": 0,
+            "firstMismatch": {
+              "canvasMatches": false,
+              "effectsMatch": true,
+              "frame": 0,
+              "treeMatches": true
+            },
+            "generatedRenderErrors": 0,
+            "matchedFrames": 135,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 136
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-cf0b3b681df9c79bd052",
+          "controls": 7,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 21,
+            "expected": 21
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 332,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 332
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 10,
+            "complete": true,
+            "emitted": 9,
+            "expected": 9
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-decc747406dd8b8a8422",
+          "controls": 17,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 16,
+            "expected": 16
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 203,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 203
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 10,
+            "complete": true,
+            "emitted": 10,
+            "expected": 10
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-e593803ba9a48d9c2775",
+          "controls": 4,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 22,
+            "expected": 22
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 154,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 154
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 5,
+            "complete": true,
+            "emitted": 5,
+            "expected": 5
+          }
+        },
+        {
+          "compiled": true,
+          "compositionKey": "composition-f8a5f751c72c00fc8cd4",
+          "controls": 12,
+          "jsxUnits": {
+            "complete": true,
+            "emitted": 2,
+            "expected": 2
+          },
+          "semantic": {
+            "baselineRenderErrors": 0,
+            "canvasTraceMismatches": 0,
+            "effectTraceMismatches": 0,
+            "exact": true,
+            "fallbackBehaviours": 0,
+            "firstMismatch": null,
+            "generatedRenderErrors": 0,
+            "matchedFrames": 130,
+            "maximumOrphanBehaviours": 0,
+            "maximumPendingBehaviours": 0,
+            "totalFrames": 130
+          },
+          "structuralTransformExact": true,
+          "visualSinks": {
+            "atomicBehaviours": 1,
+            "complete": true,
+            "emitted": 1,
+            "expected": 1
+          }
+        }
+      ],
+      "compositions": 19,
+      "factories": {
+        "behaviourKinds": 9,
+        "behaviours": {
+          "behaviour.canvas.draw": 5,
+          "behaviour.content.value": 6,
+          "behaviour.css.opacity": 18,
+          "behaviour.css.property": 13,
+          "behaviour.dom.attribute": 29,
+          "behaviour.three.property": 2,
+          "behaviour.transform.rotate": 3,
+          "behaviour.transform.scale": 11,
+          "behaviour.transform.translate": 4
+        },
+        "unitKinds": 10,
+        "units": {
+          "unit.canvas.surface": 5,
+          "unit.control.repeat": 4,
+          "unit.control.switch": 32,
+          "unit.dom.element": 102,
+          "unit.dom.text": 19,
+          "unit.media.image": 7,
+          "unit.react.local-component": 15,
+          "unit.remotion.layer": 24,
+          "unit.three.element": 19,
+          "unit.three.scene": 1
+        }
+      },
+      "inventory": {
+        "atomicBehaviours": 91,
+        "controlsExpected": 165,
+        "controlsPreserved": 165,
+        "jsxUnitsEmitted": 228,
+        "jsxUnitsExpected": 228,
+        "visualSinksEmitted": 85,
+        "visualSinksExpected": 85
+      },
+      "minedRecipes": {
+        "coverage": 0,
+        "coveredExpressionClosures": 0,
+        "eligibleRecipes": 0,
+        "reason": "round-0 has no closure-free mined recipe implementation",
+        "residualExpressionClosures": 85
+      },
+      "rates": {
+        "compile": 1,
+        "jsxUnitAccounting": 1,
+        "semanticExactCompositions": 0.578947,
+        "semanticMatchedFrames": 0.705183,
+        "structuralExact": 1,
+        "visualSinkAccounting": 1
+      },
+      "residualExpressionClosures": 85,
+      "runtime": {
+        "factoryResolutionMeasured": false,
+        "framesExecuted": 3531,
+        "generatedModulesLinked": false,
+        "pixelFramesCompared": 0,
+        "potentialFrames": 3531
+      },
+      "semantic": {
+        "baselineRenderErrors": 0,
+        "canvasTraceMismatches": 406,
+        "compositionsWithFallbackBehaviours": 0,
+        "compositionsWithOrphanBehaviours": 3,
+        "compositionsWithPendingBehaviours": 0,
+        "compositionsWithRenderErrors": 0,
+        "effectTraceMismatches": 0,
+        "evaluatedCompositions": 19,
+        "evaluatedFrames": 3531,
+        "evaluatorFailures": 0,
+        "exactCompositions": 11,
+        "fallbackBehaviours": 0,
+        "generatedRenderErrors": 0,
+        "matchedFrames": 2490,
+        "maximumOrphanBehaviours": 2,
+        "maximumPendingBehaviours": 0,
+        "renderErrors": 0,
+        "totalFrames": 3531
+      },
+      "verification": {
+        "generatedParse": 19,
+        "loweredEquivalent": 19,
+        "preLoweringEquivalent": 19,
+        "structuralTransformExact": 19
+      },
+      "workspaces": 2
+    }
+  }
+}

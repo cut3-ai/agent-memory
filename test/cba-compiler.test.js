@@ -95,3 +95,40 @@ test('all-frame semantic harness compares original and CBA trees', () => {
   assert.equal(verification.maximumOrphanBehaviours, 0);
   assert.equal(verification.fallbackBehaviours, 0);
 });
+
+test('semantic harness compares the functions actually published through globalThis', () => {
+  const verification = verifyAllFrames({
+    evaluationPrograms: {
+      baseline: 'globalThis.__composition = () => 1;',
+      cba: 'globalThis.__composition = () => 2;',
+      externalComponents: [],
+    },
+  }, {
+    fps: 1, width: 1, height: 1, lengthMs: 1000,
+  });
+  assert.equal(verification.exact, false);
+  assert.equal(verification.matchedFrames, 0);
+  assert.deepEqual(verification.firstMismatch, {
+    frame: 0,
+    treeMatches: false,
+    effectsMatch: true,
+    canvasMatches: true,
+  });
+});
+
+test('semantic harness reports render errors without aborting the corpus', () => {
+  const verification = verifyAllFrames({
+    evaluationPrograms: {
+      baseline: 'globalThis.__composition = () => { throw new TypeError("private"); };',
+      cba: 'globalThis.__composition = () => 2;',
+      externalComponents: [],
+    },
+  }, {
+    fps: 2, width: 1, height: 1, lengthMs: 1000,
+  });
+  assert.equal(verification.exact, false);
+  assert.equal(verification.baselineRenderErrors, 2);
+  assert.equal(verification.generatedRenderErrors, 0);
+  assert.equal(verification.firstMismatch.baselineError, 'TypeError');
+  assert.equal(JSON.stringify(verification).includes('private'), false);
+});

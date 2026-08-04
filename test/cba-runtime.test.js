@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import vm from 'node:vm';
 
 import {
   BehaviourGroup,
@@ -74,4 +75,12 @@ test('strict runtime rejects an unresolved factory', () => {
     () => runtime.value('behaviour.missing', () => 1),
     /Unresolved Behaviour factory/,
   );
+});
+
+test('React driver materializes Behaviour values inside cross-realm props', () => {
+  const runtime = createRuntime({ driver: createReactDriver(React) });
+  const props = vm.runInNewContext('({ style: {} })');
+  props.style.opacity = new OpacityBehaviour({ read: () => 0.25 });
+  const rendered = runtime.render(runtime.makeUnit('div', props));
+  assert.deepEqual(rendered.props, { style: { opacity: 0.25 } });
 });

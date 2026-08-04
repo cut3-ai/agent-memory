@@ -1,0 +1,31 @@
+{
+  "combinedSha256": "8d33642f4a9b9a0b3bf91dd1bc8c1da061e284f146fcf6e69610c0d60b5d683e",
+  "experimentId": "a868eaf07b291644e0ff",
+  "files": [
+    {
+      "path": "evaluator-manifest.json",
+      "sha256": "721738084c07df4f0116adace58683862c93ca32f195e189464e2135d66e18fc"
+    },
+    {
+      "path": "experiment.json",
+      "sha256": "8a04c3c5b296ecdbcad0ce3ee30ae425385b276c27d3b1a6efe3486f2091fb4c"
+    },
+    {
+      "path": "round-plan.json",
+      "sha256": "f9861bd5e7af2c5e20cf07b2f5f6e2cde6a161b277cbaa0037963adb26958562"
+    },
+    {
+      "path": "rounds/00/determinism.json",
+      "sha256": "e155d6e810946f25572078a337b759e61abd343412c7aad0b3b78dc78b181ddb"
+    },
+    {
+      "path": "rounds/00/metrics.json",
+      "sha256": "8a1812c983d7ce23599f2abf75fc042232f9d88fc91b373d3c832fe80419491f"
+    },
+    {
+      "path": "split.json",
+      "sha256": "f668f38ee12c739cce122a612dbf5815f1495ee046709ff524a27a531c66dfc0"
+    }
+  ],
+  "schemaVersion": 1
+}

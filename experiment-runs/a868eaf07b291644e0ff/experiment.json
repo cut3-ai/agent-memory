@@ -1,0 +1,50 @@
+{
+  "candidateImplementation": {
+    "compiler": {
+      "combinedSha256": "92fc2ff1b253ad719b3c6e5b2667251362c464a2da86d1106f8c57b673a67852",
+      "sourceDigests": {
+        "src/cba/compiler.js": "ab01afc74058601e99ec216f52a38b26b5de9f6b9df72335797910dbe45aaeb4",
+        "src/normalize.js": "58445b0f33bc080c186522b6f9f7aedd7e5f9425328298bbfc48581f84278bab"
+      }
+    },
+    "implementationHash": "dbddc185fbb551126c1369cf06e02e8e33992b9f8451dc75f5c2dee193fed8fa",
+    "memory": {
+      "combinedSha256": "aeb6bb01990bb30789beb6853ed3f85ae80c9ce6e2eb006ef9356566549a4c41",
+      "sourceDigests": {
+        "schemas/index-entry.schema.json": "29b721c4b070ff1f560dfdce434cb162e97e90228de330d9dc05e03d3e17cd67",
+        "schemas/observation.schema.json": "1aad08304db57963c6808ca43963a9b71c2f14a3d4cb78b33ec998f0f16340f9",
+        "schemas/preview-index.schema.json": "850419bd10fe0146bf688dc7f281134b7f10dbccccfb44edf1bb3aa24933f88f",
+        "schemas/run-manifest.schema.json": "4ac4828a55003a6f08560bae19451e02f3b1d286a497ec4d09c6824bf4e2cbe3",
+        "schemas/timeline-arrangement.schema.json": "ec7dc9e5a2642e2985e1c4272147e88537dd8342fd62b14210400e33eb59b5c9"
+      }
+    },
+    "packageLockSha256": "63488974fb4b64326d465e6a5fd571a93d8b963df5c61519525825a616b3d1b0",
+    "pipeline": {
+      "combinedSha256": "346071294e33dbe6ab1f1335240e70c3d197357d04cc045f511b41bf0866a245",
+      "sourceDigests": {
+        "src/cba/evaluate.js": "f363f9249d0338904633454033ac627247b263f0c0b5ef1be1f4e50a63b6f4d8",
+        "src/cba/pipeline.js": "77e302ba5c0501d723862573f135c435f4245116794f77b20307d15f9db9262a"
+      }
+    },
+    "runtime": {
+      "combinedSha256": "056df9f014651c80d39a467a62d62f24b62bd3334d55200234335eb7c0fb227c",
+      "sourceDigests": {
+        "core/Behaviour.js": "0e91f307ef6195ad55a00e061a379e57be0fffb988ca4c688e8fcdb1e27a418c",
+        "core/drivers/react.js": "88f0bf23d68d544abf9a763f8e8410fc1c237c0c05f7d52989377c83dce3e90a",
+        "core/drivers/remotion.js": "899ce00c401816b78768a79bbb2e27de18efd73322faae0352d1509ed31c3675",
+        "core/runtime.js": "3fe1984439538882650c607d4c9e9702f608f62020ac20ab61cc57787b802ba0",
+        "core/Unit.js": "9a555c35cebefcb151574dd93166babddf6567676ca81c37fa7cb9cb8db7e82a",
+        "src/cba/catalog.js": "980768d91bcf11454c69df00602e2ca1ce3ea59691aef32d635f0443c7d283fc"
+      }
+    },
+    "schemaVersion": 1
+  },
+  "evaluatorHash": "386427c512d2a6999c234cea6e7226f1b6083b31a625be90b656d182d236ef29",
+  "experimentId": "a868eaf07b291644e0ff",
+  "inputSha256": "daf9c07a6501ffee0ecb846c22e8ed8ea558fb04c7988cd30011b53670351ccf",
+  "modelApiCalls": 0,
+  "publicArtifactsContainRawCompositionCode": false,
+  "round": 0,
+  "schemaVersion": 1,
+  "splitHash": "318edd762ee9344803d58ef5b16f9cc43f7edf86c92b92198b5d3770d630bae4"
+}

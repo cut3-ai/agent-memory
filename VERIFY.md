@@ -1,78 +1,57 @@
-# Как проверить CBA pipeline run
+# Как проверять adaptive CBA experiment
 
-В ветке зафиксирован санитизированный результат `cba-lossless-v0.3.1`:
+Текущий честный эксперимент находится здесь:
 
 ```text
-cba-runs/58181f6bb4630140f227/
+experiment-runs/a868eaf07b291644e0ff/
 ```
 
-Private reconstruction programs и исходный `workspaces.jsonl` намеренно не входят в Git: они содержат пользовательский source, text и URL.
+Старый `cba-runs/58181f6bb4630140f227` сохранён только как legacy snapshot. Его показатели `100/100` и `16156/16156` не являются доказательством: старый semantic harness вызывал универсальный stub вместо опубликованной composition. Не используйте этот run для оценки качества.
 
-## В каком порядке читать
+Исходный `workspaces.jsonl`, prompts, URL и private reconstruction programs в Git не входят.
 
-1. `cba-runs/58181f6bb4630140f227/report.md` — короткий итог и таблица 20 проходов.
-2. `cba-runs/58181f6bb4630140f227/evaluation/final.json` — точные итоговые метрики и release verdict.
-3. `cba-runs/58181f6bb4630140f227/index.generated.json` — навигация: какие Unit/Behaviour factories были созданы, где лежит код и сколько раз factory использовалась.
-4. `cba-runs/58181f6bb4630140f227/units/` — исполняемый код Unit factories.
-5. `cba-runs/58181f6bb4630140f227/behaviours/` — исполняемый код Behaviour factories.
-6. `core/Unit.js`, `core/Behaviour.js`, `core/runtime.js` — контракт исполнения и attachment Behaviours к Units.
-7. `src/cba/compiler.js` и `src/cba/semantic-harness.js` — lowering исходной composition и all-frame verifier.
+## Порядок чтения
 
-`index.generated.json` не содержит кода: он является индексом. Поле `module` ведёт к соответствующему `.js`-файлу.
+1. `experiment.json` — dataset/evaluator/split hashes и candidate implementation.
+2. `split.json` — workspace-level train/validation/held-out split. Связанные exact-source workspaces не пересекают splits.
+3. `evaluator-manifest.json` — замороженные файлы evaluator и перечень измеряемых/неизмеряемых свойств.
+4. `rounds/00/metrics.json` — исходный baseline до двадцати улучшений.
+5. `round-plan.json` — обязательные двадцать proposal rounds.
+6. После прогонов: `rounds/01` … `rounds/20`, где должны лежать patch, tests, before/after metrics и deterministic decision.
 
-## Быстрая проверка
+## Baseline
+
+По всему corpus:
+
+```text
+compositions:              100
+semantic exact:             85
+matched frames:          13468 / 16156
+residual closures:         443
+mined recipe coverage:       0
+render errors:               0
+```
+
+Следовательно, baseline не принят для automatic memory promotion.
+
+## Локальная проверка
 
 ```powershell
 npm ci
 npm test
 
-$run = Get-Content cba-runs/58181f6bb4630140f227/evaluation/final.json -Raw | ConvertFrom-Json
-$run.semanticExactCompositions
-$run.semanticFrames
-$run.deterministicReplay
-$run.generatedFactoryValidation
+node src/experiment/cli.js `
+  --input C:\Users\User\Projects\cut3ai\workspaces.jsonl `
+  --out experiment-runs
 ```
 
-Ожидаемый результат:
+Оба evaluator runs должны давать одинаковый digest. Публичные artifacts не должны содержать raw composition source, prompts, transcripts или URL.
 
-- tests: `63/63`;
-- semantic compositions: `100/100`;
-- semantic frames: `16156/16156`;
-- 20 replay cycles имеют одинаковый digest;
-- generated modules linked: `100/100`;
-- orphan, pending и fallback behaviours: `0`;
-- Canvas/effect trace mismatches: `0`;
-- generated Unit/Behaviour factory validation: `valid: true`.
+## Что ещё не доказано
 
-Проверка, что public run не содержит raw URL или composition source:
+- Нет Remotion/browser pixel comparison.
+- Опубликованные generated factories ещё не исполняются independent verifier-ом.
+- Все 443 visual formulas пока остаются closure wiring, а не closure-free memory Behaviours.
+- `mined recipe coverage` равен нулю.
 
-```powershell
-Get-Content cba-runs/58181f6bb4630140f227/evaluation/privacy.json
-rg -n "https?://|GeneratedComposition\s*=|cdn\.cut3" cba-runs/58181f6bb4630140f227
-```
-
-`privacy.json` должен содержать `rawUrls: 0` и `sourceMarkers: 0`; `rg` не должен найти совпадений.
-
-## Как проверить tree-shaking
-
-Откройте `index.generated.js`: каждая factory находится за отдельным `import()`. Three-модули лежат только в `units/three/` и `behaviours/three/`; DOM factories их не импортируют.
-
-## Как воспроизвести run локально
-
-Dataset не коммитится. Если `workspaces.jsonl` расположен рядом с `cut3ai`, запустите:
-
-```powershell
-npm run cba -- --input C:\Users\User\Projects\cut3ai\workspaces.jsonl --cycles 20
-```
-
-Ожидаемый run ID: `58181f6bb4630140f227`. Каждый replay cycle должен получить digest `f5a6d7eac3782531870537d691f8b288553677359f37a995d7ec026092b3a4c9`.
-
-## Что результат пока не доказывает
-
-`acceptedForAutomaticMemoryPromotion` намеренно равен `false`.
-
-- Не выполнен настоящий Remotion/browser pixel diff.
-- 443 visual formulas ещё находятся в private reconstruction wiring и не стали closure-free shared animation configs.
-- Поэтому `minedRecipeLeaveOneWorkspaceOut.coverage` равен `0`; доступность базовых renderer factories не выдаётся за качество mined memory.
-
-Ветка подходит для ревью CBA compiler/runtime и воспроизводимости pipeline, но пока не является готовой production memory library.
+Именно уменьшение этих blockers без регрессии fidelity является целью следующих двадцати раундов.

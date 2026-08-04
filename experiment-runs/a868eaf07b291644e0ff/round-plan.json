@@ -1,0 +1,126 @@
+{
+  "maximumRounds": 20,
+  "rounds": [
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 1,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 2,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 3,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 4,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 5,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 6,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 7,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 8,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 9,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 10,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 11,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 12,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 13,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 14,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 15,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 16,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 17,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 18,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 19,
+      "state": "pending"
+    },
+    {
+      "acceptance": "frozen-deterministic-evaluator",
+      "proposalRequired": true,
+      "round": 20,
+      "state": "pending"
+    }
+  ],
+  "schemaVersion": 1
+}

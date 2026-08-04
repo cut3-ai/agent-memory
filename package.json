@@ -7,6 +7,7 @@
     "mine": "node src/cba/cli.js",
     "mine:legacy": "node src/cli.js",
     "cba": "node src/cba/cli.js",
+    "experiment:round0": "node src/experiment/cli.js",
     "test": "node --test"
   },
   "engines": {

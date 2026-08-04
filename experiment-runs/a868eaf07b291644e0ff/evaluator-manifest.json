@@ -1,0 +1,40 @@
+{
+  "evaluatorHash": "386427c512d2a6999c234cea6e7226f1b6083b31a625be90b656d182d236ef29",
+  "evaluatorVersion": "cba-round0-evaluator-v1",
+  "frozen": true,
+  "metricScope": {
+    "measured": [
+      "compiler-parse",
+      "reversible-instrumentation",
+      "reversible-jsx-lowering",
+      "jsx-unit-accounting",
+      "visual-sink-accounting",
+      "control-accounting",
+      "factory-occurrence-accounting",
+      "all-frame-semantic-tree-equivalence",
+      "effect-trace-equivalence",
+      "canvas-command-trace-equivalence",
+      "behaviour-attachment-diagnostics"
+    ],
+    "notMeasured": [
+      "generated-module-linking",
+      "factory-resolution",
+      "pixel-equivalence"
+    ]
+  },
+  "nodeVersion": "22.16.0",
+  "schemaVersion": 1,
+  "sourceDigests": {
+    "src/cba/semantic-harness.js": "5eb639eefa68fbd3d554e32e7fab7124b5ab2e621621954c946a0fa584e75596",
+    "src/experiment/evaluator.js": "ee87f8639c98b979f2caffcb896961add3e2236d79005ee08e78bd0b82e3d152",
+    "src/experiment/manifest.js": "1b3a0a199343eb42145bde035bcc3b823cbc25a631e34dc58484accde59c2888",
+    "src/experiment/split.js": "e6912af66251b405f75f7bf51afd4a14e401dee515abc27add1200810e286318",
+    "src/lib.js": "3a95468cf56370277780c5cef7f1d9440abd1e2bcfb8e369898f8cf34d921ec7"
+  },
+  "splitPolicy": {
+    "heldout": 0.2,
+    "train": 0.6,
+    "unit": "workspace",
+    "validation": 0.2
+  }
+}
