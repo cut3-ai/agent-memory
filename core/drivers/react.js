@@ -1,116 +1,91 @@
-import { CBA_FRAGMENT, isUnit } from '../Unit.js';
+import { projectUnit } from '../frame.js';
+import { frameContext } from '../signals.js';
+import { isUnit } from '../Unit.js';
 
-const bridgeCaches = new WeakMap();
+export const UNHANDLED_UNIT = Symbol.for('@cut3/agent-memory.unhandled-unit');
 
-export function createReactDriver(React, options = {}) {
-  if (!React || typeof React.createElement !== 'function') {
-    throw new TypeError('The React driver requires React.createElement');
+/**
+ * Renderer boundary for a statically assembled Unit renderer.
+ *
+ * `renderUnit` is ordinary application code which directly calls only the ESM
+ * adapters that composition needs. This module intentionally imports no
+ * concrete Unit class, owns no adapter collection, and performs no lookup.
+ */
+export function createReactDriver(React, renderUnit, options = {}) {
+  if (typeof React?.createElement !== 'function') {
+    throw new TypeError('React.createElement is required');
+  }
+  if (typeof renderUnit !== 'function') {
+    throw new TypeError('React driver requires a statically imported Unit renderer');
   }
 
-  const bridgeCache = bridgeCaches.get(React) ?? new WeakMap();
-  bridgeCaches.set(React, bridgeCache);
+  const components = Object.freeze({ ...(options.components ?? {}) });
 
-  const render = (value) => {
-    if (Array.isArray(value)) return value.map(render);
-    if (value?.kind === 'behaviour' || value?.kind === 'behaviour-group') {
-      return render(sample(value));
-    }
-    if (!isUnit(value)) return value;
+  const render = (unit, input = {}) => renderNode(unit, frameContext(input));
 
-    const props = materialize(value.props, render, sample);
-    applyDetachedBehaviours(value, props, render, sample);
-    const children = value.children.map(render);
-    if (value.type === CBA_FRAGMENT) {
-      return React.createElement(React.Fragment, props, ...children);
-    }
+  const renderNode = (unit, frame) => {
+    if (!isUnit(unit)) throw new TypeError('React driver can only render a Unit');
+    const state = projectUnit(unit, frame);
+    if (state.visible === false) return null;
 
-    if (
-      value.componentKind === 'local'
-      && typeof value.type === 'function'
-      && !value.type.prototype?.isReactComponent
-    ) {
-      const Bridge = getBridge(React, value.type, render, bridgeCache);
-      return React.createElement(Bridge, props, ...children);
+    const adapterContext = Object.freeze({
+      React,
+      component(name, fallback) {
+        return components[name] ?? fallback;
+      },
+      frame,
+      props(name, value) {
+        if (typeof options.adaptProps !== 'function') return value;
+        const adapted = options.adaptProps(Object.freeze({
+          frame,
+          name,
+          props: value,
+          state,
+          unit,
+        }));
+        if (!isPlainRecord(adapted)) {
+          throw new TypeError('backend prop adapter must return a plain object');
+        }
+        return adapted;
+      },
+      render(child, nextFrame = frame) {
+        return renderNode(child, frameContext(nextFrame));
+      },
+      renderChildren(nextFrame = frame) {
+        const childFrame = frameContext(nextFrame);
+        return unit.children
+          .map((child) => renderNode(child, childFrame))
+          .filter(renderedChild);
+      },
+      renderSequence: typeof options.renderSequence === 'function'
+        ? (children) => options.renderSequence(Object.freeze({
+          children,
+          frame,
+          state,
+          unit,
+        }))
+        : null,
+      state,
+      unit,
+      unhandled: UNHANDLED_UNIT,
+    });
+
+    const output = renderUnit(adapterContext);
+    if (output === UNHANDLED_UNIT) {
+      throw new TypeError(`No static React adapter for ${unit.constructor.name}`);
     }
-    return React.createElement(value.type, props, ...children);
+    return output;
   };
 
-  return { name: 'react', render };
-
-  function sample(behaviour) {
-    return behaviour.onFrame(options.getFrameContext?.() ?? {});
-  }
+  return Object.freeze({ name: options.name ?? 'react', render });
 }
 
-function applyDetachedBehaviours(unit, props, render, sample) {
-  const groupedTransforms = new Map();
-  for (const behaviour of unit.behaviours) {
-    if (storedAtPath(unit, behaviour.path)) continue;
-    if (['scale', 'translate', 'rotate'].includes(behaviour.channel)) {
-      const key = JSON.stringify(behaviour.path);
-      const entry = groupedTransforms.get(key) ?? { path: behaviour.path, parts: [] };
-      entry.parts.push(sample(behaviour));
-      groupedTransforms.set(key, entry);
-      continue;
-    }
-    setAtPath(props, behaviour.path, render(sample(behaviour)));
-  }
-  for (const { path, parts } of groupedTransforms.values()) {
-    setAtPath(props, path, parts.filter(Boolean).join(' '));
-  }
+function renderedChild(value) {
+  return value !== null && value !== undefined && value !== false;
 }
 
-function storedAtPath(unit, path) {
-  if (path[0] === 'children') return true;
-  let current = unit.props;
-  for (const key of path) {
-    if (!current || typeof current !== 'object') return false;
-    current = current[key];
-  }
-  return current?.kind === 'behaviour' || current?.kind === 'behaviour-group';
-}
-
-function setAtPath(root, path, value) {
-  if (path.length === 0) return;
-  let current = root;
-  for (let index = 0; index < path.length - 1; index += 1) {
-    const key = path[index];
-    current[key] ??= {};
-    current = current[key];
-  }
-  current[path.at(-1)] = value;
-}
-
-function getBridge(React, Component, render, cache) {
-  if (cache.has(Component)) return cache.get(Component);
-  const Bridge = (props) => render(Component(props));
-  Bridge.displayName = `CbaBridge(${Component.displayName ?? Component.name ?? 'Component'})`;
-  cache.set(Component, Bridge);
-  return Bridge;
-}
-
-function materialize(value, render, sample, seen = new WeakMap()) {
-  if (value?.kind === 'behaviour' || value?.kind === 'behaviour-group') {
-    return render(sample(value));
-  }
-  if (Array.isArray(value)) return value.map((nested) => materialize(nested, render, sample, seen));
-  if (!isPlainObject(value)) return value;
-  if (seen.has(value)) return seen.get(value);
-  const output = {};
-  seen.set(value, output);
-  for (const [key, nested] of Object.entries(value)) {
-    output[key] = materialize(nested, render, sample, seen);
-  }
-  return output;
-}
-
-function isPlainObject(value) {
-  if (!value || typeof value !== 'object') return false;
+function isPlainRecord(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const prototype = Object.getPrototypeOf(value);
-  if (prototype === null) return true;
-  // Generated compositions may execute in an isolated VM/browser realm.
-  // Its Object.prototype is not reference-equal to this module's prototype,
-  // but it is still the terminal Object prototype of that realm.
-  return Object.getPrototypeOf(prototype) === null
-    && prototype.constructor?.name === 'Object';
+  return prototype === null || prototype === Object.prototype;
 }

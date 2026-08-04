@@ -3,25 +3,53 @@
   "version": "0.3.1",
   "private": true,
   "type": "module",
+  "sideEffects": false,
+  "files": [
+    "behaviours",
+    "core",
+    "units",
+    "src/feedback",
+    "src/cba-v2",
+    "src/experiment",
+    "src/library",
+    "src/memory",
+    "src/model-lab",
+    "src/providers",
+    "src/detectors.js",
+    "src/extract.js",
+    "src/lib.js",
+    "src/mine.js",
+    "src/normalize.js",
+    "src/similarity.js",
+    "src/timeline.js",
+    "index.generated.json",
+    "VERIFY.md"
+  ],
+  "exports": {
+    "./core/Unit": "./core/Unit.js",
+    "./core/Behaviour": "./core/Behaviour.js",
+    "./core/Engine": "./core/Engine.js",
+    "./core/frame": "./core/frame.js",
+    "./core/signals": "./core/signals.js",
+    "./units/*": "./units/*.js",
+    "./behaviours/*": "./behaviours/*.js",
+    "./drivers/react": "./core/drivers/react.js",
+    "./drivers/react/adapters/*": "./core/drivers/react/adapters/*.js",
+    "./drivers/remotion": "./core/drivers/remotion.js"
+  },
   "scripts": {
-    "mine": "node src/cba/cli.js",
-    "mine:legacy": "node src/cli.js",
-    "cba": "node src/cba/cli.js",
-    "experiment:round0": "node src/experiment/cli.js",
+    "experiment": "node src/experiment/profile-lab-cli.js",
+    "memory": "node src/memory/cli.js",
     "test": "node --test"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
-    "@babel/core": "^7.29.0",
-    "@babel/generator": "^7.29.8",
     "@babel/parser": "7.29.8",
-    "@babel/plugin-transform-react-jsx": "^7.28.6",
-    "@babel/traverse": "7.29.8",
-    "@babel/types": "^7.29.8"
+    "@babel/traverse": "7.29.8"
   },
   "devDependencies": {
-    "ajv": "8.20.0"
+    "esbuild": "0.25.8"
   }
 }
