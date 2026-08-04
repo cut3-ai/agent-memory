@@ -7,8 +7,10 @@ runs/
 cba-runs/*
 .private-cba-runs/
 experiment-runs/*
+memory-runs/*
 .tmp-*/
 .private-memory-runs/
 .private-refinement-runs/
+staging/
 *.local.json
 *.private.jsonl

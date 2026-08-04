@@ -25,3 +25,20 @@ export {
   validateNavigationIndex,
   writeNavigationIndex,
 };
+
+export {
+  createFeedbackReceipt,
+  createPromotionGateAuthority,
+  createPromotionGateIssuer,
+  createPromotionGateVerifier,
+  isPromotionGateIssuer,
+  isPromotionGateVerifier,
+  loadPromotionGateAuthorityFile,
+  loadPromotionGateVerifierFile,
+  orchestrateMemoryPromotion,
+  PROMOTION_GATE_NAMES,
+  PROMOTION_GATE_RECEIPT_SCHEMA,
+  PROMOTION_GATE_RECEIPT_VERSION,
+  PromotionGateConfigurationError,
+  verifyPromotionGateReceipt,
+} from './promotion.js';

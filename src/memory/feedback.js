@@ -1,18 +1,28 @@
 import { sha256, stableStringify } from '../lib.js';
 import { assertPublicArtifact } from './privacy.js';
+import {
+  PROMOTION_GATE_NAMES,
+  verifyPromotionGateReceipt,
+} from './gate-receipts.js';
 
-export const FEEDBACK_POLICY_VERSION = 'human-feedback-v2';
+export const FEEDBACK_POLICY_VERSION = 'human-feedback-v5-generation-bound';
 export const MINIMUM_STABILITY_WINDOW_MS = 0;
+export const MINIMUM_FEEDBACK_GRACE_MS = 30_000;
 
 const HASH = /^[a-f0-9]{64}$/;
 const KIND = /^(?:unit|behaviour)\.[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
-const HUMAN_SIGNALS = new Set(['negative', 'neutral', 'positive']);
-const REQUIRED_GATES = Object.freeze([
-  ['compilerFidelity', 'compiler-fidelity-gate-failed'],
-  ['atomicity', 'atomicity-gate-failed'],
-  ['privacy', 'privacy-gate-failed'],
-  ['module', 'module-gate-failed'],
-]);
+const HUMAN_SIGNALS = new Set(['negative', 'neutral', 'positive', 'ambiguous']);
+const HUMAN_ORIGINS = new Set(['explicit-human', 'human-dialogue-classified']);
+const GATE_FAILURE_REASONS = Object.freeze({
+  compilerFidelity: 'compiler-fidelity-gate-failed',
+  reconstruction: 'reconstruction-gate-failed',
+  atomicity: 'atomicity-gate-failed',
+  privacy: 'privacy-gate-failed',
+  module: 'module-gate-failed',
+});
+const REQUIRED_GATES = Object.freeze(PROMOTION_GATE_NAMES.map(
+  (name) => Object.freeze([name, GATE_FAILURE_REASONS[name]]),
+));
 
 /**
  * Resolve a candidate revision using explicit human feedback and machine gates.
@@ -20,14 +30,14 @@ const REQUIRED_GATES = Object.freeze([
  * The function is deliberately closed over no clock, model, runtime, or
  * registry. Every decision is a deterministic projection of hashed evidence.
  */
-export function decideMemoryPromotion(input = {}) {
+export function decideMemoryPromotion(input = {}, options = {}) {
   const candidate = normalizeCandidate(input.candidate);
-  const feedbackEvents = normalizeFeedback(
-    input.feedback,
+  const feedbackReceipt = normalizeFeedbackReceipt(
+    input.feedbackReceipt,
     candidate.candidateSha256,
   );
-  const humanSignal = resolveHumanSignal(feedbackEvents);
-  const gates = normalizeGates(input.gates);
+  const humanSignal = feedbackReceipt?.signal ?? 'unknown';
+  const gates = normalizeGates(input.gates, candidate, options.gateVerifier);
   const requiredStabilityWindowMs = normalizeRequiredWindow(
     input.policy?.minimumStabilityWindowMs,
   );
@@ -44,6 +54,11 @@ export function decideMemoryPromotion(input = {}) {
     reasons = ['human-negative'];
   } else if (humanSignal === 'unknown') {
     reasons = ['human-feedback-required'];
+  } else if (humanSignal === 'ambiguous') {
+    reasons = ['human-feedback-ambiguous'];
+  } else if (feedbackReceipt.state !== 'candidate'
+      || feedbackReceipt.grace.remainingMs !== 0) {
+    reasons = ['feedback-grace-incomplete'];
   } else {
     reasons = REQUIRED_GATES
       .filter(([name]) => !gates[name].passed)
@@ -54,18 +69,18 @@ export function decideMemoryPromotion(input = {}) {
     if (reasons.length === 0) action = 'promote';
   }
 
-  const feedbackReceiptSet = feedbackEvents.map(({ receiptSha256, signal }) => ({
-    receiptSha256,
-    signal,
-  }));
   const body = {
     schemaVersion: 1,
     policyVersion: FEEDBACK_POLICY_VERSION,
     candidate,
     humanFeedback: {
       signal: humanSignal,
-      receipts: feedbackEvents.length,
-      receiptSetSha256: sha256(stableStringify(feedbackReceiptSet)),
+      origin: feedbackReceipt?.origin ?? null,
+      receiptSha256: feedbackReceipt?.receiptSha256 ?? null,
+      generationEventSha256: feedbackReceipt?.generationEventSha256 ?? null,
+      evidenceEvents: feedbackReceipt?.eventSha256s.length ?? 0,
+      eventSetSha256: sha256(stableStringify(feedbackReceipt?.eventSha256s ?? [])),
+      grace: feedbackReceipt?.grace ?? null,
     },
     gates,
     stability,
@@ -91,61 +106,158 @@ function normalizeCandidate(value) {
     kind: value.kind,
     candidateSha256: requireHash(value.candidateSha256, 'candidate.candidateSha256'),
     moduleSha256: requireHash(value.moduleSha256, 'candidate.moduleSha256'),
+    dependencyClosureSha256: requireHash(
+      value.dependencyClosureSha256,
+      'candidate.dependencyClosureSha256',
+    ),
     evidenceSha256: requireHash(value.evidenceSha256, 'candidate.evidenceSha256'),
   };
 }
 
-function normalizeFeedback(value, candidateSha256) {
-  if (value === undefined) return [];
-  if (!Array.isArray(value)) throw new TypeError('feedback must be an array');
-  const byReceipt = new Map();
-  for (const event of value) {
-    if (!event || typeof event !== 'object' || event.source !== 'human') {
-      throw new TypeError('only explicit human feedback can decide promotion');
-    }
-    if (!HUMAN_SIGNALS.has(event.signal)) {
-      throw new TypeError('human feedback signal must be negative, neutral, or positive');
-    }
-    if (event.candidateSha256 !== candidateSha256) {
-      throw new TypeError('human feedback must target the current candidate revision');
-    }
-    const receiptSha256 = requireHash(
-      event.receiptSha256,
-      'feedback.receiptSha256',
-    );
-    const previous = byReceipt.get(receiptSha256);
-    if (previous && previous.signal !== event.signal) {
-      throw new TypeError('one human receipt cannot attest conflicting signals');
-    }
-    byReceipt.set(receiptSha256, {
-      signal: event.signal,
-      receiptSha256,
-    });
+function normalizeFeedbackReceipt(value, candidateSha256) {
+  if (value === undefined || value === null) return null;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError('feedbackReceipt must be an object');
   }
-  return [...byReceipt.values()].sort((left, right) => (
-    left.receiptSha256.localeCompare(right.receiptSha256)
-      || left.signal.localeCompare(right.signal)
-  ));
+  const expectedKeys = [
+    'schemaVersion',
+    'candidateSha256',
+    'generationEventSha256',
+    'origin',
+    'signal',
+    'state',
+    'counts',
+    'eventSha256s',
+    'grace',
+    'classifier',
+    'receiptSha256',
+  ];
+  if (Object.keys(value).length !== expectedKeys.length
+      || expectedKeys.some((key) => !Object.hasOwn(value, key))) {
+    throw new TypeError('feedbackReceipt has unexpected fields');
+  }
+  if (value.schemaVersion !== 2) throw new TypeError('feedbackReceipt schema version is unsupported');
+  if (value.candidateSha256 !== candidateSha256) {
+    throw new TypeError('human feedback must target the current candidate revision');
+  }
+  if (!HUMAN_ORIGINS.has(value.origin)) throw new TypeError('feedbackReceipt origin is not human-authored');
+  if (!HUMAN_SIGNALS.has(value.signal)) throw new TypeError('feedbackReceipt signal is invalid');
+  if (!['reject', 'pending', 'candidate', 'quarantine'].includes(value.state)) {
+    throw new TypeError('feedbackReceipt state is invalid');
+  }
+  const eventSha256s = normalizeHashSet(value.eventSha256s, 'feedbackReceipt.eventSha256s');
+  if (eventSha256s.length === 0) throw new TypeError('feedbackReceipt requires user-authored evidence');
+  const counts = normalizeCounts(value.counts);
+  const grace = normalizeGrace(value.grace);
+  const classifier = normalizeClassifier(value.classifier, value.origin);
+  const receiptSha256 = requireHash(value.receiptSha256, 'feedbackReceipt.receiptSha256');
+  const body = {
+    schemaVersion: value.schemaVersion,
+    candidateSha256: value.candidateSha256,
+    generationEventSha256: requireHash(
+      value.generationEventSha256,
+      'feedbackReceipt.generationEventSha256',
+    ),
+    origin: value.origin,
+    signal: value.signal,
+    state: value.state,
+    counts,
+    eventSha256s,
+    grace,
+    classifier,
+  };
+  if (sha256(stableStringify(body)) !== receiptSha256) {
+    throw new TypeError('feedbackReceipt hash does not match its body');
+  }
+  if (value.signal === 'negative' && value.state !== 'reject') {
+    throw new TypeError('negative feedback receipt must reject');
+  }
+  if (['positive', 'neutral'].includes(value.signal)
+      && grace.requiredMs < MINIMUM_FEEDBACK_GRACE_MS) {
+    throw new TypeError('positive or neutral feedback receipt has an insufficient grace period');
+  }
+  if (['positive', 'neutral'].includes(value.signal)
+      && value.state === 'candidate'
+      && grace.remainingMs !== 0) {
+    throw new TypeError('candidate feedback receipt cannot precede grace completion');
+  }
+  return { ...body, receiptSha256 };
 }
 
-function resolveHumanSignal(events) {
-  const signals = new Set(events.map((event) => event.signal));
-  if (signals.has('negative')) return 'negative';
-  if (signals.has('positive')) return 'positive';
-  if (signals.has('neutral')) return 'neutral';
-  return 'unknown';
-}
-
-function normalizeGates(value) {
+function normalizeGates(value, candidate, verifier) {
   const source = value && typeof value === 'object' ? value : {};
   return Object.fromEntries(REQUIRED_GATES.map(([name]) => {
-    const gate = source[name];
-    const passed = gate?.passed === true && isHash(gate.receiptSha256);
+    const verified = verifyPromotionGateReceipt(verifier, source[name], {
+      gateName: name,
+      candidateSha256: candidate.candidateSha256,
+      moduleSha256: candidate.moduleSha256,
+      dependencyClosureSha256: candidate.dependencyClosureSha256,
+      resultSha256: candidate.evidenceSha256,
+    });
+    const passed = verified?.passed === true;
     return [name, {
       passed,
-      receiptSha256: passed ? gate.receiptSha256 : null,
+      authorityId: verified?.authorityId ?? null,
+      receiptSha256: verified?.receiptSha256 ?? null,
+      signatureSha256: verified?.signatureSha256 ?? null,
     }];
   }));
+}
+
+function normalizeHashSet(value, name) {
+  if (!Array.isArray(value) || value.length > 20) throw new TypeError(`${name} must be an array`);
+  const hashes = [...new Set(value.map((entry) => requireHash(entry, name)))].sort();
+  if (hashes.length !== value.length) throw new TypeError(`${name} must be unique`);
+  return hashes;
+}
+
+function normalizeCounts(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError('feedbackReceipt.counts must be an object');
+  }
+  const counts = {};
+  for (const signal of ['negative', 'positive', 'neutral', 'ambiguous']) {
+    if (!Number.isSafeInteger(value[signal]) || value[signal] < 0) {
+      throw new TypeError(`feedbackReceipt.counts.${signal} must be non-negative`);
+    }
+    counts[signal] = value[signal];
+  }
+  return counts;
+}
+
+function normalizeGrace(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError('feedbackReceipt.grace must be an object');
+  }
+  for (const name of ['requiredMs', 'remainingMs']) {
+    if (!Number.isSafeInteger(value[name]) || value[name] < 0) {
+      throw new TypeError(`feedbackReceipt.grace.${name} must be non-negative`);
+    }
+  }
+  return { requiredMs: value.requiredMs, remainingMs: value.remainingMs };
+}
+
+function normalizeClassifier(value, origin) {
+  if (origin === 'explicit-human') {
+    if (value !== null) throw new TypeError('explicit feedback cannot carry classifier authority');
+    return null;
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError('classified human feedback requires classifier hashes');
+  }
+  return {
+    provider: safeLabel(value.provider),
+    model: safeLabel(value.model),
+    requestSha256: requireHash(value.requestSha256, 'classifier.requestSha256'),
+    responseSha256: requireHash(value.responseSha256, 'classifier.responseSha256'),
+  };
+}
+
+function safeLabel(value) {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9._-]{1,100}$/u.test(value)) {
+    throw new TypeError('classifier labels must be safe identifiers');
+  }
+  return value;
 }
 
 function normalizeStability(value, candidateSha256, requiredWindowMs) {

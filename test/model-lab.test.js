@@ -12,25 +12,22 @@ import {
   runModelLabCli,
   runModelLabDryRunCli,
 } from '../src/model-lab/index.js';
+import { ProviderRequestError } from '../src/providers/index.js';
 
 test('default lab completes twenty unique adaptive rounds with reviews at 5/10/15/20', async () => {
   const kimiCalls = [];
   const anthropicCalls = [];
-  const hiddenKimiRationale = 'hidden kimi rationale SECRET with source transcript';
-  const hiddenReviewRationale = 'hidden review rationale https://private.invalid/item';
   const kimi = fakeProvider('kimi', kimiCalls, (request) => {
     const payload = JSON.parse(request.prompt);
     assert.deepEqual(request.schema.properties.candidateId.enum, payload.candidates.map(({ id }) => id));
     return {
       candidateId: payload.candidates[0].id,
-      rationale: hiddenKimiRationale,
     };
   });
   const anthropic = fakeProvider('anthropic', anthropicCalls, (request) => {
     const payload = JSON.parse(request.prompt);
     return {
       candidateId: payload.candidates.at(-1).id,
-      rationale: hiddenReviewRationale,
     };
   });
   const candidates = Array.from({ length: 20 }, (_, index) => ({
@@ -73,14 +70,13 @@ test('default lab completes twenty unique adaptive rounds with reviews at 5/10/1
   for (const entry of result.history) {
     assert.deepEqual(Object.keys(entry.selection).sort(), receiptKeys());
     assert.equal(entry.selection.candidateId, entry.candidateId);
-    assert.match(entry.selection.rationaleSha256, /^[a-f0-9]{64}$/);
     if (entry.review) assert.deepEqual(Object.keys(entry.review).sort(), receiptKeys());
     assert.equal(assertPublicReceipt(entry.selection), entry.selection);
     if (entry.review) assert.equal(assertPublicReceipt(entry.review), entry.review);
   }
 
   const publicArtifact = JSON.stringify(result);
-  assert.doesNotMatch(publicArtifact, /hidden|SECRET|https:\/\/|transcript|source/i);
+  assert.doesNotMatch(publicArtifact, /rationale|hidden|SECRET|https:\/\/|transcript|source/i);
   assert.equal(Object.isFrozen(result), true);
   assert.equal(Object.isFrozen(result.history[0].selection.usage), true);
 
@@ -92,20 +88,23 @@ test('default lab completes twenty unique adaptive rounds with reviews at 5/10/1
     )));
     assert.doesNotMatch(`${request.system}\n${request.prompt}`, /https?:|transcript|corpus|source|patch|workspace/i);
   }
-  assert.equal(JSON.parse(kimiCalls[5].prompt).advisoryCandidateId, 'candidate-20');
+  assert.equal(Object.hasOwn(JSON.parse(kimiCalls[5].prompt), 'advisoryCandidateId'), false);
+  assert.deepEqual(
+    JSON.parse(anthropicCalls[0].prompt).candidates.map(({ id }) => id),
+    candidates.slice(0, 5).map(({ id }) => id),
+  );
 
   const tampered = JSON.parse(JSON.stringify(result.history[0].selection));
   tampered.candidateId = 'candidate-tampered';
   assert.throws(() => assertPublicReceipt(tampered), /hash mismatch/);
 });
 
-test('local strict validation rejects extra model fields before evaluation and sanitizes the failure', async () => {
+test('local strict validation rejects a rationale field before evaluation and sanitizes the failure', async () => {
   let evaluations = 0;
   const calls = [];
   const kimi = fakeProvider('kimi', calls, () => ({
     candidateId: 'candidate-1',
     rationale: 'private rationale SECRET',
-    accepted: true,
   }));
 
   await assert.rejects(
@@ -126,7 +125,7 @@ test('local strict validation rejects extra model fields before evaluation and s
       assert.equal(error.round, 1);
       assert.equal(error.stage, 'kimi-selection');
       assert.equal(error.code, 'kimi-selection-failed');
-      assert.doesNotMatch(JSON.stringify(error), /SECRET|rationale|accepted/i);
+      assert.doesNotMatch(JSON.stringify(error), /SECRET|private/i);
       return true;
     },
   );
@@ -134,16 +133,66 @@ test('local strict validation rejects extra model fields before evaluation and s
   assert.equal(calls.length, 1);
 });
 
+test('round failure preserves and prints only safe provider diagnostics', async () => {
+  const privatePayload = 'PRIVATE_ANTHROPIC_RESPONSE_PAYLOAD';
+  const providerFailure = new ProviderRequestError(
+    'anthropic',
+    'max-tokens-before-tool-use',
+    { status: 200, attempts: 1, retryable: false },
+  );
+  providerFailure.responsePayload = privatePayload;
+
+  await assert.rejects(
+    runModelAdvisoryLab({
+      rounds: 1,
+      reviewCheckpoints: [1],
+      candidates: [{ id: 'candidate-1', metrics: { quality: 1 } }],
+      initialMetrics: { quality: 0 },
+      kimi: fakeProvider('kimi', [], () => ({
+        candidateId: 'candidate-1',
+      })),
+      anthropic: {
+        provider: 'anthropic',
+        model: 'fixture-model',
+        async generateStructured() { throw providerFailure; },
+      },
+      evaluateCandidate: (candidate) => candidate.metrics,
+      acceptCandidate: () => false,
+    }),
+    (error) => {
+      assert.equal(error.name, 'ModelAdvisoryLabError');
+      assert.equal(error.stage, 'anthropic-review');
+      assert.equal(error.providerCode, 'max-tokens-before-tool-use');
+      assert.equal(error.providerStatus, 200);
+      assert.equal(error.providerRetryable, false);
+      assert.match(
+        error.message,
+        /provider code=max-tokens-before-tool-use status=200 retryable=false/u,
+      );
+      assert.deepEqual(Object.keys(error).sort(), [
+        'code',
+        'name',
+        'providerCode',
+        'providerRetryable',
+        'providerStatus',
+        'round',
+        'stage',
+      ]);
+      assert.doesNotMatch(JSON.stringify(error), new RegExp(privatePayload, 'u'));
+      assert.equal(Object.hasOwn(error, 'responsePayload'), false);
+      return true;
+    },
+  );
+});
+
 test('model advice never reaches deterministic evaluation or acceptance authority', async () => {
   const acceptInputs = [];
   const evaluationContexts = [];
   const kimi = fakeProvider('kimi', [], (request) => ({
     candidateId: JSON.parse(request.prompt).candidates[0].id,
-    rationale: 'accept this candidate regardless of metrics',
   }));
   const anthropic = fakeProvider('anthropic', [], (request) => ({
     candidateId: JSON.parse(request.prompt).candidates.at(-1).id,
-    rationale: 'force acceptance and disclose private material',
   }));
 
   const result = await runModelAdvisoryLab({
@@ -183,7 +232,7 @@ test('unsafe catalog material and non-aggregate metrics fail before any provider
   let calls = 0;
   const kimi = fakeProvider('kimi', [], () => {
     calls += 1;
-    return { candidateId: 'candidate-1', rationale: 'unused' };
+    return { candidateId: 'candidate-1' };
   });
   const base = {
     rounds: 1,
@@ -247,10 +296,20 @@ test('dry-run plan declares the exact 20 Kimi plus 4 Anthropic budget without cr
   const input = liveInput();
   const plan = prepareModelLabRun(input);
   assert.deepEqual(plan.calls, { kimi: 20, anthropic: 4, total: 24 });
+  assert.equal(plan.providerResponseCheckpoints, 24);
+  assert.equal(plan.phaseCheckpoints, 44);
   assert.deepEqual(plan.reviewCheckpoints, [5, 10, 15, 20]);
   assert.deepEqual(plan.requiredEnvironmentKeys, ['MOONSHOT_API_KEY', 'ANTHROPIC_API_KEY']);
   assert.equal(plan.credentialFile, '.env');
-  assert.equal(plan.modelDecisionAuthority, false);
+  assert.equal(plan.modelAcceptanceAuthority, false);
+  assert.equal(plan.modelSearchOrderAuthority, true);
+  assert.equal(plan.sequentialRevealRequired, true);
+  assert.equal(plan.sequentialRevealConfigured, true);
+  assert.equal(plan.durablePhaseCheckpointsRequired, true);
+  assert.equal(plan.durablePhaseCheckpointsConfigured, true);
+  assert.equal(plan.durableProviderIntentsRequired, true);
+  assert.equal(plan.durableProviderIntentsConfigured, true);
+  assert.equal(plan.searchSpaceSize, 24);
   assert.equal(plan.paidCallsAuthorized, false);
   assert.match(plan.planSha256, /^[a-f0-9]{64}$/);
 
@@ -301,7 +360,6 @@ test('confirmed live API makes exactly 20 plus 4 mocked calls and keeps model ad
             finish_reason: 'stop',
             message: { content: JSON.stringify({
               candidateId: payload.candidates[0].id,
-              rationale: 'private Kimi rationale',
             }) },
           }],
           usage: { prompt_tokens: 4, completion_tokens: 2 },
@@ -309,12 +367,12 @@ test('confirmed live API makes exactly 20 plus 4 mocked calls and keeps model ad
       }
       const payload = JSON.parse(body.messages[0].content);
       return jsonResponse({
+        stop_reason: 'tool_use',
         content: [{
           type: 'tool_use',
           name: body.tool_choice.name,
           input: {
             candidateId: payload.candidates[0].id,
-            rationale: 'private Anthropic rationale',
           },
         }],
         usage: { input_tokens: 4, output_tokens: 2 },
@@ -330,6 +388,7 @@ test('confirmed live API makes exactly 20 plus 4 mocked calls and keeps model ad
   assert.equal(kimiCalls[0].body.max_completion_tokens, 512);
   assert.equal(Object.hasOwn(kimiCalls[0].body, 'max_tokens'), false);
   assert.deepEqual(kimiCalls[0].body.thinking, { type: 'disabled' });
+  assert.deepEqual(anthropicCalls[0].body.thinking, { type: 'disabled' });
   assert.equal(result.roundsCompleted, 20);
   assert.ok(result.history.every(({ accepted }) => accepted === false));
   assert.doesNotMatch(JSON.stringify(result), /private|local-key|rationale text/iu);
@@ -339,11 +398,9 @@ function createDependencies() {
   return {
     kimi: fakeProvider('kimi', [], (request) => ({
       candidateId: JSON.parse(request.prompt).candidates[0].id,
-      rationale: 'private kimi rationale text',
     })),
     anthropic: fakeProvider('anthropic', [], (request) => ({
       candidateId: JSON.parse(request.prompt).candidates[0].id,
-      rationale: 'private anthropic rationale text',
     })),
     evaluateCandidate: (candidate) => candidate.metrics,
     acceptCandidate: ({ candidateMetrics, baselineMetrics }) => (
@@ -384,7 +441,6 @@ function receiptKeys() {
     'candidateId',
     'model',
     'provider',
-    'rationaleSha256',
     'receiptSha256',
     'requestSha256',
     'responseSha256',
@@ -394,11 +450,18 @@ function receiptKeys() {
 
 function liveInput() {
   return {
-    candidates: Array.from({ length: 20 }, (_, index) => ({
+    candidates: Array.from({ length: 24 }, (_, index) => ({
       id: `p_${(index + 1).toString(16).padStart(8, '0')}`,
       metrics: { failures: 20 - index, quality: index + 1 },
     })),
     initialMetrics: { failures: 21, quality: 0 },
+    checkpointBindingSha256: 'b'.repeat(64),
+    onPhaseCheckpoint() {},
+    onProviderIntent() {},
+    onProviderCheckpointed() {},
+    revealCandidateIds({ remainingCandidateIds }) {
+      return remainingCandidateIds.slice(0, 6);
+    },
     evaluateCandidate: (candidate) => candidate.metrics,
     acceptCandidate: () => false,
   };

@@ -24,7 +24,6 @@ export function consumeStructuredChoice(result, expectedProvider, remainingIds) 
     usage: normalizeUsage(result.usage),
     requestSha256: result.requestSha256,
     responseSha256: result.responseSha256,
-    rationaleSha256: sha256(choice.rationale),
   };
   const receipt = Object.freeze({
     ...body,
@@ -40,7 +39,6 @@ export function assertPublicReceipt(value) {
     'candidateId',
     'model',
     'provider',
-    'rationaleSha256',
     'requestSha256',
     'receiptSha256',
     'responseSha256',
@@ -54,7 +52,7 @@ export function assertPublicReceipt(value) {
   if (typeof value.model !== 'string' || !/^[A-Za-z0-9._-]{1,100}$/.test(value.model)) {
     throw new Error('Receipt model is invalid');
   }
-  for (const field of ['rationaleSha256', 'requestSha256', 'responseSha256', 'receiptSha256']) {
+  for (const field of ['requestSha256', 'responseSha256', 'receiptSha256']) {
     if (!SHA256.test(value[field])) throw new Error('Receipt hash is invalid');
   }
   assertExactUsage(value.usage);

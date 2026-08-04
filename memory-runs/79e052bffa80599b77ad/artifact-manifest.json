@@ -1,0 +1,36 @@
+{
+  "artifacts": [
+    {
+      "bytes": 458,
+      "file": "class-validation.json",
+      "sha256": "a2eb9f6f4a4e69cb17958dedf54c811cb7daaa96395bd3074a6017f3fd0cc9f0"
+    },
+    {
+      "bytes": 77287,
+      "file": "corpus.json",
+      "sha256": "118eac7759fb5e8e4190036bd8f893d1b1ca435cfb79e1b08075630f29fcaef5"
+    },
+    {
+      "bytes": 3418,
+      "file": "index.snapshot.json",
+      "sha256": "70a94cdbc93f47af40f73e4bc28877a93e994e62df78fe2b5247ce9cd842c00d"
+    },
+    {
+      "bytes": 952,
+      "file": "manifest.json",
+      "sha256": "a82180d6351d64f3e1a4f8f875500c05870c52603efcda460ee2c6e65499e069"
+    },
+    {
+      "bytes": 9578,
+      "file": "metrics.json",
+      "sha256": "954e49257e34e0e149dbe86806300d3be2cbb677b856fdc111afbab94c680b85"
+    },
+    {
+      "bytes": 81,
+      "file": "privacy.json",
+      "sha256": "f358074446363f0570ff708cf9a34b73a0ae1c2d41853c9006cfcb36d37801a3"
+    }
+  ],
+  "manifestSha256": "e1dbe0bb31dcb90a7be790267b56a29c74db00edcad905eaf198151f4489cf0c",
+  "schemaVersion": 1
+}

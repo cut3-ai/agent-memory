@@ -1,6 +1,8 @@
 export {
   NATIVE_FRAGMENT,
   NativeUnit,
+  plainVisualValue,
+  readElementProp,
   readStyleValue,
   readTransformOperation,
   readTransformSignal,

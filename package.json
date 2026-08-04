@@ -23,6 +23,7 @@
     "src/similarity.js",
     "src/timeline.js",
     "index.generated.json",
+    "promotion-ledger.json",
     "VERIFY.md"
   ],
   "exports": {
@@ -35,19 +36,31 @@
     "./behaviours/*": "./behaviours/*.js",
     "./drivers/react": "./core/drivers/react.js",
     "./drivers/react/adapters/*": "./core/drivers/react/adapters/*.js",
-    "./drivers/remotion": "./core/drivers/remotion.js"
+    "./drivers/remotion": "./core/drivers/remotion.js",
+    "./cba-v2": "./src/cba-v2/index.js",
+    "./cba-v2/runtime": "./src/cba-v2/runtime/index.js",
+    "./providers": "./src/providers/index.js",
+    "./memory": "./src/memory/index.js",
+    "./memory/promotion": "./src/memory/promotion.js",
+    "./memory/promotion-gates": "./src/memory/promotion-gates.js",
+    "./library": "./src/library/index.js",
+    "./index.generated.json": "./index.generated.json"
   },
   "scripts": {
     "experiment": "node src/experiment/profile-lab-cli.js",
     "memory": "node src/memory/cli.js",
+    "memory:gates": "node src/memory/promotion-gates-cli.js",
+    "memory:promote": "node src/memory/promotion-cli.js",
     "test": "node --test"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
+    "@babel/generator": "7.29.8",
     "@babel/parser": "7.29.8",
-    "@babel/traverse": "7.29.8"
+    "@babel/traverse": "7.29.8",
+    "@babel/types": "7.29.8"
   },
   "devDependencies": {
     "esbuild": "0.25.8"

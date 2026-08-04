@@ -45,16 +45,17 @@ export const MEMORY_ENTRIES = deepFreeze([
   }),
 ]);
 
-/* Detector-only hypotheses. buildMemoryIndex() intentionally imports only
- * MEMORY_ENTRIES, so these cannot leak into the agent's reusable catalog. */
+/* Detector-only hypotheses have no importable module. A future implementation
+ * stays in transient staging until reconstruction, feedback and hard gates
+ * promote its exact source revision. */
 export const MEMORY_CANDIDATES = deepFreeze([
-  entry('text.scatter-chunk', 'unit.scatter-text', 'unit', 'units/scatter-text.js', 'ScatterText', {
+  entry('text.scatter-chunk', 'unit.scatter-text', 'unit', null, null, {
     parameters: { text: 'string', x: 'number', y: 'number', typography: 'data?' },
   }),
-  entry('text.dialogue-card', 'unit.dialogue-card', 'unit', 'units/dialogue-card.js', 'DialogueCard', {
+  entry('text.dialogue-card', 'unit.dialogue-card', 'unit', null, null, {
     parameters: { speaker: 'string?', text: 'string', portrait: 'asset?', presentation: 'data?' },
   }),
-  entry('card.ranking', 'unit.ranking-card', 'unit', 'units/ranking-card.js', 'RankingCard', {
+  entry('card.ranking', 'unit.ranking-card', 'unit', null, null, {
     parameters: { rank: 'number|string', title: 'string', subtitle: 'string?', image: 'asset?' },
   }),
 ]);
@@ -63,8 +64,8 @@ export const MEMORY_CANDIDATES = deepFreeze([
  * Detector evidence and a reusable class are deliberately different things.
  * The item detectors are useful corpus probes, but their current heuristics do
  * not prove that a match is one card/item rather than an enclosing sequence.
- * Keeping this policy outside MEMORY_ENTRIES also keeps the navigation index
- * limited to the class contract consumed by agents.
+ * Keeping this policy outside MEMORY_ENTRIES prevents heuristic matches from
+ * being treated as reusable-memory proof.
  */
 const PROMOTION_POLICIES = deepFreeze({
   'motion.opacity': reviewable('atomic-visual-write'),

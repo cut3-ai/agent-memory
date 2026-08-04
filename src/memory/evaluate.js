@@ -4,14 +4,12 @@ import { evaluateReconstructionReceipts } from './reconstruction.js';
 /** Mapping is navigation coverage; only verifier receipts can establish 1:1. */
 export function evaluateMemoryCandidate(
   census,
-  classContract,
+  classIndex,
   contractValidation = {},
   options = {},
 ) {
-  const indexedKinds = new Set([
-    ...(classContract.units ?? []).map((entry) => entry.kind),
-    ...(classContract.behaviours ?? []).map((entry) => entry.kind),
-  ]);
+  const entries = navigationEntries(classIndex);
+  const indexedKinds = new Set(entries.map((entry) => entry.kind));
   const unitGroups = census.units ?? [];
   const behaviourGroups = census.behaviours ?? [];
   const totalUnits = sum(unitGroups, 'witnesses');
@@ -52,12 +50,13 @@ export function evaluateMemoryCandidate(
       ...(contractValidation.imports?.violations ?? []),
     ];
   const body = {
+    schemaVersion: 4,
     proofLevel: 'static-class-contract-independent-ast-census-and-receipts',
     classContract: {
       valid: contractValidation.valid === true,
       violations: contractViolations.length,
-      indexedUnits: classContract.units?.length ?? 0,
-      indexedBehaviours: classContract.behaviours?.length ?? 0,
+      indexedUnits: entries.filter((entry) => entry.type === 'unit').length,
+      indexedBehaviours: entries.filter((entry) => entry.type === 'behaviour').length,
     },
     corpus: {
       compositions: census.counts.compositions,
@@ -116,8 +115,19 @@ export function evaluateMemoryCandidate(
   };
   return Object.freeze({
     ...body,
-    evaluationSha256: sha256(stableStringify(body)),
+    metricsSha256: sha256(stableStringify(body)),
   });
+}
+
+function navigationEntries(index) {
+  if (Array.isArray(index?.entries)) return index.entries;
+  return [
+    ...(index?.units ?? []).map((entry) => ({ ...entry, type: entry.type ?? 'unit' })),
+    ...(index?.behaviours ?? []).map((entry) => ({
+      ...entry,
+      type: entry.type ?? 'behaviour',
+    })),
+  ];
 }
 
 function residualGroups(groups, indexedKinds) {

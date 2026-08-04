@@ -1,163 +1,157 @@
 {
+  "format": "cut3-static-library-index",
+  "version": 1,
+  "indexSha256": "19b257f4b58d826d53f2046dd219364698447ab4ab35e5023ce1bcef53b1f7cc",
   "entries": [
     {
-      "export": "Blur",
       "kind": "behaviour.blur",
+      "type": "behaviour",
       "source": "behaviours/blur.js",
-      "type": "behaviour"
+      "export": "Blur"
     },
     {
-      "export": "Opacity",
       "kind": "behaviour.opacity",
+      "type": "behaviour",
       "source": "behaviours/opacity.js",
-      "type": "behaviour"
+      "export": "Opacity"
     },
     {
-      "export": "Rotate",
       "kind": "behaviour.rotate",
+      "type": "behaviour",
       "source": "behaviours/rotate.js",
-      "type": "behaviour"
+      "export": "Rotate"
     },
     {
-      "export": "Scale",
       "kind": "behaviour.scale",
+      "type": "behaviour",
       "source": "behaviours/scale.js",
-      "type": "behaviour"
+      "export": "Scale"
     },
     {
-      "export": "TextReveal",
       "kind": "behaviour.text-reveal",
+      "type": "behaviour",
       "source": "behaviours/text-reveal.js",
-      "type": "behaviour"
+      "export": "TextReveal"
     },
     {
-      "export": "Translate",
       "kind": "behaviour.translate",
+      "type": "behaviour",
       "source": "behaviours/translate.js",
-      "type": "behaviour"
+      "export": "Translate"
     },
     {
-      "export": "VisibleDuring",
       "kind": "behaviour.visible-during",
+      "type": "behaviour",
       "source": "behaviours/visible-during.js",
-      "type": "behaviour"
+      "export": "VisibleDuring"
     },
     {
-      "export": "Audio",
       "kind": "unit.audio",
+      "type": "unit",
       "source": "units/audio.js",
-      "type": "unit"
+      "export": "Audio"
     },
     {
-      "export": "Canvas",
+      "kind": "unit.box",
+      "type": "unit",
+      "source": "units/box.js",
+      "export": "Box"
+    },
+    {
       "kind": "unit.canvas",
+      "type": "unit",
       "source": "units/canvas.js",
-      "type": "unit"
+      "export": "Canvas"
     },
     {
-      "export": "DialogueCard",
-      "kind": "unit.dialogue-card",
-      "source": "units/dialogue-card.js",
-      "type": "unit"
-    },
-    {
-      "export": "Group",
       "kind": "unit.group",
+      "type": "unit",
       "source": "units/group.js",
-      "type": "unit"
+      "export": "Group"
     },
     {
-      "export": "Image",
       "kind": "unit.image",
+      "type": "unit",
       "source": "units/image.js",
-      "type": "unit"
+      "export": "Image"
     },
     {
-      "export": "Layer",
       "kind": "unit.layer",
+      "type": "unit",
       "source": "units/layer.js",
-      "type": "unit"
+      "export": "Layer"
     },
     {
-      "export": "RankingCard",
-      "kind": "unit.ranking-card",
-      "source": "units/ranking-card.js",
-      "type": "unit"
-    },
-    {
-      "export": "Repeat",
       "kind": "unit.repeat",
+      "type": "unit",
       "source": "units/repeat.js",
-      "type": "unit"
+      "export": "Repeat"
     },
     {
-      "export": "ScatterText",
-      "kind": "unit.scatter-text",
-      "source": "units/scatter-text.js",
-      "type": "unit"
-    },
-    {
-      "export": "Sequence",
       "kind": "unit.sequence",
+      "type": "unit",
       "source": "units/sequence.js",
-      "type": "unit"
+      "export": "Sequence"
     },
     {
-      "export": "SolidFill",
       "kind": "unit.solid-fill",
+      "type": "unit",
       "source": "units/solid-fill.js",
-      "type": "unit"
+      "export": "SolidFill"
     },
     {
-      "export": "Sprite",
       "kind": "unit.sprite",
+      "type": "unit",
       "source": "units/sprite.js",
-      "type": "unit"
+      "export": "Sprite"
     },
     {
-      "export": "Surface",
       "kind": "unit.surface",
+      "type": "unit",
       "source": "units/surface.js",
-      "type": "unit"
+      "export": "Surface"
     },
     {
-      "export": "Svg",
       "kind": "unit.svg",
+      "type": "unit",
       "source": "units/svg.js",
-      "type": "unit"
+      "export": "Svg"
     },
     {
-      "export": "Switch",
       "kind": "unit.switch",
+      "type": "unit",
       "source": "units/switch.js",
-      "type": "unit"
+      "export": "Switch"
     },
     {
-      "export": "Text",
       "kind": "unit.text",
+      "type": "unit",
       "source": "units/text.js",
-      "type": "unit"
+      "export": "Text"
     },
     {
-      "export": "ThreeScene",
+      "kind": "unit.text-node",
+      "type": "unit",
+      "source": "units/text-node.js",
+      "export": "TextNode"
+    },
+    {
       "kind": "unit.three-scene",
+      "type": "unit",
       "source": "units/three/scene.js",
-      "type": "unit"
+      "export": "ThreeScene"
     },
     {
-      "export": "Video",
       "kind": "unit.video",
+      "type": "unit",
       "source": "units/video.js",
-      "type": "unit"
+      "export": "Video"
     },
     {
-      "export": "Vignette",
       "kind": "unit.vignette",
+      "type": "unit",
       "source": "units/vignette.js",
-      "type": "unit"
+      "export": "Vignette"
     }
-  ],
-  "format": "cut3-static-library-index",
-  "indexSha256": "42f1c59532188046fad89fc2f38754f62348d35a208c70d90a668f942ab63e05",
-  "version": 1
+  ]
 }

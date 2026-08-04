@@ -5,11 +5,16 @@ import path from 'node:path';
 import test from 'node:test';
 
 import {
+  createPromotionLedger,
+  createReviewedCoreLedger,
+  discoverLibrary,
   generateNavigationIndex,
   validateNavigationIndex,
+  validatePromotionLedger,
   verifyDomTreeShaking,
   verifyLibrary,
 } from '../src/library/index.js';
+import { sha256, stableStringify } from '../src/lib.js';
 
 test('static discovery writes a deterministic navigation-only index without evaluating modules', async (t) => {
   const rootDir = await fixture(t, {
@@ -33,9 +38,11 @@ test('static discovery writes a deterministic navigation-only index without eval
     ].join('\n'),
   });
 
-  const first = await generateNavigationIndex({ rootDir });
+  const promotionLedger = await reviewedLedger(rootDir, ['behaviour.fade', 'unit.card']);
+
+  const first = await generateNavigationIndex({ rootDir, promotionLedger });
   const firstBytes = await fs.readFile(path.join(rootDir, 'index.generated.json'), 'utf8');
-  const second = await generateNavigationIndex({ rootDir });
+  const second = await generateNavigationIndex({ rootDir, promotionLedger });
   const secondBytes = await fs.readFile(path.join(rootDir, 'index.generated.json'), 'utf8');
 
   assert.equal(first.verification.ok, true);
@@ -74,9 +81,15 @@ test('static discovery writes a deterministic navigation-only index without eval
 
 test('navigation index hash and minimal JSON shape fail closed', async (t) => {
   const rootDir = await fixture(t, {
-    'units/Card.js': "export class Card extends Object { static kind = 'unit.card'; }\n",
+    'core/Unit.js': 'export class Unit {}\n',
+    'units/Card.js': [
+      "import { Unit } from '../core/Unit.js';",
+      "export class Card extends Unit { static kind = 'unit.card'; }",
+      '',
+    ].join('\n'),
   });
-  const { index } = await generateNavigationIndex({ rootDir });
+  const promotionLedger = await reviewedLedger(rootDir, ['unit.card']);
+  const { index } = await generateNavigationIndex({ rootDir, promotionLedger });
 
   const tampered = structuredClone(index);
   tampered.entries[0].source = 'units/../private.js';
@@ -127,14 +140,152 @@ test('static verification rejects inherited identity, dynamic loading and engine
   await assert.rejects(() => generateNavigationIndex({ rootDir }), /Static library verification failed/);
 });
 
+test('static verification rejects fake or non-canonical Unit and Behaviour bindings', async (t) => {
+  const rootDir = await fixture(t, {
+    'core/Unit.js': 'export class Unit {}\n',
+    'core/Behaviour.js': 'export class Behaviour {}\n',
+    'units/Fake.js': [
+      'class Unit {}',
+      "export class Fake extends Unit { static kind = 'unit.fake'; }",
+      '',
+    ].join('\n'),
+    'behaviours/Wrong.js': [
+      "import { Behaviour } from '../foreign/Behaviour.js';",
+      "export class Wrong extends Behaviour { static kind = 'behaviour.wrong'; }",
+      '',
+    ].join('\n'),
+  });
+
+  const report = await verifyLibrary({ rootDir });
+  const invalidBindings = report.errors.filter((error) => error.code === 'invalid-base-import');
+
+  assert.equal(report.ok, false);
+  assert.deepEqual(invalidBindings.map((error) => error.file), [
+    'behaviours/Wrong.js',
+    'units/Fake.js',
+  ]);
+  await assert.rejects(() => generateNavigationIndex({ rootDir }), /Static library verification failed/);
+});
+
 test('duplicate static kinds are rejected before index generation', async (t) => {
   const rootDir = await fixture(t, {
-    'units/Left.js': "export class Left extends Object { static kind = 'unit.same'; }\n",
-    'units/Right.js': "export class Right extends Object { static kind = 'unit.same'; }\n",
+    'units/Left.js': [
+      "import { Unit } from '../core/Unit.js';",
+      "export class Left extends Unit { static kind = 'unit.same'; }",
+      '',
+    ].join('\n'),
+    'units/Right.js': [
+      "import { Unit } from '../core/Unit.js';",
+      "export class Right extends Unit { static kind = 'unit.same'; }",
+      '',
+    ].join('\n'),
   });
   const report = await verifyLibrary({ rootDir });
   assert.equal(report.ok, false);
   assert.equal(report.errors.filter((error) => error.code === 'duplicate-kind').length, 1);
+});
+
+test('unlisted and stale modules cannot enter the public index', async (t) => {
+  const rootDir = await fixture(t, {
+    'core/Unit.js': 'export class Unit {}\n',
+    'units/Reviewed.js': [
+      "import { Unit } from '../core/Unit.js';",
+      "export class Reviewed extends Unit { static kind = 'unit.reviewed'; }",
+      '',
+    ].join('\n'),
+    'units/DetectorOnly.js': [
+      "import { Unit } from '../core/Unit.js';",
+      "export class DetectorOnly extends Unit { static kind = 'unit.detector-only'; }",
+      '',
+    ].join('\n'),
+  });
+  const promotionLedger = await reviewedLedger(rootDir, ['unit.reviewed']);
+  const generated = await generateNavigationIndex({ rootDir, promotionLedger });
+  assert.deepEqual(generated.index.entries.map((entry) => entry.kind), ['unit.reviewed']);
+  assert.deepEqual(generated.promotion.excludedEntries.map((entry) => entry.kind), ['unit.detector-only']);
+
+  await fs.appendFile(path.join(rootDir, 'units/Reviewed.js'), '// changed revision\n');
+  await assert.rejects(
+    () => generateNavigationIndex({ rootDir, promotionLedger }),
+    /promoted-module-revision-mismatch/u,
+  );
+});
+
+test('promotion ledger pins each relative dependency closure without staling unrelated classes', async (t) => {
+  const rootDir = await fixture(t, {
+    'core/unit-state.js': [
+      "import 'state-runtime';",
+      'export const stateVersion = 1;',
+      '',
+    ].join('\n'),
+    'core/Unit.js': [
+      "import { stateVersion } from './unit-state.js';",
+      "import 'unit-runtime';",
+      'export class Unit { static stateVersion = stateVersion; }',
+      '',
+    ].join('\n'),
+    'core/Behaviour.js': [
+      "import 'behaviour-runtime';",
+      'export class Behaviour {}',
+      '',
+    ].join('\n'),
+    'units/Reviewed.js': [
+      "import { Unit } from '../core/Unit.js';",
+      "export class Reviewed extends Unit { static kind = 'unit.reviewed'; }",
+      '',
+    ].join('\n'),
+    'behaviours/Unrelated.js': [
+      "import { Behaviour } from '../core/Behaviour.js';",
+      "export class Unrelated extends Behaviour { static kind = 'behaviour.unrelated'; }",
+      '',
+    ].join('\n'),
+  });
+  const promotionLedger = await reviewedLedger(rootDir, [
+    'behaviour.unrelated',
+    'unit.reviewed',
+  ]);
+  const reviewed = promotionLedger.entries.find((entry) => entry.kind === 'unit.reviewed');
+  assert.equal(promotionLedger.version, 2);
+  assert.deepEqual(reviewed.dependencyClosure.files.map((file) => file.module), [
+    'core/Unit.js',
+    'core/unit-state.js',
+    'units/Reviewed.js',
+  ]);
+  assert.deepEqual(reviewed.dependencyClosure.externalImports, [
+    { importer: 'core/Unit.js', specifier: 'unit-runtime' },
+    { importer: 'core/unit-state.js', specifier: 'state-runtime' },
+  ]);
+  const tamperedLedger = structuredClone(promotionLedger);
+  tamperedLedger.entries.find((entry) => entry.kind === 'unit.reviewed')
+    .dependencyClosure.files[0].sha256 = 'f'.repeat(64);
+  const tamperedValidation = validatePromotionLedger(tamperedLedger);
+  assert.equal(tamperedValidation.ok, false);
+  assert.ok(tamperedValidation.errors.some(
+    (error) => error.code === 'dependency-closure-sha256-mismatch',
+  ));
+
+  const reboundEntries = structuredClone(promotionLedger.entries);
+  const rebound = reboundEntries.find((entry) => entry.kind === 'unit.reviewed');
+  rebound.dependencyClosure.files.find((file) => file.module === 'core/unit-state.js')
+    .sha256 = 'e'.repeat(64);
+  const { closureSha256: ignoredClosureSha256, ...closureBody } = rebound.dependencyClosure;
+  rebound.dependencyClosure.closureSha256 = sha256(stableStringify(closureBody));
+  const reboundLedger = createPromotionLedger(reboundEntries, {
+    revision: promotionLedger.revision,
+  });
+  const reboundValidation = validatePromotionLedger(reboundLedger);
+  assert.ok(reboundValidation.errors.some(
+    (error) => error.code === 'revision-sha256-mismatch',
+  ));
+
+  await fs.appendFile(path.join(rootDir, 'core/unit-state.js'), '// changed dependency\n');
+  const discovery = await discoverLibrary({ rootDir, promotionLedger });
+  assert.deepEqual(discovery.promotion.errors, [{
+    code: 'promoted-dependency-revision-mismatch',
+    location: 'unit.reviewed',
+  }]);
+  assert.deepEqual(discovery.publicEntries.map((entry) => entry.kind), ['behaviour.unrelated']);
+  assert.deepEqual(discovery.promotion.excludedEntries.map((entry) => entry.kind), ['unit.reviewed']);
 });
 
 test('DOM tree-shaking probe follows only reachable static ESM imports', async (t) => {
@@ -177,4 +328,9 @@ async function fixture(t, files) {
     await fs.writeFile(filename, source, 'utf8');
   }));
   return rootDir;
+}
+
+async function reviewedLedger(rootDir, kinds) {
+  const discovery = await discoverLibrary({ rootDir });
+  return createReviewedCoreLedger(discovery, kinds);
 }

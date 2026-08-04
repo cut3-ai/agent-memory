@@ -29,6 +29,7 @@ export function evaluateReconstructionReceipts(census, input = []) {
   const pixelExact = ordered.filter((receipt) => receipt.pixelExact).length;
   const expectedFrames = sum(census.compositions ?? [], 'frameCount');
   const missingRecords = missing.map((key) => compositions.get(key));
+  const hasCompositions = compositions.size > 0;
   const body = {
     schemaVersion: 1,
     receipts: ordered.length,
@@ -59,11 +60,14 @@ export function evaluateReconstructionReceipts(census, input = []) {
       functionValuedConfigs: sumNested(ordered, 'residuals', 'functionValuedConfigs'),
       rawExecutableAstNodes: sumNested(ordered, 'residuals', 'rawExecutableAstNodes'),
     },
-    semanticOneToOneVerified: missing.length === 0
+    semanticOneToOneVerified: hasCompositions
+      && missing.length === 0
       && semanticExact === compositions.size,
-    pixelOneToOneVerified: missing.length === 0
+    pixelOneToOneVerified: hasCompositions
+      && missing.length === 0
       && pixelExact === compositions.size,
-    oneToOneVerified: missing.length === 0
+    oneToOneVerified: hasCompositions
+      && missing.length === 0
       && semanticExact === compositions.size
       && pixelExact === compositions.size,
     receiptSetSha256: sha256(stableStringify(ordered)),
@@ -152,7 +156,7 @@ function normalizeResiduals(value, composition) {
 }
 
 function requireHash(value) {
-  if (typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value)) {
+  if (typeof value !== 'string' || !/^[a-f0-9]{64}$/u.test(value)) {
     throw new TypeError('receiptSha256 must be a lowercase SHA-256');
   }
   return value;

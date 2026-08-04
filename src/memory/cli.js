@@ -16,11 +16,12 @@ export function summarizeMemoryRun(result) {
     runId: result.runId,
     runDirectory: result.runDirectory,
     indexSha256: result.index.indexSha256,
-    modulesValid: result.moduleValidation.valid,
+    promotionLedgerSha256: result.classValidation.promotionLedgerSha256,
+    libraryValid: result.classValidation.valid,
     compositions: result.manifest.counts.compositions,
-    renderBoundaries: result.manifest.counts.renderBoundaries,
-    visualWrites: result.manifest.counts.visualWrites,
-    rounds: result.manifest.counts.rounds,
+    unitWitnesses: result.manifest.counts.unitWitnesses,
+    visualSinks: result.manifest.counts.visualSinks,
+    atomicBehaviourWitnesses: result.manifest.counts.atomicBehaviourWitnesses,
     indexedUnits: result.manifest.counts.indexedUnits,
     indexedBehaviours: result.manifest.counts.indexedBehaviours,
     reconstructionProven: result.manifest.reconstructionProven,
@@ -44,6 +45,9 @@ function parseArguments(argv) {
     input: path.resolve(values.get('input')),
     repositoryRoot,
     outputRoot: path.resolve(values.get('out') ?? path.join(repositoryRoot, 'memory-runs')),
+    promotionLedgerFile: values.has('ledger')
+      ? path.resolve(values.get('ledger'))
+      : undefined,
   };
 }
 

@@ -5,7 +5,9 @@ import {
   aggregateFeedbackSignals,
   classifyDialogueFeedback,
   FEEDBACK_CLASSIFICATION_SCHEMA,
+  hashDialogueEvent,
 } from '../src/feedback/classify.js';
+import { createCandidateChoiceSchema } from '../src/model-lab/contracts.js';
 import { createAnthropicProvider } from '../src/providers/anthropic.js';
 import {
   assertLocalProviderEnvFile,
@@ -27,6 +29,52 @@ const STRUCTURED_REQUEST = Object.freeze({
   system: 'Return the fixture classification.',
   prompt: 'Classify fixture message u1.',
   schema: FEEDBACK_CLASSIFICATION_SCHEMA,
+});
+
+test('advisory candidate output is a strict minimal enum object for both providers', async () => {
+  const schema = createCandidateChoiceSchema(['candidate-1', 'candidate-2']);
+  const request = Object.freeze({
+    name: 'select_candidate_v2',
+    system: 'Return only candidateId.',
+    prompt: 'Choose an opaque candidate.',
+    schema,
+  });
+  assert.deepEqual(schema, {
+    type: 'object',
+    additionalProperties: false,
+    required: ['candidateId'],
+    properties: {
+      candidateId: { type: 'string', enum: ['candidate-1', 'candidate-2'] },
+    },
+  });
+
+  for (const providerName of ['kimi', 'anthropic']) {
+    const exact = createAdvisoryFixtureProvider(providerName, {
+      candidateId: 'candidate-2',
+    });
+    const result = await exact.generateStructured(request);
+    assert.deepEqual(result.data, { candidateId: 'candidate-2' });
+
+    const withRationale = createAdvisoryFixtureProvider(providerName, {
+      candidateId: 'candidate-2',
+      rationale: 'PRIVATE_EXTRA_FIELD',
+    });
+    await assert.rejects(
+      () => withRationale.generateStructured(request),
+      (error) => {
+        assert.ok(error instanceof ProviderRequestError);
+        assert.equal(
+          error.code,
+          providerName === 'kimi'
+            ? 'unexpected-structured-field'
+            : 'invalid-structured-content',
+        );
+        assert.equal(error.status, 200);
+        assert.doesNotMatch(JSON.stringify(error), /PRIVATE_EXTRA_FIELD/u);
+        return true;
+      },
+    );
+  }
 });
 
 test('env parser accepts quoted keys and values while retaining only selected names', () => {
@@ -106,6 +154,7 @@ test('Anthropic provider forces one structured tool and normalizes cache usage',
     fetchImpl: async (url, init) => {
       request = { url, init };
       return jsonResponse({
+        stop_reason: 'tool_use',
         content: [{
           type: 'tool_use',
           name: 'feedback_fixture',
@@ -125,6 +174,7 @@ test('Anthropic provider forces one structured tool and normalizes cache usage',
   const body = JSON.parse(request.init.body);
   assert.equal(request.url, 'https://api.anthropic.com/v1/messages');
   assert.equal(request.init.headers['x-api-key'], 'fixture-anthropic-value');
+  assert.deepEqual(body.thinking, { type: 'disabled' });
   assert.equal(body.tools[0].strict, true);
   assert.deepEqual(body.tool_choice, {
     type: 'tool',
@@ -139,6 +189,89 @@ test('Anthropic provider forces one structured tool and normalizes cache usage',
     totalTokens: 25,
   });
   assert.doesNotMatch(JSON.stringify({ provider, result }), /fixture-anthropic-value/);
+});
+
+test('Anthropic provider fails closed on every non-tool stop reason without leaking content', async () => {
+  const cases = [
+    ['end_turn', 'non-tool-use-stop-reason'],
+    ['max_tokens', 'max-tokens-before-tool-use'],
+    ['refusal', 'structured-output-refusal'],
+  ];
+
+  for (const [stopReason, expectedCode] of cases) {
+    const provider = createAnthropicProvider({
+      apiKey: 'fixture-anthropic-stop-value',
+      maxRetries: 0,
+      fetchImpl: async () => jsonResponse({
+        stop_reason: stopReason,
+        content: [{ type: 'text', text: 'PRIVATE_PROVIDER_RESPONSE' }],
+      }),
+    });
+
+    await assert.rejects(
+      () => provider.generateStructured(STRUCTURED_REQUEST),
+      (error) => {
+        assert.ok(error instanceof ProviderRequestError);
+        assert.equal(error.code, expectedCode);
+        assert.equal(error.status, 200);
+        assert.equal(error.attempts, 1);
+        assert.equal(error.retryable, false);
+        assert.doesNotMatch(
+          JSON.stringify(error),
+          /PRIVATE_PROVIDER_RESPONSE|fixture-anthropic-stop-value/u,
+        );
+        return true;
+      },
+    );
+  }
+});
+
+test('Anthropic post-200 structured failures retain only safe HTTP metadata', async () => {
+  const cases = [
+    {
+      expectedCode: 'missing-structured-tool-call',
+      content: [{ type: 'text', text: 'PRIVATE_MISSING_TOOL_RESPONSE' }],
+    },
+    {
+      expectedCode: 'invalid-structured-content',
+      content: [{
+        type: 'tool_use',
+        name: 'feedback_fixture',
+        input: {
+          signal: 'positive',
+          evidenceMessageIds: ['u1'],
+          privateUnexpectedField: 'PRIVATE_INVALID_TOOL_RESPONSE',
+        },
+      }],
+    },
+  ];
+
+  for (const fixture of cases) {
+    const provider = createAnthropicProvider({
+      apiKey: 'fixture-anthropic-structured-value',
+      maxRetries: 0,
+      fetchImpl: async () => jsonResponse({
+        stop_reason: 'tool_use',
+        content: fixture.content,
+      }),
+    });
+
+    await assert.rejects(
+      () => provider.generateStructured(STRUCTURED_REQUEST),
+      (error) => {
+        assert.ok(error instanceof ProviderRequestError);
+        assert.equal(error.code, fixture.expectedCode);
+        assert.equal(error.status, 200);
+        assert.equal(error.attempts, 1);
+        assert.equal(error.retryable, false);
+        assert.doesNotMatch(
+          JSON.stringify(error),
+          /PRIVATE_|privateUnexpectedField|fixture-anthropic-structured-value/u,
+        );
+        return true;
+      },
+    );
+  }
 });
 
 test('provider rejects JSON that violates the requested schema without leaking it', async () => {
@@ -160,7 +293,8 @@ test('provider rejects JSON that violates the requested schema without leaking i
     () => provider.generateStructured(STRUCTURED_REQUEST),
     (error) => {
       assert.ok(error instanceof ProviderRequestError);
-      assert.equal(error.code, 'invalid-structured-content');
+      assert.equal(error.code, 'unexpected-structured-field');
+      assert.equal(error.status, 200);
       assert.doesNotMatch(JSON.stringify(error), /PRIVATE_SCHEMA_OUTPUT|privateUnexpectedField/);
       return true;
     },
@@ -312,7 +446,7 @@ test('optional structured dialogue classifier feeds deterministic aggregation', 
       return {
         provider: 'kimi',
         model: 'fixture-model',
-        data: { signal: 'positive', evidenceMessageIds: ['u1'] },
+        data: { signal: 'positive', evidenceMessageIds: ['feedback-01'] },
         usage: { inputTokens: 8, outputTokens: 2, totalTokens: 10 },
         request: { attempts: 1, retries: 0, status: 200 },
       };
@@ -324,20 +458,167 @@ test('optional structured dialogue classifier feeds deterministic aggregation', 
     generatedAtMs: 1_000,
     nowMs: 2_000,
     graceMs: 500,
+    feedbackWindowMs: 5_000,
     dialogue: [
-      { id: 'a1', role: 'assistant', atMs: 1_000, content: 'Generated result.' },
-      { id: 'u1', role: 'user', atMs: 1_200, content: 'Looks good.' },
+      { id: 'before', role: 'user', atMs: 900, content: 'Pre-generation private context.' },
+      { id: 'a1', role: 'assistant', atMs: 1_000, content: 'Generated private assistant result.' },
+      {
+        id: 'u1',
+        role: 'user',
+        atMs: 1_200,
+        content: [
+          'Looks good.',
+          'https://private.invalid/path',
+          'ftp://files.private.invalid/archive',
+          'mailto:owner@private.invalid',
+          'owner@private.invalid',
+          'github.com/private/repository',
+          '127.0.0.1:4312/private',
+          '[::1]:4312/private',
+          'localhost:4312/private',
+          '```const privateCode = true;```',
+        ].join(' '),
+      },
+      { id: 'future', role: 'user', atMs: 2_100, content: 'Future private context.' },
     ],
   }, { provider });
 
   assert.equal(calls, 1);
   assert.equal(providerRequest.name, 'classify_feedback');
   assert.equal(providerRequest.schema.additionalProperties, false);
+  const providerPrompt = JSON.parse(providerRequest.prompt);
+  assert.deepEqual(Object.keys(providerPrompt), ['userMessages']);
+  assert.deepEqual(providerPrompt.userMessages.map(({ id }) => id), ['feedback-01']);
+  assert.match(providerPrompt.userMessages[0].content, /\[url-redacted\].*\[code-redacted\]/u);
+  assert.doesNotMatch(
+    providerRequest.prompt,
+    /assistant result|Pre-generation|Future private|private\.invalid|privateCode|github\.com|127\.0\.0\.1|::1|localhost|owner@/u,
+  );
   assert.equal(result.state, 'candidate');
   assert.equal(result.classification.source, 'llm');
   assert.equal(result.classification.provider, 'kimi');
+  assert.equal(result.classification.externalProviderReceivedMinimizedContent, true);
+  assert.deepEqual(result.classification.externalProviderInput, {
+    policyVersion: 'feedback-provider-minimization-v1',
+    generationBound: true,
+    userMessagesOnly: true,
+    strictlyAfterGeneratedAtOnly: true,
+    boundedFeedbackWindow: true,
+    feedbackWindowMs: 5_000,
+    maximumMessages: 20,
+    maximumCharacters: 8_000,
+    messagesSent: 1,
+    charactersSent: providerPrompt.userMessages[0].content.length,
+    opaqueMessageIds: true,
+    urlsRedacted: true,
+    codeBlocksRedacted: true,
+    sent: true,
+  });
   assert.deepEqual(result.evidenceMessageIds, ['u1']);
   assert.deepEqual(result.classification.request, { attempts: 1, retries: 0, status: 200 });
+});
+
+test('feedback outside the bounded post-generation window never calls the provider', async () => {
+  let calls = 0;
+  const result = await classifyDialogueFeedback({
+    signals: [],
+    generatedMessageId: 'a1',
+    generatedAtMs: 1_000,
+    nowMs: 10_000,
+    feedbackWindowMs: 500,
+    dialogue: [
+      { id: 'a1', role: 'assistant', atMs: 1_000, content: 'Assistant content.' },
+      { id: 'u1', role: 'user', atMs: 1_501, content: 'Too late.' },
+    ],
+  }, {
+    provider: {
+      provider: 'fixture',
+      model: 'fixture-model',
+      async generateStructured() { calls += 1; },
+    },
+  });
+  assert.equal(calls, 0);
+  assert.equal(result.reason, 'no-feedback-dialogue');
+  assert.equal(result.classification.externalProviderReceivedMinimizedContent, false);
+  assert.equal(result.classification.externalProviderInput.sent, false);
+});
+
+test('provider feedback minimization redacts secret-like tokens before the call', async () => {
+  const rawContent = [
+    'Approved, but rotate these credentials:',
+    'sk-ant-api03-abcdefghijklmnopqrstuv',
+    'sk-proj-abcdefghijklmnopqrstuvwxyz012345',
+    `ghp_${'A'.repeat(36)}`,
+    `github_pat_${'B'.repeat(32)}`,
+    `ANTHROPIC_API_KEY=${'c'.repeat(40)}`,
+    `apiKey="${'d'.repeat(40)}"`,
+    'monkey=not-a-secret-label',
+  ].join(' ');
+  let sentContent;
+  const provider = {
+    provider: 'fixture',
+    model: 'fixture-model',
+    async generateStructured(request) {
+      const body = JSON.parse(request.prompt);
+      assert.deepEqual(body.userMessages.map(({ id }) => id), ['feedback-01']);
+      sentContent = body.userMessages[0].content;
+      return {
+        data: { signal: 'positive', evidenceMessageIds: ['feedback-01'] },
+      };
+    },
+  };
+
+  const result = await classifyDialogueFeedback({
+    signals: [],
+    generatedMessageId: 'a1',
+    generatedAtMs: 1_000,
+    nowMs: 2_000,
+    graceMs: 0,
+    dialogue: [
+      { id: 'a1', role: 'assistant', atMs: 1_000, content: 'Generated result.' },
+      { id: 'u-secret', role: 'user', atMs: 1_100, content: rawContent },
+    ],
+  }, { provider });
+
+  assert.match(sentContent, /\[secret-redacted\]/u);
+  assert.doesNotMatch(sentContent, /sk-(?:ant-|proj-)|ghp_|github_pat_|c{20}|d{20}/iu);
+  assert.match(sentContent, /monkey=not-a-secret-label/u);
+  assert.deepEqual(result.evidenceMessageIds, ['u-secret']);
+  assert.deepEqual(result.classification.evidenceEventSha256s, [hashDialogueEvent({
+    id: 'u-secret',
+    role: 'user',
+    atMs: 1_100,
+    content: rawContent,
+  })]);
+});
+
+test('dialogue classification is bound to the exact generated assistant event', async () => {
+  let calls = 0;
+  const provider = {
+    provider: 'fixture',
+    model: 'fixture-model',
+    async generateStructured() { calls += 1; return {}; },
+  };
+  const input = {
+    signals: [],
+    generatedAtMs: 1_000,
+    nowMs: 2_000,
+    dialogue: [
+      { id: 'a1', role: 'assistant', atMs: 1_000, content: 'First result.' },
+      { id: 'a2', role: 'assistant', atMs: 1_500, content: 'Second result.' },
+      { id: 'u1', role: 'user', atMs: 1_600, content: 'Approved.' },
+    ],
+  };
+
+  await assert.rejects(
+    classifyDialogueFeedback({ ...input, generatedMessageId: 'missing' }, { provider }),
+    /generatedMessageId must reference an assistant/u,
+  );
+  await assert.rejects(
+    classifyDialogueFeedback({ ...input, generatedMessageId: 'a2' }, { provider }),
+    /generatedAtMs must match/u,
+  );
+  assert.equal(calls, 0);
 });
 
 test('explicit negative bypasses the model; malformed or failed classification quarantines', async () => {
@@ -351,10 +632,14 @@ test('explicit negative bypasses the model; malformed or failed classification q
     },
   };
   const common = {
+    generatedMessageId: 'a1',
     generatedAtMs: 1_000,
     nowMs: 2_000,
     graceMs: 100,
-    dialogue: [{ id: 'u1', role: 'user', atMs: 1_100, content: 'Fixture response.' }],
+    dialogue: [
+      { id: 'a1', role: 'assistant', atMs: 1_000, content: 'Generated result.' },
+      { id: 'u1', role: 'user', atMs: 1_100, content: 'Fixture response.' },
+    ],
   };
   const rejected = await classifyDialogueFeedback({
     ...common,
@@ -377,6 +662,35 @@ test('explicit negative bypasses the model; malformed or failed classification q
   assert.equal(failed.reason, 'classifier-error');
   assert.doesNotMatch(JSON.stringify(failed), /private provider response/);
 });
+
+function createAdvisoryFixtureProvider(provider, data) {
+  return createProvider({
+    provider,
+    apiKey: `fixture-${provider}-advisory-value`,
+    maxRetries: 0,
+    fetchImpl: async (_url, init) => {
+      const body = JSON.parse(init.body);
+      if (provider === 'kimi') {
+        return jsonResponse({
+          choices: [{
+            finish_reason: 'stop',
+            message: { content: JSON.stringify(data) },
+          }],
+          usage: { prompt_tokens: 1, completion_tokens: 1 },
+        });
+      }
+      return jsonResponse({
+        stop_reason: 'tool_use',
+        content: [{
+          type: 'tool_use',
+          name: body.tool_choice.name,
+          input: data,
+        }],
+        usage: { input_tokens: 1, output_tokens: 1 },
+      });
+    },
+  });
+}
 
 function jsonResponse(value, options = {}) {
   return new Response(JSON.stringify(value), {

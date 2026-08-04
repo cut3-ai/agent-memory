@@ -1,5 +1,15 @@
 export const FEATURE_KEYS = Object.freeze([
+  'publicGroupUnit',
+  'publicBoxUnit',
+  'publicLayerUnit',
+  'publicLabelUnit',
+  'publicImageUnit',
+  'publicAudioUnit',
+  'publicVideoUnit',
+  'collectionChildren',
+  'primitiveChildUnit',
   'opacityTween',
+  'declarativeSignalIr',
   'opacityFormula',
   'scaleFormula',
   'translateFormula',
@@ -24,36 +34,26 @@ export function normalizeCbaV2Features(input = undefined) {
   return Object.freeze(profile);
 }
 
-const PRESET_DATA = Object.freeze([
-  ['p_a194ce72', 31],
-  ['p_71b30fd4', 1],
-  ['p_e62c4a09', 2],
-  ['p_35fa817c', 4],
-  ['p_c4802e6b', 8],
-  ['p_89de105f', 16],
-  ['p_167ab3e8', 3],
-  ['p_f2509c4d', 5],
-  ['p_4be178a2', 9],
-  ['p_d03f65b7', 17],
-  ['p_62ac901e', 6],
-  ['p_b7194fd0', 10],
-  ['p_2e85ca63', 18],
-  ['p_943bd728', 12],
-  ['p_5c10e9af', 20],
-  ['p_ed7462c1', 24],
-  ['p_308fae59', 7],
-  ['p_ae6217d3', 15],
-  ['p_796c04b8', 23],
-  ['p_0d8f6a31', 27],
-]);
+// The search space is deliberately bounded. It samples single capabilities,
+// the all-feature profile, complements and low-order interactions without
+// enumerating 2^N compiler configurations.
+const MAX_SEARCH_PROFILES = 96;
+const SEARCH_FEATURE_VECTORS = buildSearchFeatureVectors(FEATURE_KEYS.length, MAX_SEARCH_PROFILES);
 
-export const CBA_V2_PROFILES = Object.freeze(PRESET_DATA.map(([id, mask]) => Object.freeze({
-  id,
-  features: Object.freeze(Object.fromEntries(FEATURE_KEYS.map((key, index) => [
-    key,
-    Boolean(mask & (1 << index)),
-  ]))),
-})));
+export const CBA_V2_SEARCH_SPACE = Object.freeze(SEARCH_FEATURE_VECTORS.map((vector) => {
+  const fingerprint = vector.map(Number).join('');
+  return Object.freeze({
+    id: `p_${opaqueHash(`cba-profile-search-v4:${fingerprint}`)}`,
+    features: Object.freeze(Object.fromEntries(FEATURE_KEYS.map((key, index) => [
+      key,
+      vector[index],
+    ]))),
+  });
+}));
+
+// Compatibility alias for callers that only need the available compiler
+// profiles.  Evaluation policy lives in experiment/profile-search.js.
+export const CBA_V2_PROFILES = CBA_V2_SEARCH_SPACE;
 
 export const CBA_V2_BASELINE_PROFILE = Object.freeze({
   id: 'b_41f0c68d',
@@ -64,4 +64,48 @@ function isPlainRecord(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const prototype = Object.getPrototypeOf(value);
   return prototype === Object.prototype || prototype === null;
+}
+
+function buildSearchFeatureVectors(count, limit) {
+  const vectors = new Map();
+  const add = (enabled) => {
+    if (vectors.size >= limit) return;
+    const selected = new Set(enabled);
+    const vector = Array.from({ length: count }, (_, index) => selected.has(index));
+    if (vector.some(Boolean)) vectors.set(vector.map(Number).join(''), Object.freeze(vector));
+  };
+  for (let index = 0; index < count; index += 1) add([index]);
+  add(Array.from({ length: count }, (_, index) => index));
+  for (let omitted = 0; omitted < count; omitted += 1) {
+    add(Array.from({ length: count }, (_, index) => index).filter((index) => index !== omitted));
+  }
+  for (let size = 2; size < count && vectors.size < limit; size += 1) {
+    visitCombinations(count, size, 0, [], add, () => vectors.size >= limit);
+  }
+  return Object.freeze([...vectors.values()]);
+}
+
+function visitCombinations(count, size, start, selected, visit, done) {
+  if (done()) return;
+  if (selected.length === size) {
+    visit(selected);
+    return;
+  }
+  for (let index = start; index <= count - (size - selected.length); index += 1) {
+    selected.push(index);
+    visitCombinations(count, size, index + 1, selected, visit, done);
+    selected.pop();
+    if (done()) return;
+  }
+}
+
+// FNV-1a 64 produces stable non-semantic identifiers without importing Node
+// crypto into compiler feature configuration.
+function opaqueHash(value) {
+  let hash = 0xcbf29ce484222325n;
+  for (const byte of new TextEncoder().encode(value)) {
+    hash ^= BigInt(byte);
+    hash = BigInt.asUintN(64, hash * 0x100000001b3n);
+  }
+  return hash.toString(16).padStart(16, '0');
 }

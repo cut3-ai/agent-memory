@@ -1,226 +1,200 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { decideMemoryPromotion } from '../src/memory/feedback.js';
 import {
-  decideMemoryPromotion,
-} from '../src/memory/feedback.js';
+  createFeedbackReceipt,
+  createPromotionGateIssuer,
+  createPromotionGateVerifier,
+} from '../src/memory/promotion.js';
 
-const OPTIONAL_STABILITY_WINDOW_MS = 24 * 60 * 60 * 1000;
-
-const hashes = Object.freeze({
+const H = Object.freeze({
   candidate: '0'.repeat(64),
   module: '1'.repeat(64),
+  dependencyClosure: 'c'.repeat(64),
   evidence: '2'.repeat(64),
-  positive: '3'.repeat(64),
-  neutral: '4'.repeat(64),
-  negative: '5'.repeat(64),
-  compiler: '6'.repeat(64),
-  atomicity: '7'.repeat(64),
-  privacy: '8'.repeat(64),
-  moduleGate: '9'.repeat(64),
-  observedFirst: 'a'.repeat(64),
-  observedLast: 'b'.repeat(64),
-  otherCandidate: 'c'.repeat(64),
+  event: '3'.repeat(64),
+  generation: 'b'.repeat(64),
+  request: '4'.repeat(64),
+  response: '5'.repeat(64),
 });
 
-function feedback(signal, receiptSha256 = hashes[signal]) {
-  return {
-    source: 'human',
+const candidate = Object.freeze({
+  kind: 'behaviour.opacity.fade',
+  candidateSha256: H.candidate,
+  moduleSha256: H.module,
+  dependencyClosureSha256: H.dependencyClosure,
+  evidenceSha256: H.evidence,
+});
+const GATE_SECRET = 'test-only-gate-secret-that-is-at-least-32-bytes';
+const gateIssuer = createPromotionGateIssuer({
+  authorityId: 'test-gate-authority',
+  secret: GATE_SECRET,
+});
+const gateReceiptVerifier = createPromotionGateVerifier({
+  authorityId: 'test-gate-authority',
+  secret: GATE_SECRET,
+});
+
+function receipt(signal, options = {}) {
+  const state = options.state ?? (signal === 'negative' ? 'reject' : 'candidate');
+  return createFeedbackReceipt({
+    candidateSha256: H.candidate,
+    generationEventSha256: H.generation,
+    origin: options.origin ?? 'explicit-human',
     signal,
-    candidateSha256: hashes.candidate,
-    receiptSha256,
-  };
-}
-
-function passingGates() {
-  return {
-    compilerFidelity: { passed: true, receiptSha256: hashes.compiler },
-    atomicity: { passed: true, receiptSha256: hashes.atomicity },
-    privacy: { passed: true, receiptSha256: hashes.privacy },
-    module: { passed: true, receiptSha256: hashes.moduleGate },
-  };
-}
-
-function stableObservations(candidateSha256 = hashes.candidate) {
-  return [
-    {
-      candidateSha256,
-      observedAtMs: 1_000,
-      receiptSha256: hashes.observedFirst,
+    state,
+    counts: {
+      negative: signal === 'negative' ? 1 : 0,
+      positive: signal === 'positive' ? 1 : 0,
+      neutral: signal === 'neutral' ? 1 : 0,
+      ambiguous: signal === 'ambiguous' ? 1 : 0,
     },
-    {
-      candidateSha256,
-      observedAtMs: 1_000 + OPTIONAL_STABILITY_WINDOW_MS,
-      receiptSha256: hashes.observedLast,
-    },
-  ];
+    eventSha256s: [H.event],
+    grace: { requiredMs: 30_000, remainingMs: state === 'pending' ? 1 : 0 },
+    classifier: options.origin === 'human-dialogue-classified'
+      ? {
+        provider: 'kimi',
+        model: 'kimi-k2.6',
+        requestSha256: H.request,
+        responseSha256: H.response,
+      }
+      : null,
+  });
 }
 
-function input(overrides = {}) {
-  return {
-    candidate: {
-      kind: 'behaviour.opacity.fade',
-      candidateSha256: hashes.candidate,
-      moduleSha256: hashes.module,
-      evidenceSha256: hashes.evidence,
-    },
-    feedback: [feedback('positive')],
-    gates: passingGates(),
-    stability: { observations: stableObservations() },
-    ...overrides,
-  };
+function signedGates(overrides = {}, authority = gateIssuer) {
+  return Object.fromEntries([
+    'compilerFidelity',
+    'reconstruction',
+    'atomicity',
+    'privacy',
+    'module',
+  ].map((name) => [name, authority.issue({
+    gateName: name,
+    candidateSha256: H.candidate,
+    moduleSha256: H.module,
+    dependencyClosureSha256: H.dependencyClosure,
+    resultSha256: H.evidence,
+    passed: true,
+    ...(overrides[name] ?? {}),
+  })]));
 }
 
-test('any negative human signal discards the current revision', () => {
-  const decision = decideMemoryPromotion(input({
-    feedback: [feedback('positive'), feedback('negative')],
-  }));
+function decide(feedbackReceipt, overrides = {}) {
+  const gates = overrides.gates ?? signedGates();
+  const verifier = Object.hasOwn(overrides, 'gateVerifier')
+    ? overrides.gateVerifier
+    : gateReceiptVerifier;
+  const { gates: ignoredGates, gateVerifier: ignoredVerifier, ...inputOverrides } = overrides;
+  return decideMemoryPromotion({
+    candidate,
+    feedbackReceipt,
+    gates,
+    ...inputOverrides,
+  }, { gateVerifier: verifier });
+}
 
-  assert.equal(decision.humanFeedback.signal, 'negative');
+test('negative user evidence always discards and cannot be overridden by gates', () => {
+  const decision = decide(receipt('negative'), { gates: {} });
   assert.equal(decision.action, 'discard');
   assert.equal(decision.eligibleForPromotion, false);
   assert.deepEqual(decision.reasons, ['human-negative']);
 });
 
-test('positive and neutral promote with every gate; stability is disabled by default', () => {
+test('positive or neutral promotes only after grace and all five bound gates', () => {
   for (const signal of ['positive', 'neutral']) {
-    const decision = decideMemoryPromotion(input({
-      feedback: [feedback(signal)],
-      stability: undefined,
-    }));
-    assert.equal(decision.humanFeedback.signal, signal);
-    assert.equal(decision.action, 'promote');
-    assert.equal(decision.eligibleForPromotion, true);
-    assert.equal(decision.stability.enabled, false);
-    assert.deepEqual(decision.reasons, []);
+    assert.equal(decide(receipt(signal)).action, 'promote');
+    const pending = decide(receipt(signal, { state: 'pending' }));
+    assert.equal(pending.action, 'quarantine');
+    assert.deepEqual(pending.reasons, ['feedback-grace-incomplete']);
+  }
+
+  for (const gate of ['compilerFidelity', 'reconstruction', 'atomicity', 'privacy', 'module']) {
+    const gates = signedGates({ [gate]: { passed: false } });
+    const decision = decide(receipt('positive'), { gates });
+    assert.equal(decision.action, 'quarantine', gate);
+    assert.equal(decision.gates[gate].passed, false);
   }
 });
 
-test('each required gate fails closed, including a passed gate without a receipt', () => {
-  for (const gateName of ['compilerFidelity', 'atomicity', 'privacy', 'module']) {
-    const gates = passingGates();
-    gates[gateName] = { passed: false };
-    const decision = decideMemoryPromotion(input({ gates }));
-    assert.equal(decision.action, 'quarantine');
-    assert.equal(decision.gates[gateName].passed, false);
-    assert.equal(decision.reasons.some((reason) => reason.includes('gate-failed')), true);
-  }
-
-  const gates = passingGates();
-  gates.compilerFidelity = { passed: true, receiptSha256: 'not-a-hash' };
-  const decision = decideMemoryPromotion(input({ gates }));
-  assert.equal(decision.action, 'quarantine');
-  assert.equal(decision.gates.compilerFidelity.passed, false);
+test('gate receipts bind candidate, module, dependency closure and one evidence bundle', () => {
+  const staleCandidate = signedGates({ module: { candidateSha256: 'f'.repeat(64) } });
+  const staleModule = signedGates({ reconstruction: { moduleSha256: 'e'.repeat(64) } });
+  const staleClosure = signedGates({ atomicity: { dependencyClosureSha256: 'd'.repeat(64) } });
+  const mixedEvidence = signedGates({ privacy: { resultSha256: 'd'.repeat(64) } });
+  assert.equal(decide(receipt('positive'), { gates: staleCandidate }).action, 'quarantine');
+  assert.equal(decide(receipt('positive'), { gates: staleModule }).action, 'quarantine');
+  assert.equal(decide(receipt('positive'), { gates: staleClosure }).action, 'quarantine');
+  assert.equal(decide(receipt('positive'), { gates: mixedEvidence }).action, 'quarantine');
 });
 
-test('an optional configured stability window can add a gate', () => {
-  const tooShort = stableObservations();
-  tooShort[1] = {
-    ...tooShort[1],
-    observedAtMs: tooShort[0].observedAtMs + OPTIONAL_STABILITY_WINDOW_MS - 1,
-  };
-  assert.equal(decideMemoryPromotion(input({
-    policy: { minimumStabilityWindowMs: OPTIONAL_STABILITY_WINDOW_MS },
-    stability: { observations: tooShort },
-  })).action, 'quarantine');
+test('legacy hash-only gates, missing verifier, tampering, and wrong gate names fail closed', () => {
+  const legacy = Object.fromEntries(['compilerFidelity', 'reconstruction', 'atomicity', 'privacy', 'module']
+    .map((name) => [name, {
+      passed: true,
+      receiptSha256: 'a'.repeat(64),
+      candidateSha256: H.candidate,
+      moduleSha256: H.module,
+    }]));
+  assert.equal(decide(receipt('positive'), { gates: legacy }).action, 'quarantine');
+  assert.equal(decide(receipt('positive'), { gateVerifier: null }).action, 'quarantine');
 
-  assert.equal(decideMemoryPromotion(input({
-    policy: { minimumStabilityWindowMs: OPTIONAL_STABILITY_WINDOW_MS },
-    stability: { observations: [stableObservations()[0]] },
-  })).action, 'quarantine');
+  const tampered = signedGates();
+  tampered.privacy = { ...tampered.privacy, resultSha256: 'f'.repeat(64) };
+  assert.equal(decide(receipt('positive'), { gates: tampered }).action, 'quarantine');
 
-  assert.equal(decideMemoryPromotion(input({
-    policy: { minimumStabilityWindowMs: OPTIONAL_STABILITY_WINDOW_MS },
-    stability: { observations: stableObservations(hashes.otherCandidate) },
-  })).action, 'quarantine');
-
-  assert.equal(decideMemoryPromotion(input({
-    policy: { minimumStabilityWindowMs: OPTIONAL_STABILITY_WINDOW_MS },
-  })).action, 'promote');
+  const wrongGate = signedGates();
+  wrongGate.atomicity = gateIssuer.issue({
+    gateName: 'privacy',
+    candidateSha256: H.candidate,
+    moduleSha256: H.module,
+    dependencyClosureSha256: H.dependencyClosure,
+    resultSha256: H.evidence,
+    passed: true,
+  });
+  assert.equal(decide(receipt('positive'), { gates: wrongGate }).action, 'quarantine');
+  assert.equal(typeof gateIssuer.verify, 'undefined');
+  assert.equal(typeof gateReceiptVerifier.issue, 'undefined');
+  assert.doesNotMatch(
+    JSON.stringify({ gateIssuer, gateReceiptVerifier, decision: decide(receipt('positive')) }),
+    /test-only-gate-secret/u,
+  );
 });
 
-test('missing feedback holds and model-authored feedback is rejected', () => {
-  const missing = decideMemoryPromotion(input({
-    feedback: [],
-    llmSignal: 'positive',
-  }));
-  assert.equal(missing.humanFeedback.signal, 'unknown');
+test('classified user dialogue is valid authority only with request and response hashes', () => {
+  const classified = receipt('positive', { origin: 'human-dialogue-classified' });
+  const decision = decide(classified);
+  assert.equal(decision.action, 'promote');
+  assert.equal(decision.humanFeedback.origin, 'human-dialogue-classified');
+
+  assert.throws(() => createFeedbackReceipt({
+    ...classified,
+    classifier: null,
+  }), /classifier/u);
+});
+
+test('missing receipt or legacy model-authored event never approves', () => {
+  const missing = decideMemoryPromotion({
+    candidate,
+    feedback: [{ source: 'llm', signal: 'positive' }],
+    gates: signedGates(),
+  }, { gateVerifier: gateReceiptVerifier });
   assert.equal(missing.action, 'quarantine');
   assert.deepEqual(missing.reasons, ['human-feedback-required']);
-
-  assert.throws(() => decideMemoryPromotion(input({
-    feedback: [{
-      ...feedback('positive'),
-      source: 'llm',
-    }],
-  })), /only explicit human feedback/);
 });
 
-test('feedback is revision-scoped and one receipt cannot attest conflicting signals', () => {
-  assert.throws(() => decideMemoryPromotion(input({
-    feedback: [{
-      ...feedback('positive'),
-      candidateSha256: hashes.otherCandidate,
-    }],
-  })), /current candidate revision/);
+test('feedback receipt is revision-scoped, hash-sealed and contains no raw dialogue', () => {
+  const feedbackReceipt = receipt('neutral');
+  assert.throws(() => decideMemoryPromotion({
+    candidate: { ...candidate, candidateSha256: 'f'.repeat(64) },
+    feedbackReceipt,
+    gates: signedGates(),
+  }, { gateVerifier: gateReceiptVerifier }), /current candidate revision/u);
 
-  assert.throws(() => decideMemoryPromotion(input({
-    feedback: [
-      feedback('positive', hashes.positive),
-      feedback('negative', hashes.positive),
-    ],
-  })), /conflicting signals/);
-});
-
-test('decision is order-independent, deeply frozen, and emits only allowlisted metadata', () => {
-  const raw = {
-    prompt: 'PRIVATE PROMPT',
-    transcript: 'PRIVATE TRANSCRIPT',
-    url: 'https://private.example/video.mp4',
-  };
-  const left = decideMemoryPromotion(input({
-    candidate: { ...input().candidate, ...raw },
-    feedback: [
-      { ...feedback('neutral'), notes: raw },
-      { ...feedback('positive'), notes: raw },
-    ],
-    gates: Object.fromEntries(Object.entries(passingGates()).map(([name, gate]) => [
-      name,
-      { ...gate, diagnostic: raw },
-    ])),
-    stability: {
-      observations: stableObservations().map((observation) => ({
-        ...observation,
-        diagnostic: raw,
-      })),
-    },
-  }));
-  const right = decideMemoryPromotion(input({
-    feedback: [feedback('positive'), feedback('neutral')],
-    gates: Object.fromEntries(Object.entries(passingGates()).reverse()),
-    stability: { observations: stableObservations().reverse() },
-  }));
-
-  assert.deepEqual(left, right);
-  assert.equal(Object.isFrozen(left), true);
-  assert.equal(Object.isFrozen(left.gates), true);
-  assert.deepEqual(Object.keys(left).sort(), [
-    'action',
-    'candidate',
-    'decisionSha256',
-    'eligibleForPromotion',
-    'gates',
-    'humanFeedback',
-    'policyVersion',
-    'reasons',
-    'schemaVersion',
-    'stability',
-  ]);
-  const serialized = JSON.stringify(left);
-  assert.equal(serialized.includes('PRIVATE'), false);
-  assert.equal(serialized.includes('https://'), false);
-  assert.equal(serialized.includes('prompt'), false);
-  assert.equal(serialized.includes('transcript'), false);
-  assert.equal(serialized.includes('factory'), false);
-  assert.equal(serialized.includes('runtime'), false);
+  const tampered = { ...feedbackReceipt, signal: 'positive' };
+  assert.throws(() => decideMemoryPromotion({ candidate, feedbackReceipt: tampered, gates: signedGates() }, {
+    gateVerifier: gateReceiptVerifier,
+  }), /hash/u);
+  assert.doesNotMatch(JSON.stringify(decide(feedbackReceipt)), /dialogue|messageId|content|prompt|https?:\/\//iu);
 });

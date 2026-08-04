@@ -1,6 +1,14 @@
 import { sha256, stableStringify } from '../lib.js';
+import {
+  calleeName,
+  jsxName,
+  normalizeExactSource,
+  parseComposition,
+  propertyName,
+  walkAst,
+} from '../normalize.js';
 
-export const SPLIT_VERSION = 'workspace-split-v1';
+export const SPLIT_VERSION = 'workspace-structural-stratified-v2';
 export const SPLIT_RATIOS = Object.freeze({
   train: 0.6,
   validation: 0.2,
@@ -31,7 +39,7 @@ export function parseWorkspaceDataset(inputText) {
         if (typeof track.source !== 'string' || !track.source.trim()) {
           throw new Error(`Composition source is missing at line ${lineIndex + 1}`);
         }
-        const sourceHash = sha256(track.source);
+        const sourceHash = sha256(normalizeExactSource(track.source));
         return {
           compositionIndex,
           trackIndex,
@@ -98,8 +106,9 @@ export function createWorkspaceSplit(dataset) {
   const body = {
     schemaVersion: 1,
     splitVersion: SPLIT_VERSION,
-    strategy: 'workspace-level-content-hash-ranking',
+    strategy: 'workspace-group-structural-stratification',
     grouping: 'connected-components-by-exact-composition-source-hash',
+    stratification: summarizeStratification(groups, groupAssignments),
     inputSha256: dataset.inputSha256,
     requestedRatios: SPLIT_RATIOS,
     counts: {
@@ -179,11 +188,74 @@ function connectedWorkspaceGroups(workspaces) {
   return [...membersByRoot.values()].map((members) => {
     members.sort((left, right) => left.workspaceKey.localeCompare(right.workspaceKey));
     const groupKey = `group-${sha256(members.map((entry) => entry.workspaceKey).join(':')).slice(0, 16)}`;
-    return { groupKey, workspaces: members };
+    const strata = new Map();
+    let compositionCount = 0;
+    for (const workspace of members) {
+      for (const composition of workspace.compositions) {
+        compositionCount += 1;
+        for (const label of compositionStructuralLabels(composition.source)) {
+          strata.set(label, (strata.get(label) ?? 0) + 1);
+        }
+      }
+    }
+    return {
+      groupKey,
+      workspaces: members,
+      compositionCount,
+      strata: Object.fromEntries([...strata].sort(([left], [right]) => left.localeCompare(right))),
+    };
   });
 }
 
 function assignGroups(groups, workspaceCount) {
+  if (groups.length <= 12) return assignGroupsExhaustively(groups, workspaceCount);
+  return assignGroupsByCount(groups, workspaceCount);
+}
+
+function assignGroupsExhaustively(groups, workspaceCount) {
+  const targets = splitSizes(workspaceCount);
+  const targetCounts = [targets.train, targets.validation, targets.heldout];
+  const splitNames = ['train', 'validation', 'heldout'];
+  const assignments = Array(groups.length).fill('train');
+  let best = null;
+
+  const visit = (index, counts) => {
+    if (index === groups.length) {
+      const state = { counts: [...counts], assignments: [...assignments] };
+      const candidate = {
+        state,
+        allocationScore: assignmentScore(state, targetCounts),
+        stratificationScore: structuralStratificationScore(groups, state.assignments),
+        key: assignmentKey(state),
+      };
+      if (!best
+          || candidate.allocationScore < best.allocationScore
+          || (candidate.allocationScore === best.allocationScore
+            && candidate.stratificationScore < best.stratificationScore)
+          || (candidate.allocationScore === best.allocationScore
+            && candidate.stratificationScore === best.stratificationScore
+            && candidate.key.localeCompare(best.key) < 0)) {
+        best = candidate;
+      }
+      return;
+    }
+
+    for (let splitIndex = 0; splitIndex < splitNames.length; splitIndex += 1) {
+      assignments[index] = splitNames[splitIndex];
+      counts[splitIndex] += groups[index].workspaces.length;
+      visit(index + 1, counts);
+      counts[splitIndex] -= groups[index].workspaces.length;
+    }
+  };
+
+  visit(0, [0, 0, 0]);
+  return new Map(groups.map((group, index) => [
+    group.groupKey,
+    best.state.assignments[index],
+  ]));
+}
+
+function assignGroupsByCount(groups, workspaceCount) {
   const targets = splitSizes(workspaceCount);
   const splitNames = ['train', 'validation', 'heldout'];
   let states = new Map([['0:0:0', { counts: [0, 0, 0], assignments: [] }]]);
@@ -216,6 +288,49 @@ function assignGroups(groups, workspaceCount) {
   return new Map(groups.map((group, index) => [group.groupKey, best.assignments[index]]));
 }
 
+function structuralStratificationScore(groups, assignments) {
+  const splitNames = ['train', 'validation', 'heldout'];
+  const ratios = splitNames.map((name) => SPLIT_RATIOS[name]);
+  const compositionTotals = Array(splitNames.length).fill(0);
+  const splitStrata = splitNames.map(() => new Map());
+  const totalStrata = new Map();
+  const groupsByStratum = new Map();
+  const totalCompositions = groups.reduce((sum, group) => sum + group.compositionCount, 0);
+
+  groups.forEach((group, index) => {
+    const splitIndex = splitNames.indexOf(assignments[index]);
+    compositionTotals[splitIndex] += group.compositionCount;
+    for (const [label, count] of Object.entries(group.strata)) {
+      splitStrata[splitIndex].set(label, (splitStrata[splitIndex].get(label) ?? 0) + count);
+      totalStrata.set(label, (totalStrata.get(label) ?? 0) + count);
+      groupsByStratum.set(label, (groupsByStratum.get(label) ?? 0) + 1);
+    }
+  });
+
+  let score = 0;
+  for (let splitIndex = 0; splitIndex < splitNames.length; splitIndex += 1) {
+    score += normalizedSquaredDeviation(
+      compositionTotals[splitIndex],
+      totalCompositions * ratios[splitIndex],
+    );
+    for (const [label, total] of totalStrata) {
+      // A label occurring in one indivisible exact-source group cannot be
+      // stratified. Ignoring it prevents the optimizer from pretending that a
+      // unique family can be generalized across workspace boundaries.
+      if ((groupsByStratum.get(label) ?? 0) < 2) continue;
+      score += normalizedSquaredDeviation(
+        splitStrata[splitIndex].get(label) ?? 0,
+        total * ratios[splitIndex],
+      );
+    }
+  }
+  return score;
+}
+
+function normalizedSquaredDeviation(actual, target) {
+  return ((actual - target) ** 2) / Math.max(1, target);
+}
+
 function assignmentScore(state, targets) {
   const emptyRequired = state.counts.reduce((sum, count, index) => (
     sum + (targets[index] > 0 && count === 0 ? 1 : 0)
@@ -243,6 +358,98 @@ function assertExactSourcesStayInOneSplit(workspaces, assignments) {
       splitBySourceHash.set(composition.sourceHash, split);
     }
   }
+}
+
+function compositionStructuralLabels(source) {
+  const jsxTags = new Set();
+  const calls = new Set();
+  const styleProperties = new Set();
+  try {
+    const { ast } = parseComposition(source);
+    walkAst(ast, (node) => {
+      if (node.type === 'JSXOpeningElement') {
+        const name = jsxName(node.name);
+        if (name) jsxTags.add(name);
+      }
+      if (node.type === 'CallExpression' || node.type === 'OptionalCallExpression') {
+        const name = calleeName(node.callee);
+        if (name) calls.add(name);
+      }
+      if (node.type === 'ObjectProperty' || node.type === 'ObjectMethod') {
+        const name = propertyName(node.key);
+        if (name) styleProperties.add(name);
+      }
+    });
+  } catch {
+    return Object.freeze(['render:unknown']);
+  }
+
+  const labels = new Set();
+  const hasThree = jsxTags.has('ThreeCanvas')
+    || [...jsxTags].some((tag) => ['mesh', 'group', 'points', 'lineSegments'].includes(tag))
+    || calls.has('THREE.Shape');
+  const hasCanvas = jsxTags.has('canvas')
+    || [...calls].some((name) => name === 'getContext' || name.endsWith('.getContext'));
+  const renderMode = hasThree
+    ? 'three'
+    : hasCanvas
+      ? 'canvas2d'
+      : jsxTags.has('svg')
+        ? 'svg'
+        : 'dom';
+  labels.add(`render:${renderMode}`);
+
+  const familyTags = [
+    ['image', ['Img', 'img']],
+    ['video', ['Video', 'OffthreadVideo', 'video']],
+    ['audio', ['Audio', 'audio']],
+  ];
+  for (const [family, tags] of familyTags) {
+    if (tags.some((tag) => jsxTags.has(tag))) labels.add(`family:${family}`);
+  }
+  if (styleProperties.has('fontSize')
+      || [...jsxTags].some((tag) => /^(?:span|pre|text|p|h[1-6])$/u.test(tag))) {
+    labels.add('family:text');
+  }
+  if (hasThree) labels.add('family:three');
+  if (hasCanvas) labels.add('family:canvas');
+  if (calls.has('interpolate')) labels.add('motion:interpolate');
+  if (calls.has('spring')) labels.add('motion:spring');
+  if (calls.has('Math.sin') || calls.has('Math.cos')) labels.add('motion:oscillation');
+  if ([...calls].some((name) => name === 'map' || name.endsWith('.map'))) {
+    labels.add('structure:collection');
+  }
+  if (jsxTags.has('Sequence') || jsxTags.has('Series')) labels.add('structure:timeline');
+  return Object.freeze([...labels].sort());
+}
+
+function summarizeStratification(groups, assignments) {
+  const splitNames = ['train', 'validation', 'heldout'];
+  const labels = new Map();
+  for (const group of groups) {
+    const split = assignments.get(group.groupKey);
+    for (const [label, count] of Object.entries(group.strata)) {
+      const summary = labels.get(label) ?? {
+        label,
+        groups: 0,
+        compositions: 0,
+        splits: Object.fromEntries(splitNames.map((name) => [name, 0])),
+      };
+      summary.groups += 1;
+      summary.compositions += count;
+      summary.splits[split] += count;
+      labels.set(label, summary);
+    }
+  }
+  return {
+    version: 1,
+    assignmentUnit: 'exact-source-connected-workspace-group',
+    labelSource: 'pre-lowering-static-ast',
+    outcomeLabelsUsed: false,
+    exactSourceLeakageAllowed: false,
+    uniqueGroupLabelsExcludedFromBalance: true,
+    labels: [...labels.values()].sort((left, right) => left.label.localeCompare(right.label)),
+  };
 }
 
 function splitSizes(count) {

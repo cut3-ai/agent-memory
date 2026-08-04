@@ -13,6 +13,7 @@ import { createRemotionComponent } from '../core/drivers/remotion.js';
 import { renderGroup } from '../core/drivers/react/adapters/group.js';
 import { renderSequence } from '../core/drivers/react/adapters/sequence.js';
 import { renderText } from '../core/drivers/react/adapters/text.js';
+import { renderTextNode } from '../core/drivers/react/adapters/text-node.js';
 import { Blur } from '../behaviours/blur.js';
 import { Opacity } from '../behaviours/opacity.js';
 import { Rotate } from '../behaviours/rotate.js';
@@ -21,14 +22,12 @@ import { TextReveal } from '../behaviours/text-reveal.js';
 import { Translate } from '../behaviours/translate.js';
 import { VisibleDuring } from '../behaviours/visible-during.js';
 import { Audio } from '../units/audio.js';
+import { Box } from '../units/box.js';
 import { Canvas } from '../units/canvas.js';
-import { DialogueCard } from '../units/dialogue-card.js';
 import { Group } from '../units/group.js';
 import { Image } from '../units/image.js';
 import { Layer } from '../units/layer.js';
-import { RankingCard } from '../units/ranking-card.js';
 import { Repeat } from '../units/repeat.js';
-import { ScatterText } from '../units/scatter-text.js';
 import { Sequence } from '../units/sequence.js';
 import { SolidFill } from '../units/solid-fill.js';
 import { Sprite } from '../units/sprite.js';
@@ -38,11 +37,12 @@ import { Switch } from '../units/switch.js';
 import { Text } from '../units/text.js';
 import { ThreeScene } from '../units/three/scene.js';
 import { Video } from '../units/video.js';
+import { TextNode } from '../units/text-node.js';
 import { Vignette } from '../units/vignette.js';
 
 const UNIT_CLASSES = [
-  Audio, Canvas, DialogueCard, Group, Image, Layer, RankingCard, Repeat,
-  ScatterText, Sequence, SolidFill, Sprite, Surface, Svg, Switch, Text,
+  Audio, Box, Canvas, Group, Image, Layer, Repeat, Sequence, SolidFill, Sprite,
+  Surface, Svg, Switch, Text, TextNode,
   ThreeScene, Video, Vignette,
 ];
 const BEHAVIOUR_CLASSES = [Blur, Opacity, Rotate, Scale, TextReveal, Translate, VisibleDuring];
@@ -56,7 +56,9 @@ function renderDriverUnit(context) {
   if (group !== context.unhandled) return group;
   const sequence = renderSequence(context);
   if (sequence !== context.unhandled) return sequence;
-  return renderText(context);
+  const text = renderText(context);
+  if (text !== context.unhandled) return text;
+  return renderTextNode(context);
 }
 
 test('domain identity is static on direct class subclasses and contains no engine metadata', () => {
@@ -119,24 +121,13 @@ test('Unit composition accepts existing objects, preserves one parent, and rejec
   assert.throws(() => text.add(parent), /primitive Unit/);
 });
 
-test('template Units receive an already-created Unit and never manufacture hidden children', () => {
-  const dialogueContent = new Group(new Text('speaker'), new Text('line'));
-  const dialogue = new DialogueCard(dialogueContent, { background: 'black' });
-  assert.deepEqual(dialogue.children, [dialogueContent]);
-
-  const rankingContent = new Group(new Text('1'), new Text('title'));
-  const ranking = new RankingCard(rankingContent);
-  assert.deepEqual(ranking.children, [rankingContent]);
-
-  const scatteredText = new Text('word');
-  const scatter = new ScatterText(scatteredText, { x: 10, y: 20 });
-  assert.deepEqual(scatter.children, [scatteredText]);
-  assert.deepEqual(scatter.appearance, {
-    position: 'absolute', left: 10, top: 20,
-  });
-  assert.throws(() => new DialogueCard({ text: 'raw' }), /requires a Unit/);
-  assert.throws(() => new RankingCard({ title: 'raw' }), /requires a Unit/);
-  assert.throws(() => new ScatterText({ text: 'raw' }), /requires a Unit/);
+test('TextNode preserves a primitive child without adding a wrapper element', () => {
+  const driver = createReactDriver(React, renderDriverUnit);
+  assert.equal(driver.render(new TextNode('raw')), 'raw');
+  assert.equal(driver.render(new TextNode(42)), 42);
+  assert.throws(() => new TextNode({}), /string or number/);
+  assert.throws(() => new TextNode('raw').add(new Text('nested')), /does not accept/);
+  assert.throws(() => new TextNode('raw').add(new Opacity(new TextNode('owner'), 1)), /does not accept/);
 });
 
 test('absolute-frame Engine evaluates independent visual channels transactionally', () => {

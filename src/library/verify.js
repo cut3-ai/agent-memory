@@ -31,13 +31,25 @@ export function verifyDiscovery(discovery, options = {}) {
   const forbiddenFields = new Set(options.forbiddenFields ?? FORBIDDEN_LIBRARY_FIELDS);
   const errors = [...discovery.diagnostics];
   const kinds = new Map();
+  const modulesByFile = new Map(discovery.modules.map((module) => [module.file, module]));
 
   for (const entry of discovery.entries) {
-    if (!entry.hasSuperClass) {
+    const expectedBase = entry.type === 'unit' ? 'Unit' : 'Behaviour';
+    if (!entry.hasSuperClass || entry.superClass !== expectedBase) {
       errors.push(issue(
-        'not-concrete-library-class',
+        'invalid-base-class',
         entry.source,
-        `${entry.className} must extend a Unit or Behaviour base class`,
+        `${entry.className} must directly extend ${expectedBase}`,
+        entry.loc,
+      ));
+    }
+    if (entry.hasSuperClass
+        && entry.superClass === expectedBase
+        && !hasCanonicalBaseImport(modulesByFile.get(entry.source), expectedBase)) {
+      errors.push(issue(
+        'invalid-base-import',
+        entry.source,
+        `${entry.className} must bind ${expectedBase} through its canonical core ESM import`,
         entry.loc,
       ));
     }
@@ -67,7 +79,10 @@ export function verifyDiscovery(discovery, options = {}) {
     }
   }
 
-  for (const module of discovery.modules) {
+  const verifiedModules = new Set();
+  for (const module of discovery.dependencyModules ?? discovery.modules) {
+    if (!module.ast || verifiedModules.has(module.file)) continue;
+    verifiedModules.add(module.file);
     verifyModuleAst(module, forbiddenFields, errors);
   }
 
@@ -78,6 +93,30 @@ export function verifyDiscovery(discovery, options = {}) {
     modules: discovery.modules.length,
     errors,
   };
+}
+
+function hasCanonicalBaseImport(module, expectedBase) {
+  if (!module?.ast) return false;
+  const canonicalSource = expectedBase === 'Unit' ? 'core/Unit.js' : 'core/Behaviour.js';
+  for (const statement of module.ast.program.body) {
+    if (statement.type !== 'ImportDeclaration'
+        || resolveStaticImport(module.file, statement.source.value) !== canonicalSource) {
+      continue;
+    }
+    if (statement.specifiers.some((specifier) => (
+      specifier.type === 'ImportSpecifier'
+      && propertyName(specifier.imported) === expectedBase
+      && specifier.local?.name === expectedBase
+    ))) return true;
+  }
+  return false;
+}
+
+function resolveStaticImport(importer, specifier) {
+  if (!isRelativeSpecifier(specifier)) return null;
+  const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(importer), specifier));
+  if (resolved === '..' || resolved.startsWith('../') || path.posix.isAbsolute(resolved)) return null;
+  return resolved.replace(/^\.\//u, '');
 }
 
 export async function verifyLibrary(options = {}) {
@@ -279,6 +318,26 @@ function findNonStaticImports(ast, file, errors) {
         'commonjs-require',
         file,
         'Library modules may only use static ESM imports',
+        node.loc?.start,
+      ));
+    }
+    if (node.type === 'CallExpression'
+        && node.callee?.type === 'Identifier'
+        && ['eval', 'Function'].includes(node.callee.name)) {
+      errors.push(issue(
+        'runtime-code-generation',
+        file,
+        'Library modules cannot evaluate or construct executable source',
+        node.loc?.start,
+      ));
+    }
+    if (node.type === 'NewExpression'
+        && node.callee?.type === 'Identifier'
+        && node.callee.name === 'Function') {
+      errors.push(issue(
+        'runtime-code-generation',
+        file,
+        'Library modules cannot evaluate or construct executable source',
         node.loc?.start,
       ));
     }

@@ -13,6 +13,163 @@ class Signal {
   }
 }
 
+const CONTEXT_FIELDS = new Set([
+  'frame',
+  'fps',
+  'width',
+  'height',
+  'durationInFrames',
+]);
+const COMPUTE_ARITY = Object.freeze({
+  add: 2,
+  subtract: 2,
+  multiply: 2,
+  divide: 2,
+  round: 1,
+  max: -1,
+});
+const EXTRAPOLATION = new Set(['clamp', 'extend']);
+
+/** A renderer-neutral, whitelisted read from the immutable frame context. */
+export class ContextValue extends Signal {
+  static kind = 'signal.context-value';
+
+  constructor(field) {
+    super();
+    if (!CONTEXT_FIELDS.has(field)) throw new TypeError(`Unknown frame context field: ${String(field)}`);
+    this.field = field;
+    Object.freeze(this);
+  }
+
+  at(context) {
+    return frameContext(context)[this.field];
+  }
+}
+
+/**
+ * Small arithmetic expression node. It is deliberately data-only: the
+ * operator is selected from a closed table and operands cannot be callbacks.
+ */
+export class Computed extends Signal {
+  static kind = 'signal.computed';
+
+  constructor(operator, operands) {
+    super();
+    if (!Object.hasOwn(COMPUTE_ARITY, operator)) {
+      throw new TypeError(`Unknown signal computation: ${String(operator)}`);
+    }
+    if (!Array.isArray(operands)) throw new TypeError('Computed operands must be an array');
+    const arity = COMPUTE_ARITY[operator];
+    if ((arity >= 0 && operands.length !== arity) || (arity < 0 && operands.length < 1)) {
+      throw new TypeError(`Computed ${operator} has invalid arity`);
+    }
+    this.operator = operator;
+    this.operands = Object.freeze(operands.map((value) => signalValue(value, 'computed operand')));
+    Object.freeze(this);
+  }
+
+  at(context) {
+    const values = this.operands.map((value) => numericSample(value, context, 'computed operand'));
+    let output;
+    if (this.operator === 'add') output = values[0] + values[1];
+    else if (this.operator === 'subtract') output = values[0] - values[1];
+    else if (this.operator === 'multiply') output = values[0] * values[1];
+    else if (this.operator === 'divide') output = values[0] / values[1];
+    else if (this.operator === 'round') output = Math.round(values[0]);
+    else output = Math.max(...values);
+    if (!Number.isFinite(output)) throw new RangeError(`Computed ${this.operator} produced a non-finite value`);
+    return output;
+  }
+}
+
+/** Build a sampled plain record, for example the x/y value of Translate. */
+export class RecordValue extends Signal {
+  static kind = 'signal.record-value';
+
+  constructor(fields) {
+    super();
+    const entries = Array.isArray(fields) ? fields : isPlainRecord(fields) ? Object.entries(fields) : null;
+    if (!entries || entries.some((entry) => !Array.isArray(entry) || entry.length !== 2
+        || typeof entry[0] !== 'string')) {
+      throw new TypeError('RecordValue fields must be plain data');
+    }
+    this.fields = Object.freeze(Object.fromEntries(
+      entries.map(([key, value]) => [key, signalValue(value, `record field ${key}`)]),
+    ));
+    Object.freeze(this);
+  }
+
+  at(context) {
+    return immutableValue(Object.fromEntries(
+      Object.entries(this.fields).map(([key, value]) => [key, sample(value, context)]),
+    ));
+  }
+}
+
+/**
+ * Numeric piecewise interpolation with declarative easing. Unlike a callback,
+ * its complete executable vocabulary is fixed by this module.
+ */
+export class Interpolation extends Signal {
+  static kind = 'signal.interpolation';
+
+  constructor({
+    input,
+    inputRange,
+    outputRange,
+    easing = 'linear',
+    extrapolateLeft = 'extend',
+    extrapolateRight = 'extend',
+  }) {
+    super();
+    if (!Array.isArray(inputRange) || !Array.isArray(outputRange)
+        || inputRange.length < 2 || inputRange.length !== outputRange.length) {
+      throw new TypeError('Interpolation requires matching ranges of at least two values');
+    }
+    if (!EXTRAPOLATION.has(extrapolateLeft) || !EXTRAPOLATION.has(extrapolateRight)) {
+      throw new TypeError('Interpolation extrapolation must be clamp or extend');
+    }
+    this.input = signalValue(input, 'interpolation input');
+    this.inputRange = Object.freeze(inputRange.map(
+      (value) => signalValue(value, 'interpolation input range'),
+    ));
+    this.outputRange = Object.freeze(outputRange.map(
+      (value) => signalValue(value, 'interpolation output range'),
+    ));
+    this.easing = normalizeEasing(easing);
+    this.extrapolateLeft = extrapolateLeft;
+    this.extrapolateRight = extrapolateRight;
+    Object.freeze(this);
+  }
+
+  at(context) {
+    const input = numericSample(this.input, context, 'interpolation input');
+    const inputRange = this.inputRange.map(
+      (value) => numericSample(value, context, 'interpolation input range'),
+    );
+    const outputRange = this.outputRange.map(
+      (value) => numericSample(value, context, 'interpolation output range'),
+    );
+    for (let index = 1; index < inputRange.length; index += 1) {
+      if (inputRange[index] < inputRange[index - 1]) {
+        throw new RangeError('Interpolation input range must be ascending');
+      }
+    }
+    let rightIndex;
+    if (input <= inputRange[0]) rightIndex = 1;
+    else if (input >= inputRange.at(-1)) rightIndex = inputRange.length - 1;
+    else rightIndex = inputRange.findIndex((point) => point >= input);
+    const left = inputRange[rightIndex - 1];
+    const right = inputRange[rightIndex];
+    let progress = right === left ? 1 : (input - left) / (right - left);
+    if (input < inputRange[0] && this.extrapolateLeft === 'clamp') progress = 0;
+    else if (input > inputRange.at(-1) && this.extrapolateRight === 'clamp') progress = 1;
+    const eased = evaluateEasing(this.easing, progress);
+    return outputRange[rightIndex - 1]
+      + ((outputRange[rightIndex] - outputRange[rightIndex - 1]) * eased);
+  }
+}
+
 export class Tween extends Signal {
   static kind = 'signal.tween';
 
@@ -191,6 +348,84 @@ export function isSignalValue(value) {
   } catch {
     return false;
   }
+}
+
+function signalValue(value, name) {
+  if (isSignal(value)) return value;
+  try {
+    return immutableValue(value);
+  } catch {
+    throw new TypeError(`${name} must be plain data or a built-in Signal`);
+  }
+}
+
+function numericSample(value, context, name) {
+  const output = sample(value, context);
+  if (typeof output !== 'number' || !Number.isFinite(output)) {
+    throw new TypeError(`${name} must resolve to a finite number`);
+  }
+  return output;
+}
+
+function normalizeEasing(value) {
+  if (typeof value === 'string') {
+    if (!['linear', 'ease', 'quad', 'cubic'].includes(value)) {
+      throw new TypeError(`Unknown interpolation easing: ${String(value)}`);
+    }
+    return value;
+  }
+  if (Array.isArray(value)) {
+    if (value[0] === 'bezier' && value.length === 5) {
+      return normalizeEasing({ name: 'bezier', values: value.slice(1) });
+    }
+    if (['in', 'out'].includes(value[0]) && value.length === 2) {
+      return immutableValue({ name: value[0], easing: normalizeEasing(value[1]) });
+    }
+    throw new TypeError('Interpolation easing must be a declarative descriptor');
+  }
+  if (!isPlainRecord(value) || typeof value.name !== 'string') {
+    throw new TypeError('Interpolation easing must be a declarative descriptor');
+  }
+  const allowedFields = value.name === 'in' || value.name === 'out'
+    ? ['name', 'easing']
+    : value.name === 'bezier' ? ['name', 'values'] : [];
+  if (allowedFields.length === 0 || Object.keys(value).some((key) => !allowedFields.includes(key))) {
+    throw new TypeError(`Unknown interpolation easing: ${String(value.name)}`);
+  }
+  if (value.name === 'bezier') {
+    if (!Array.isArray(value.values) || value.values.length !== 4
+        || value.values.some((entry) => typeof entry !== 'number' || !Number.isFinite(entry))) {
+      throw new TypeError('Bezier easing requires four finite values');
+    }
+    return immutableValue({ name: value.name, values: value.values });
+  }
+  return immutableValue({ name: value.name, easing: normalizeEasing(value.easing) });
+}
+
+function evaluateEasing(descriptor, value) {
+  if (descriptor === 'linear') return value;
+  if (descriptor === 'quad') return value * value;
+  if (descriptor === 'cubic') return value * value * value;
+  if (descriptor === 'ease') return cubicBezier(0.42, 0, 1, 1)(value);
+  if (descriptor.name === 'bezier') return cubicBezier(...descriptor.values)(value);
+  const nested = evaluateEasing(descriptor.easing, descriptor.name === 'out' ? 1 - value : value);
+  return descriptor.name === 'out' ? 1 - nested : nested;
+}
+
+function cubicBezier(x1, y1, x2, y2) {
+  const point = (a, b, value) => 3 * a * (1 - value) ** 2 * value
+    + 3 * b * (1 - value) * value ** 2 + value ** 3;
+  return (value) => {
+    if (value <= 0 || value >= 1) return value;
+    let low = 0;
+    let high = 1;
+    for (let iteration = 0; iteration < 16; iteration += 1) {
+      const middle = (low + high) / 2;
+      if (point(x1, x2, middle) < value) low = middle;
+      else high = middle;
+    }
+    return point(y1, y2, (low + high) / 2);
+  };
 }
 
 function assertMatchingShape(left, right) {

@@ -299,7 +299,7 @@ function analyzeComposition(record) {
         const callback = path.get('arguments.0');
         if (effectKind === 'scene-frame' || pathDependsOnFrame(callback)) {
           const classification = classifyImperativeEffect(callback, effectKind);
-          addBehaviour(path.node, classification, null, `effect.${effectKind}`);
+          addBehaviour(path.node, classification, null, `ast.${effectKind}`);
           visualSinks += 1;
         }
       }

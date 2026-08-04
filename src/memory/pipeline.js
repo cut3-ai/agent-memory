@@ -8,7 +8,7 @@ import { buildCorpusCensus } from './corpus.js';
 import { evaluateMemoryCandidate } from './evaluate.js';
 import { assertPublicArtifact, inspectPublicArtifact } from './privacy.js';
 
-export const MEMORY_ALGORITHM_VERSION = 'class-memory-v3.1.0-static-index-receipts';
+export const MEMORY_ALGORITHM_VERSION = 'class-memory-v4.0.0-promotion-ledger';
 
 export async function runMemoryPipeline(inputText, options = {}) {
   const repositoryRoot = path.resolve(options.repositoryRoot ?? process.cwd());
@@ -18,7 +18,10 @@ export async function runMemoryPipeline(inputText, options = {}) {
   const deterministic = firstCensus.censusSha256 === secondCensus.censusSha256;
   if (!deterministic) throw new Error('memory-pipeline-nondeterministic');
 
-  const { index, validation: classValidation } = await buildClassIndex(repositoryRoot);
+  const { index, validation: classValidation } = await buildClassIndex(repositoryRoot, {
+    promotionLedger: options.promotionLedger,
+    promotionLedgerFile: options.promotionLedgerFile,
+  });
   const metrics = evaluateMemoryCandidate(firstCensus, index, classValidation, {
     reconstructionReceipts: options.reconstructionReceipts ?? [],
   });
@@ -26,15 +29,18 @@ export async function runMemoryPipeline(inputText, options = {}) {
     algorithmVersion: MEMORY_ALGORITHM_VERSION,
     censusSha256: firstCensus.censusSha256,
     indexSha256: index.indexSha256,
+    promotionLedgerSha256: classValidation.promotionLedgerSha256,
     metricsSha256: metrics.metricsSha256,
   })).slice(0, 20);
   const runDirectory = path.join(outputRoot, runId);
   const manifest = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     runId,
     algorithmVersion: MEMORY_ALGORITHM_VERSION,
     censusSha256: firstCensus.censusSha256,
     indexSha256: index.indexSha256,
+    promotionLedgerSha256: classValidation.promotionLedgerSha256,
+    promotionLedgerRevision: classValidation.promotionLedgerRevision,
     metricsSha256: metrics.metricsSha256,
     deterministic,
     counts: {
@@ -59,9 +65,6 @@ export async function runMemoryPipeline(inputText, options = {}) {
     ['metrics.json', metrics],
   ]);
   for (const value of publicFiles.values()) assertPublicArtifact(value);
-  const artifactManifest = buildArtifactManifest(publicFiles);
-  assertPublicArtifact(artifactManifest);
-  publicFiles.set('artifact-manifest.json', artifactManifest);
   const findings = [...publicFiles.entries()].flatMap(([file, value]) => (
     inspectPublicArtifact(value).map((finding) => ({ file, ...finding }))
   ));
@@ -73,6 +76,9 @@ export async function runMemoryPipeline(inputText, options = {}) {
   };
   assertPublicArtifact(privacy);
   publicFiles.set('privacy.json', privacy);
+  const artifactManifest = buildArtifactManifest(publicFiles);
+  assertPublicArtifact(artifactManifest);
+  publicFiles.set('artifact-manifest.json', artifactManifest);
 
   await Promise.all([...publicFiles.entries()].map(([relative, value]) => (
     writeImmutableJson(path.join(runDirectory, relative), value)

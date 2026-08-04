@@ -12,9 +12,11 @@ import { verifyDiscovery } from '../library/verify.js';
  * Compatibility entry point for memory callers. The index and all class checks
  * are owned by src/library and inspect source AST only.
  */
-export async function buildClassIndex(repositoryRoot) {
+export async function buildClassIndex(repositoryRoot, options = {}) {
   const created = await createNavigationIndex({
     rootDir: path.resolve(repositoryRoot),
+    promotionLedger: options.promotionLedger,
+    promotionLedgerFile: options.promotionLedgerFile,
   });
   return {
     index: created.index,
@@ -25,12 +27,18 @@ export async function buildClassIndex(repositoryRoot) {
 /**
  * Compare an index with a fresh AST discovery. No discovered module is loaded.
  */
-export async function verifyClassIndex(repositoryRoot, index) {
+export async function verifyClassIndex(repositoryRoot, index, options = {}) {
   const rootDir = path.resolve(repositoryRoot);
   const indexReport = validateNavigationIndex(index);
-  const discovery = await discoverLibrary({ rootDir });
+  const discovery = await discoverLibrary({
+    rootDir,
+    promotionLedger: options.promotionLedger,
+    promotionLedgerFile: options.promotionLedgerFile,
+  });
   const sourceReport = verifyDiscovery(discovery);
-  const current = sourceReport.ok ? buildNavigationIndex(discovery) : null;
+  const current = sourceReport.ok && discovery.promotion.ok
+    ? buildNavigationIndex(discovery)
+    : null;
   const currentIndex = Boolean(
     current
       && indexReport.ok
@@ -48,6 +56,11 @@ export async function verifyClassIndex(repositoryRoot, index) {
       module: '<index>',
       location: error.location,
     })),
+    ...discovery.promotion.errors.map((error) => ({
+      code: error.code,
+      module: '<promotion-ledger>',
+      location: error.location,
+    })),
   ];
   if (sourceReport.ok && indexReport.ok && !currentIndex) {
     violations.push({ code: 'index-not-current', module: '<index>' });
@@ -56,7 +69,7 @@ export async function verifyClassIndex(repositoryRoot, index) {
   return Object.freeze({
     format: 'cut3-static-library-verification',
     version: 1,
-    valid: sourceReport.ok && indexReport.ok && currentIndex,
+    valid: sourceReport.ok && discovery.promotion.ok && indexReport.ok && currentIndex,
     checked: Array.isArray(index?.entries) ? index.entries.length : 0,
     evaluatedModules: 0,
     violations: Object.freeze(violations),
@@ -73,8 +86,12 @@ function libraryValidation(created) {
     entries: entries.length,
     units: entries.filter((entry) => entry.type === 'unit').length,
     behaviours: entries.filter((entry) => entry.type === 'behaviour').length,
+    discoveredEntries: created.verification.entries,
+    excludedEntries: created.promotion.excludedEntries.length,
     evaluatedModules: 0,
     indexSha256: created.index.indexSha256,
+    promotionLedgerSha256: created.promotion.ledgerSha256,
+    promotionLedgerRevision: created.promotion.ledgerRevision,
     violations: Object.freeze([]),
   });
 }

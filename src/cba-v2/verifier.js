@@ -5,10 +5,35 @@ import { Rotate } from '../../behaviours/rotate.js';
 import { Scale } from '../../behaviours/scale.js';
 import { Translate } from '../../behaviours/translate.js';
 import { Behaviour } from '../../core/Behaviour.js';
-import { Tween } from '../../core/signals.js';
+import {
+  Computed,
+  ContextValue,
+  Interpolation,
+  RecordValue,
+  Tween,
+} from '../../core/signals.js';
+import { isUnit } from '../../core/Unit.js';
+import { renderAudio } from '../../core/drivers/react/adapters/audio.js';
+import { renderBox } from '../../core/drivers/react/adapters/box.js';
+import { renderGroup } from '../../core/drivers/react/adapters/group.js';
+import { renderImage } from '../../core/drivers/react/adapters/image.js';
+import { renderLayer } from '../../core/drivers/react/adapters/layer.js';
+import { renderText } from '../../core/drivers/react/adapters/text.js';
+import { renderTextNode } from '../../core/drivers/react/adapters/text-node.js';
+import { renderVideo } from '../../core/drivers/react/adapters/video.js';
+import { Audio as AudioUnit } from '../../units/audio.js';
+import { Box } from '../../units/box.js';
+import { Group } from '../../units/group.js';
+import { Image as ImageUnit } from '../../units/image.js';
+import { Layer } from '../../units/layer.js';
+import { Text as TextUnit } from '../../units/text.js';
+import { TextNode } from '../../units/text-node.js';
+import { Video as VideoUnit } from '../../units/video.js';
 import {
   NATIVE_FRAGMENT,
   NativeUnit,
+  plainVisualValue,
+  readElementProp,
   readStyleValue,
   readTransformSignal,
   renderNativeTree,
@@ -16,6 +41,27 @@ import {
   tweenOptions,
   unitsOption,
 } from './runtime/index.js';
+
+const UNIT_CLASSES = Object.freeze({
+  Audio: AudioUnit,
+  Box,
+  Group,
+  Image: ImageUnit,
+  Layer,
+  Text: TextUnit,
+  TextNode,
+  Video: VideoUnit,
+});
+const UNIT_ADAPTERS = Object.freeze({
+  renderAudio,
+  renderBox,
+  renderGroup,
+  renderImage,
+  renderLayer,
+  renderText,
+  renderTextNode,
+  renderVideo,
+});
 
 /** Compare the source and emitted class graph at every timeline frame. */
 export function verifyCompositionV2(compilation, video, options = {}) {
@@ -32,8 +78,14 @@ export function verifyCompositionV2(compilation, video, options = {}) {
   let generatedRenderErrors = 0;
   let firstMismatch = null;
   let maximumUnits = 0;
+  let maximumPublicUnits = 0;
+  let maximumNativeUnits = 0;
   let maximumBehaviours = 0;
+  let maximumPublicBehaviours = 0;
+  let maximumLocalBehaviours = 0;
   let invalidBehaviourOwners = 0;
+  const publicUnitKinds = new Set();
+  const publicBehaviourKinds = new Set();
   const unsupportedEffects = new Set();
   for (let frame = 0; frame < totalFrames; frame += 1) {
     const left = safelyRender(baseline, frame);
@@ -41,10 +93,16 @@ export function verifyCompositionV2(compilation, video, options = {}) {
     if (left.errorCode) baselineRenderErrors += 1;
     if (right.errorCode) generatedRenderErrors += 1;
     maximumUnits = Math.max(maximumUnits, right.diagnostics.units);
+    maximumPublicUnits = Math.max(maximumPublicUnits, right.diagnostics.publicUnits);
+    maximumNativeUnits = Math.max(maximumNativeUnits, right.diagnostics.nativeUnits);
     maximumBehaviours = Math.max(maximumBehaviours, right.diagnostics.behaviours);
+    maximumPublicBehaviours = Math.max(maximumPublicBehaviours, right.diagnostics.publicBehaviours);
+    maximumLocalBehaviours = Math.max(maximumLocalBehaviours, right.diagnostics.localBehaviours);
     invalidBehaviourOwners = Math.max(invalidBehaviourOwners, right.diagnostics.invalidBehaviourOwners);
     left.diagnostics.unsupportedEffects.forEach((effect) => unsupportedEffects.add(effect));
     right.diagnostics.unsupportedEffects.forEach((effect) => unsupportedEffects.add(effect));
+    right.diagnostics.publicUnitKinds.forEach((kind) => publicUnitKinds.add(kind));
+    right.diagnostics.publicBehaviourKinds.forEach((kind) => publicBehaviourKinds.add(kind));
     if (!left.errorCode && !right.errorCode && left.snapshot === right.snapshot) matchedFrames += 1;
     else if (!firstMismatch) firstMismatch = {
       frame,
@@ -68,6 +126,12 @@ export function verifyCompositionV2(compilation, video, options = {}) {
   return {
     totalFrames, matchedFrames, exact: matchedFrames === totalFrames && unsupported.length === 0, firstMismatch,
     baselineRenderErrors, generatedRenderErrors, maximumUnits, maximumBehaviours,
+    maximumPublicUnits, maximumNativeUnits, publicUnitKinds: [...publicUnitKinds].sort(),
+    maximumPublicBehaviours, maximumLocalBehaviours,
+    publicBehaviourKinds: [...publicBehaviourKinds].sort(),
+    sourceDependentVisualComputations: Number(
+      compilation.escapeHatches?.sourceDependentVisualComputations ?? 0,
+    ),
     invalidBehaviourOwners, unsupportedEffects: unsupported, mismatchCategory,
   };
 }
@@ -84,6 +148,10 @@ function createEvaluator(kind, compilation, video, props) {
   if (typeof source !== 'string') throw new TypeError('Missing verifier program');
   new vm.Script(source, { filename: `${kind}.cba-v2.js` }).runInContext(context, { timeout: 1000 });
   if (typeof context.__composition !== 'function') throw new TypeError('Verifier entry was not published');
+  const staticRenderer = kind === 'cba' ? createStaticRenderer(compilation.rendering) : null;
+  const renderOptions = kind === 'cba'
+    ? { components: compilation.rendering?.components ?? {} }
+    : {};
   return {
     render(frame) {
       state.frame = frame;
@@ -97,9 +165,27 @@ function createEvaluator(kind, compilation, video, props) {
       const value = context.__composition(props, frameContext);
       const diagnostics = kind === 'cba' ? inspectGraph(value) : emptyDiagnostics();
       diagnostics.unsupportedEffects = [...unsupportedEffects].sort();
-      const rendered = kind === 'cba' ? renderNativeTree(value, React, frameContext) : value;
+      const rendered = kind === 'cba'
+        ? renderNativeTree(value, React, frameContext, staticRenderer, renderOptions)
+        : value;
       return { snapshot: stableSnapshot(resolveTree(rendered, React, frameContext)), diagnostics };
     },
+  };
+}
+
+function createStaticRenderer(rendering) {
+  const adapters = (rendering?.adapters ?? []).map(({ adapter }) => {
+    const render = UNIT_ADAPTERS[adapter];
+    if (typeof render !== 'function') throw new TypeError('Unknown static verifier adapter');
+    return render;
+  });
+  if (adapters.length === 0) return null;
+  return (context) => {
+    for (const render of adapters) {
+      const output = render(context);
+      if (output !== context.unhandled) return output;
+    }
+    return context.unhandled;
   };
 }
 
@@ -115,7 +201,13 @@ function createGlobals(state, video, React, kind, unsupportedEffects) {
     Fragment: React.Fragment,
     NATIVE_FRAGMENT,
     NativeUnit,
+    plainVisualValue,
+    readElementProp,
     Behaviour,
+    Computed,
+    ContextValue,
+    Interpolation,
+    RecordValue,
     Tween,
     Opacity,
     Scale,
@@ -164,6 +256,7 @@ function createGlobals(state, video, React, kind, unsupportedEffects) {
     'PerspectiveCamera', 'OrthographicCamera',
   ];
   for (const name of threeComponents) target[name] = externalComponent(name, React, () => markEffect('three'));
+  for (const [name, Concrete] of Object.entries(UNIT_CLASSES)) target[`__v2${name}Unit`] = Concrete;
   target.globalThis = target;
   target.global = target;
   target.self = target;
@@ -203,10 +296,11 @@ function externalComponent(name, React, onRender = null) {
 }
 
 function resolveTree(value, React, context) {
-  if (value instanceof NativeUnit) return resolveTree(renderNativeTree(value, React, context), React, context);
+  if (isUnit(value)) throw new TypeError('Verifier received an unrendered Unit');
   if (Array.isArray(value)) return value.flatMap((nested) => {
     const resolved = resolveTree(nested, React, context);
-    return Array.isArray(resolved) ? resolved : [resolved];
+    return (Array.isArray(resolved) ? resolved : [resolved])
+      .filter((child) => child !== null && child !== undefined && typeof child !== 'boolean');
   });
   if (!value || typeof value !== 'object' || !value.$$cbaV2Element) return value;
   if (value.type === React.Fragment) return resolveTree(value.props.children ?? [], React, context);
@@ -270,19 +364,44 @@ function splitArguments(value) { return value.split(/\s*,\s*|\s+/).filter(Boolea
 function inspectGraph(root) {
   const seen = new Set();
   let units = 0;
+  let publicUnits = 0;
+  let nativeUnits = 0;
   let behaviours = 0;
+  let publicBehaviours = 0;
+  let localBehaviours = 0;
   let invalidBehaviourOwners = 0;
+  const publicUnitKinds = new Set();
+  const publicBehaviourKinds = new Set();
   const walk = (value) => {
     if (Array.isArray(value)) { value.forEach(walk); return; }
-    if (!(value instanceof NativeUnit) || seen.has(value)) return;
+    if (!isUnit(value) || seen.has(value)) return;
     seen.add(value);
     units += 1;
+    if (value instanceof NativeUnit) nativeUnits += 1;
+    else {
+      publicUnits += 1;
+      publicUnitKinds.add(value.constructor.kind);
+    }
     behaviours += value.behaviours.length;
+    for (const behaviour of value.behaviours) {
+      const kind = behaviour.constructor.kind;
+      if (typeof kind === 'string' && kind.startsWith('behaviour.local.')) localBehaviours += 1;
+      else {
+        publicBehaviours += 1;
+        if (typeof kind === 'string') publicBehaviourKinds.add(kind);
+      }
+    }
     invalidBehaviourOwners += value.behaviours.filter((behaviour) => behaviour.unit !== value).length;
-    value.content.forEach(walk);
+    if (value instanceof NativeUnit) value.content.forEach(walk);
+    else value.children.forEach(walk);
   };
   walk(root);
-  return { units, behaviours, invalidBehaviourOwners };
+  return {
+    units, publicUnits, nativeUnits, behaviours, publicBehaviours, localBehaviours,
+    invalidBehaviourOwners,
+    publicUnitKinds: [...publicUnitKinds].sort(),
+    publicBehaviourKinds: [...publicBehaviourKinds].sort(),
+  };
 }
 
 function safelyRender(evaluator, frame) {
@@ -301,12 +420,20 @@ function failed(totalFrames, code, error) {
     totalFrames, matchedFrames: 0, exact: false,
     firstMismatch: { frame: 0, treeMatches: false, evaluatorError: `${code}:${error?.name ?? 'Error'}` },
     baselineRenderErrors: totalFrames, generatedRenderErrors: totalFrames,
-    maximumUnits: 0, maximumBehaviours: 0, invalidBehaviourOwners: 0,
+    maximumUnits: 0, maximumPublicUnits: 0, maximumNativeUnits: 0,
+    maximumBehaviours: 0, maximumPublicBehaviours: 0, maximumLocalBehaviours: 0,
+    publicUnitKinds: [], publicBehaviourKinds: [], sourceDependentVisualComputations: 0,
+    invalidBehaviourOwners: 0,
     unsupportedEffects: [], mismatchCategory: code,
   };
 }
 function emptyDiagnostics() {
-  return { units: 0, behaviours: 0, invalidBehaviourOwners: 0, unsupportedEffects: [] };
+  return {
+    units: 0, publicUnits: 0, nativeUnits: 0, behaviours: 0,
+    publicBehaviours: 0, localBehaviours: 0,
+    publicUnitKinds: [], publicBehaviourKinds: [],
+    invalidBehaviourOwners: 0, unsupportedEffects: [],
+  };
 }
 function stableSnapshot(value) { return JSON.stringify(sortValue(value)); }
 function sortValue(value) {
@@ -318,8 +445,10 @@ function interpolate(value, input, output, options = {}) {
   if (!Array.isArray(input) || !Array.isArray(output) || input.length !== output.length || input.length < 2) {
     throw new TypeError('interpolate requires matching input and output ranges');
   }
-  let index = input.findIndex((point) => point >= value);
-  if (index < 1) index = value < input[0] ? 1 : input.length - 1;
+  let index;
+  if (value <= input[0]) index = 1;
+  else if (value >= input.at(-1)) index = input.length - 1;
+  else index = input.findIndex((point) => point >= value);
   const left = input[index - 1];
   const right = input[index];
   let progress = right === left ? 1 : (value - left) / (right - left);
@@ -335,7 +464,8 @@ function springValue(frame, fps) {
 }
 
 const SAFE_DIAGNOSTIC_IDENTIFIERS = new Set([
-  'AbsoluteFill', 'AnimatedImage', 'Audio', 'Easing', 'Image', 'Img', 'OffthreadVideo', 'Path2D',
+  'AbsoluteFill', 'AnimatedImage', 'Audio', 'Computed', 'ContextValue', 'Easing', 'Image', 'Img',
+  'Interpolation', 'OffthreadVideo', 'Path2D', 'RecordValue',
   'React', 'Sequence', 'Series', 'THREE', 'Text', 'ThreeCanvas', 'Video', 'document', 'interpolate',
   'loadFont', 'loadGoogleFont', 'spring', 'useCallback', 'useCurrentFrame', 'useEffect', 'useLayoutEffect',
   'useMemo', 'useRef', 'useState', 'useVideoConfig',

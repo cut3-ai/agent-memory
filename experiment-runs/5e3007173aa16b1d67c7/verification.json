@@ -1,0 +1,31 @@
+{
+  "fallbackMatchedCases": 70,
+  "invalidBehaviourOwners": 0,
+  "library": {
+    "entries": 25,
+    "failures": 0,
+    "modules": 27,
+    "valid": true
+  },
+  "localBehaviours": 276,
+  "nativeUnits": 706,
+  "navigationEntries": 25,
+  "navigationIndexValid": true,
+  "promotion": {
+    "excludedEntries": 0,
+    "failures": 0,
+    "ledgerSha256": "d3bd6c377c943a36f8f12b68b55b0112f5352e5f34cc47e870924b1060f68af9",
+    "promotedEntries": 25,
+    "valid": true
+  },
+  "publicBrickStructuralExactCases": 30,
+  "publicUnitCoverage": 0.5721212121212121,
+  "residualVisualComputations": 76,
+  "treeShaking": {
+    "externalImports": 0,
+    "failures": 0,
+    "reachableFiles": 7,
+    "valid": true
+  },
+  "unsupportedEffectCases": 12
+}

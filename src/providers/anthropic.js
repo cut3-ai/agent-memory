@@ -37,6 +37,7 @@ export function createAnthropicProvider(options = {}) {
           disable_parallel_tool_use: true,
         },
       };
+      if (model === DEFAULT_ANTHROPIC_MODEL) body.thinking = { type: 'disabled' };
       const response = await postJsonWithRetry({
         provider: 'anthropic',
         endpoint: options.endpoint ?? ANTHROPIC_MESSAGES_ENDPOINT,
@@ -52,6 +53,20 @@ export function createAnthropicProvider(options = {}) {
         retryBaseDelayMs: options.retryBaseDelayMs,
         sleepImpl: options.sleepImpl,
       });
+      const failureOptions = {
+        status: response.request.status,
+        attempts: response.request.attempts,
+        retryable: false,
+      };
+      const stopReason = response.data?.stop_reason;
+      if (stopReason !== 'tool_use') {
+        const code = stopReason === 'max_tokens'
+          ? 'max-tokens-before-tool-use'
+          : stopReason === 'refusal'
+            ? 'structured-output-refusal'
+            : 'non-tool-use-stop-reason';
+        throw new ProviderRequestError('anthropic', code, failureOptions);
+      }
       const calls = Array.isArray(response.data?.content)
         ? response.data.content.filter((entry) => entry?.type === 'tool_use')
         : [];
@@ -60,16 +75,20 @@ export function createAnthropicProvider(options = {}) {
           || !calls[0].input
           || typeof calls[0].input !== 'object'
           || Array.isArray(calls[0].input)) {
-        throw new ProviderRequestError('anthropic', 'missing-structured-tool-call', {
-          attempts: response.request.attempts,
-        });
+        throw new ProviderRequestError(
+          'anthropic',
+          'missing-structured-tool-call',
+          failureOptions,
+        );
       }
       try {
         assertMatchesSchema(calls[0].input, structured.schema);
       } catch {
-        throw new ProviderRequestError('anthropic', 'invalid-structured-content', {
-          attempts: response.request.attempts,
-        });
+        throw new ProviderRequestError(
+          'anthropic',
+          'invalid-structured-content',
+          failureOptions,
+        );
       }
       return structuredResult({
         data: calls[0].input,

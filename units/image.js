@@ -7,8 +7,8 @@ export class Image extends Unit {
   constructor(value, { alt = '', fit = 'cover', appearance = {} } = {}) {
     super();
     this.source = source(value);
-    this.alt = String(alt);
-    this.fit = String(fit);
+    this.alt = alt === null ? null : String(alt);
+    this.fit = fit === null ? null : String(fit);
     this.appearance = plain(appearance, 'appearance');
   }
 

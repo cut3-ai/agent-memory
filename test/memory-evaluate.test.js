@@ -20,12 +20,16 @@ test('kind mapping is never reported as exact reconstruction', () => {
     ],
   };
   const index = {
-    units: [{ kind: 'unit.text' }],
-    behaviours: [{ kind: 'behaviour.opacity' }],
+    entries: [
+      { kind: 'unit.text', type: 'unit' },
+      { kind: 'behaviour.opacity', type: 'behaviour' },
+    ],
   };
   const metrics = evaluateMemoryCandidate(census, index, { valid: true, violations: [] });
   assert.equal(metrics.mapping.behaviourKindMappingCoverage, 0.75);
+  assert.equal(metrics.mapping.proof, 'navigation-only');
   assert.equal(metrics.reconstruction.semanticExactCompositions, 0);
+  assert.equal(metrics.reconstruction.pixelOneToOneVerified, false);
   assert.equal(metrics.reconstruction.oneToOneVerified, false);
   assert.equal(metrics.residuals.sourceDependentVisualComputations, 4);
   assert.equal(metrics.release.acceptedForAutomaticPromotion, false);

@@ -3,6 +3,11 @@ import path from 'node:path';
 
 import { parse } from '@babel/parser';
 
+import {
+  loadPromotionLedger,
+  resolvePromotedEntries,
+} from './promotion-ledger.js';
+
 const SOURCE_EXTENSIONS = new Set(['.js', '.mjs', '.jsx']);
 
 /**
@@ -56,6 +61,7 @@ export async function discoverLibrary(options = {}) {
           export: exported.exportName,
           className: exported.className,
           hasSuperClass: Boolean(exported.node.superClass),
+          superClass: propertyName(exported.node.superClass),
           source: relativeFile,
           loc: exported.node.loc?.start ?? null,
         });
@@ -63,10 +69,156 @@ export async function discoverLibrary(options = {}) {
     }
   }
 
+  const coreSeeds = await collectDependencySeeds(
+    rootDir,
+    options.coreDirectory ?? 'core',
+  );
+  const dependencyGraph = await collectStaticDependencyGraph(
+    rootDir,
+    [...modules, ...coreSeeds.modules],
+  );
+  diagnostics.push(...coreSeeds.diagnostics);
+  diagnostics.push(...dependencyGraph.diagnostics);
+
   modules.sort((left, right) => left.file.localeCompare(right.file));
   entries.sort(compareEntries);
   diagnostics.sort(compareDiagnostics);
-  return { rootDir, modules, entries, diagnostics };
+  const ledgerValidation = await loadPromotionLedger({
+    rootDir,
+    ledger: options.promotionLedger,
+    ledgerFile: options.promotionLedgerFile,
+  });
+  const promotion = resolvePromotedEntries(
+    {
+      rootDir,
+      modules,
+      dependencyModules: dependencyGraph.modules,
+      entries,
+      diagnostics,
+    },
+    ledgerValidation,
+  );
+  return {
+    rootDir,
+    modules,
+    dependencyModules: dependencyGraph.modules,
+    entries,
+    publicEntries: promotion.promotedEntries,
+    diagnostics,
+    promotion,
+  };
+}
+
+/**
+ * Read the complete relative ESM closure without evaluating it. Bare package
+ * specifiers stay on each module record so the promotion ledger can bind them
+ * deterministically without attempting network or package resolution.
+ */
+async function collectStaticDependencyGraph(rootDir, roots) {
+  const byFile = new Map(roots.map((module) => [module.file, module]));
+  const queue = [...roots];
+  const visited = new Set();
+  const diagnostics = [];
+
+  while (queue.length > 0) {
+    const module = queue.shift();
+    if (visited.has(module.file)) continue;
+    visited.add(module.file);
+
+    for (const imported of module.imports ?? []) {
+      if (!isRelativeSpecifier(imported.value)) continue;
+      const filename = path.resolve(path.dirname(module.filename), imported.value);
+      const relativeFile = relativeInside(rootDir, filename);
+      if (relativeFile === null) {
+        diagnostics.push(diagnostic(
+          'dependency-import-escapes-root',
+          module.file,
+          `Static dependency escapes repository root: ${imported.value}`,
+          imported.loc,
+        ));
+        continue;
+      }
+      if (byFile.has(relativeFile)) {
+        queue.push(byFile.get(relativeFile));
+        continue;
+      }
+
+      let source;
+      try {
+        source = await fs.readFile(filename, 'utf8');
+      } catch (error) {
+        diagnostics.push(diagnostic(
+          'unresolved-static-dependency',
+          module.file,
+          `Cannot read static dependency: ${imported.value}`,
+          imported.loc,
+        ));
+        continue;
+      }
+
+      let ast = null;
+      let imports = [];
+      if (SOURCE_EXTENSIONS.has(path.extname(filename))) {
+        try {
+          ast = parseModule(source, relativeFile);
+          imports = collectStaticSpecifiers(ast);
+        } catch (error) {
+          diagnostics.push(diagnostic(
+            'dependency-parse-error',
+            relativeFile,
+            `Cannot parse static dependency: ${firstLine(error.message)}`,
+            error.loc,
+          ));
+          continue;
+        }
+      }
+
+      const record = {
+        file: relativeFile,
+        filename,
+        source,
+        ast,
+        imports,
+        type: null,
+      };
+      byFile.set(relativeFile, record);
+      queue.push(record);
+    }
+  }
+
+  return {
+    modules: [...byFile.values()].sort((left, right) => left.file.localeCompare(right.file)),
+    diagnostics: diagnostics.sort(compareDiagnostics),
+  };
+}
+
+async function collectDependencySeeds(rootDir, directory) {
+  const modules = [];
+  const diagnostics = [];
+  const absoluteDirectory = path.resolve(rootDir, directory);
+  for (const filename of await collectSourceFiles(absoluteDirectory)) {
+    const source = await fs.readFile(filename, 'utf8');
+    const relativeFile = toPosix(path.relative(rootDir, filename));
+    try {
+      const ast = parseModule(source, relativeFile);
+      modules.push({
+        file: relativeFile,
+        filename,
+        source,
+        ast,
+        imports: collectStaticSpecifiers(ast),
+        type: null,
+      });
+    } catch (error) {
+      diagnostics.push(diagnostic(
+        'dependency-parse-error',
+        relativeFile,
+        `Cannot parse static dependency: ${firstLine(error.message)}`,
+        error.loc,
+      ));
+    }
+  }
+  return { modules, diagnostics };
 }
 
 export function parseModule(source, filename = '<source>') {
@@ -193,6 +345,18 @@ function identifierName(node) {
   if (node?.type === 'Identifier') return node.name;
   if (node?.type === 'StringLiteral') return node.value;
   return null;
+}
+
+function isRelativeSpecifier(value) {
+  return typeof value === 'string' && (value.startsWith('./') || value.startsWith('../'));
+}
+
+function relativeInside(rootDir, filename) {
+  const relative = path.relative(rootDir, filename);
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    return null;
+  }
+  return toPosix(relative);
 }
 
 async function collectSourceFiles(directory) {

@@ -23,15 +23,24 @@ test('memory pipeline emits deterministic privacy-safe independent-census artifa
     tracks: [{ id: 'private-id', type: 'composition', start: 0, length: 1_000, source }],
   })}\n`;
 
-  const first = await runMemoryPipeline(input, { repositoryRoot: process.cwd(), outputRoot });
-  const second = await runMemoryPipeline(input, { repositoryRoot: process.cwd(), outputRoot });
+  const first = await runMemoryPipeline(input, {
+    repositoryRoot: process.cwd(),
+    outputRoot,
+    writeIndex: false,
+  });
+  const second = await runMemoryPipeline(input, {
+    repositoryRoot: process.cwd(),
+    outputRoot,
+    writeIndex: false,
+  });
   assert.equal(first.runId, second.runId);
   assert.equal(first.privacy.valid, true);
   assert.equal(first.classValidation.valid, true);
   assert.equal(first.manifest.reconstructionProven, false);
   assert.equal(first.manifest.automaticPromotionAllowed, false);
-  assert.equal(first.index.behaviours.some((entry) => entry.kind === 'behaviour.opacity'), true);
-  for (const entry of [...first.index.units, ...first.index.behaviours]) {
+  assert.equal(first.manifest.refinementAuthority, 'experiment-profile-lab');
+  assert.equal(first.index.entries.some((entry) => entry.kind === 'behaviour.opacity'), true);
+  for (const entry of first.index.entries) {
     assert.deepEqual(Object.keys(entry).sort(), ['export', 'kind', 'source', 'type']);
   }
 
@@ -47,4 +56,9 @@ test('memory pipeline emits deterministic privacy-safe independent-census artifa
   ]);
   const bytes = await Promise.all(files.map((file) => fs.readFile(path.join(first.runDirectory, file), 'utf8')));
   assert.doesNotMatch(bytes.join('\n'), /private-id|GeneratedComposition|https?:\/\//iu);
+  const artifactManifest = JSON.parse(await fs.readFile(
+    path.join(first.runDirectory, 'artifact-manifest.json'),
+    'utf8',
+  ));
+  assert.equal(artifactManifest.artifacts.some(({ file }) => file === 'privacy.json'), true);
 });

@@ -6,10 +6,10 @@ export function renderAudio(context) {
   const props = compact({
     'data-end-frame': context.state.to ?? undefined,
     'data-start-frame': context.state.from === 0 ? undefined : context.state.from,
-    muted: context.state.muted,
-    playbackRate: context.state.rate,
+    muted: context.state.muted ? true : undefined,
+    playbackRate: context.state.rate === 1 ? undefined : context.state.rate,
     src: context.state.source,
-    volume: context.state.volume,
+    volume: context.state.volume === 1 ? undefined : context.state.volume,
   });
   return context.React.createElement(
     context.component('audio', 'audio'),

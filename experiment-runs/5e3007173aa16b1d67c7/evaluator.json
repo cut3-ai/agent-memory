@@ -1,0 +1,404 @@
+{
+  "files": [
+    {
+      "file": "behaviours/blur.js",
+      "sha256": "55612d076652308852f740af85717b2a7c4b3a3c24d6fd0d66be3116a32139ea"
+    },
+    {
+      "file": "behaviours/opacity.js",
+      "sha256": "af90a5517f23b33d3ab1f7742bfb4c45eedffd6c14fc38f05cf4f4714e1daf76"
+    },
+    {
+      "file": "behaviours/rotate.js",
+      "sha256": "5e300b40c158c1f8ed6e23679a8878b1f8509502409c8c387e1f086d95df8a8c"
+    },
+    {
+      "file": "behaviours/scale.js",
+      "sha256": "51c26b532727f5fd5cb2c1597b950115e5ae4c9019f55f1727b1aee7f1ea6b52"
+    },
+    {
+      "file": "behaviours/shared.js",
+      "sha256": "975d556bc1a9a55c615f198f2bb105c744d743d805bcfe98cfd04f5221203302"
+    },
+    {
+      "file": "behaviours/text-reveal.js",
+      "sha256": "c47aa7a1ee37407d61bdfafe27d44d944525407adc2c9a57e883b69e21e8f597"
+    },
+    {
+      "file": "behaviours/translate.js",
+      "sha256": "862781dc753293f13cc61f4fe00565e5427e3a33f85b6b890df4511344c984f4"
+    },
+    {
+      "file": "behaviours/visible-during.js",
+      "sha256": "c6b03a71ccb4a2bc68f2d5e282969e63048c9347153401b13d0bfb730382d2b8"
+    },
+    {
+      "file": "core/Behaviour.js",
+      "sha256": "1629f53540fac7e1b161ced789ecb231605f80b76e789023484380fc6e689e66"
+    },
+    {
+      "file": "core/Engine.js",
+      "sha256": "95d2564175bed86ccb1a4897e87d1235c3e2ba70871a8aad7e1bfee2d76a8841"
+    },
+    {
+      "file": "core/Unit.js",
+      "sha256": "1b2429bdd6d64ddb3dbe4fdc32c044e272858a0066bf1e4e76e8a093f00c1d4a"
+    },
+    {
+      "file": "core/drivers/react.js",
+      "sha256": "f1269d99dc8c5c4238bcc1efbb91acfc658fdba3e2a09d7697740534bee3bbcf"
+    },
+    {
+      "file": "core/drivers/react/adapters/audio.js",
+      "sha256": "c4029c655c9148a0ffc183fa71aa06de4836694441e585bcaef0e61feb24b268"
+    },
+    {
+      "file": "core/drivers/react/adapters/box.js",
+      "sha256": "d7a081da0909e32c4e254e66f3a1c1cb0e43f4b625777f2b4445bdf193b3189d"
+    },
+    {
+      "file": "core/drivers/react/adapters/canvas.js",
+      "sha256": "9d6633979772f3711323c1500d62649dda8bf778f9e13a71128d905f93502394"
+    },
+    {
+      "file": "core/drivers/react/adapters/group.js",
+      "sha256": "130cd9c2bf5a059027a5a8288ce9bac5fc4f6f9c2925c0c3e2d9c17902cdc07b"
+    },
+    {
+      "file": "core/drivers/react/adapters/image.js",
+      "sha256": "f92f633acd0e6179d37ae06b44eab3f0861a191b46222222c755044fb15ec93b"
+    },
+    {
+      "file": "core/drivers/react/adapters/layer.js",
+      "sha256": "b936e86f05779fa09f1484fef4ffa2815078298f9dafb91fee172ad7d0fa2fab"
+    },
+    {
+      "file": "core/drivers/react/adapters/repeat.js",
+      "sha256": "f45d69e3b0b9403d1f6d96662a03d95db234ac7e5d8f3e576c58ec7b1f573e84"
+    },
+    {
+      "file": "core/drivers/react/adapters/sequence.js",
+      "sha256": "7eb17f4cc7531a7ca06730d3aea18ef02b8752cc55a04a3fd604dcadfbbe6cac"
+    },
+    {
+      "file": "core/drivers/react/adapters/solid-fill.js",
+      "sha256": "c4678fac1d2222d7f826ec7cc531831ea08f3f6c65dd129cbbd6b000900e66f4"
+    },
+    {
+      "file": "core/drivers/react/adapters/sprite.js",
+      "sha256": "9f45d09262d54cd32544b26478716509ba9b1f6fe56306383855caa4c6459aab"
+    },
+    {
+      "file": "core/drivers/react/adapters/surface.js",
+      "sha256": "82118835856f2f062d57d8c4903e01e5f36f9ea7f4048c0954a8f5db57273e63"
+    },
+    {
+      "file": "core/drivers/react/adapters/svg.js",
+      "sha256": "48d9eccfebd77c63ad9ca6e8defb9c0965a4a343ec0128db47ce9f466ac1b3b3"
+    },
+    {
+      "file": "core/drivers/react/adapters/switch.js",
+      "sha256": "a816460d9d10868b5b927f477c66086d7c7f19ee40088bb416f9f080f9dd478e"
+    },
+    {
+      "file": "core/drivers/react/adapters/text-node.js",
+      "sha256": "3bc6c25e1489b9880e91e7146009dc57a456b6eb27b23bb3012a032b72978c94"
+    },
+    {
+      "file": "core/drivers/react/adapters/text.js",
+      "sha256": "ec96aafd2bbdb5dd21e4c2f880a13240495679d3ec1af67ec94657a9de95f7bf"
+    },
+    {
+      "file": "core/drivers/react/adapters/three-scene.js",
+      "sha256": "4ed7bdc1f27b1c19ac968c64ab1abf1897c2f6ba09b2c7b40576d2ec95eea9a7"
+    },
+    {
+      "file": "core/drivers/react/adapters/video.js",
+      "sha256": "e405b765174685c6272d293cafb0abe6b42e57e882212653dbcd13eb920ab252"
+    },
+    {
+      "file": "core/drivers/react/adapters/vignette.js",
+      "sha256": "343159e425a91f7f762ee3107f15ad4d0ffa439e36d2216a484d7600cc8ae600"
+    },
+    {
+      "file": "core/drivers/react/style.js",
+      "sha256": "c1feafc13623424161133bc36f338441140c46f09d1395c45e205819d6b59f8a"
+    },
+    {
+      "file": "core/drivers/remotion.js",
+      "sha256": "bce563beed146e2a5e5a131dcea766f8a5e9ac9e4a223f1a985eb85d048e8770"
+    },
+    {
+      "file": "core/frame.js",
+      "sha256": "dc5731efd6953b24320293c2efc0b7c28f971ab26e589035e8d553df7b834085"
+    },
+    {
+      "file": "core/identity.js",
+      "sha256": "4236f212c7b7cd1f72d82990edc940f65b9f8f30486da5ed177a273f7355ebce"
+    },
+    {
+      "file": "core/signals.js",
+      "sha256": "95530edcf7fbbe976dc942ed5b57f901356d222284a7730315ad753759aa4749"
+    },
+    {
+      "file": "core/state.js",
+      "sha256": "9031f577206b4626b235d6792574b1dfeab7ca3d2b56273b6c9023946c620c00"
+    },
+    {
+      "file": "package-lock.json",
+      "sha256": "d2246e6d39f6fac681b95bcba91a6a81ef4878746121d8aa08be116b627c0e43"
+    },
+    {
+      "file": "package.json",
+      "sha256": "99e724758f3faf7c7d1492591ba5b2a60c8d8531b5aab228a2c3ce0e9bae1367"
+    },
+    {
+      "file": "promotion-ledger.json",
+      "sha256": "15cd4444a1066584d3c081e3bb16a67ebdb0220cee785ab674f74bb39aa1bc08"
+    },
+    {
+      "file": "src/cba-v2/analyzer.js",
+      "sha256": "ef1584599b48105cfb04480eb38815c7a7d5f2331e46afda107a0c72cd8637d4"
+    },
+    {
+      "file": "src/cba-v2/compiler.js",
+      "sha256": "730b17376aedc314f6ee84cd85f6c7b17137aa2c6c951240f3d128f9232cc1fc"
+    },
+    {
+      "file": "src/cba-v2/emitter.js",
+      "sha256": "481773a894bfdf67c9909100ca50479d690be300526f2b5d3248e75f59b19ac7"
+    },
+    {
+      "file": "src/cba-v2/features.js",
+      "sha256": "e32c823edde458c21318aea1f524a6a40c9e3fff8ea642b46f619c6178f128a1"
+    },
+    {
+      "file": "src/cba-v2/index.js",
+      "sha256": "be2ed1aa908f6705938a3c6841aab79a443c051d46cb4900138d4372b5b4f98c"
+    },
+    {
+      "file": "src/cba-v2/parser.js",
+      "sha256": "bd94d5de18e0d689b0f51ee87efde14fbb8d5f36231a226c689756caed89f8ee"
+    },
+    {
+      "file": "src/cba-v2/runtime/NativeUnit.js",
+      "sha256": "8b46e6f6b8d291e79a9773974f2dc1d2881a14d9b6fa8dcc42926647a767f697"
+    },
+    {
+      "file": "src/cba-v2/runtime/index.js",
+      "sha256": "9b5c8c86d1d935fdeeba2c229b1fc24abd26c5e245ad6d3c932ed0f2c149111b"
+    },
+    {
+      "file": "src/cba-v2/signal-ir.js",
+      "sha256": "17aadd40449aefe5b3ea70cb561d1911e184f9b149cb97b7011b1d21c04a44d1"
+    },
+    {
+      "file": "src/cba-v2/verifier.js",
+      "sha256": "31d40c39d3c19ea60b287ae126364bfefce3bb9cc8ce473398d426b1f7cf23e9"
+    },
+    {
+      "file": "src/experiment/durable-storage.js",
+      "sha256": "b3fc96891fcb545d6e3a015d28347842fdf43d1754b51a0b5e450525fafea7ac"
+    },
+    {
+      "file": "src/experiment/profile-evaluator.js",
+      "sha256": "602c45f1ae100249a16a9cb2dfd4777733beace62a4e7079bdaac5ba29e6343d"
+    },
+    {
+      "file": "src/experiment/profile-lab-cli.js",
+      "sha256": "661984570f84e6124cb83a1480d4dc85681614571ed6cd872d4862c75f7bb433"
+    },
+    {
+      "file": "src/experiment/profile-lab.js",
+      "sha256": "4b31dd852a8eb9f3b17e28faab5dace01f1ef84b8477ca4c8111bb1949536cec"
+    },
+    {
+      "file": "src/experiment/profile-progress.js",
+      "sha256": "b6c88133eb0fc2b6fb306793bfc4aa389bcc599ba338d5aa46c86ec5623eecd7"
+    },
+    {
+      "file": "src/experiment/profile-search.js",
+      "sha256": "c6368c0c0eb1797dbef7ce54d7acd6a1ca4891f1f03c8f6f45ab7dae71c0fa28"
+    },
+    {
+      "file": "src/experiment/profile-selection.js",
+      "sha256": "769ce2addfb65c87d0fd8fcedb4e091301d229dd61f69f8d16ec0defa5f832ac"
+    },
+    {
+      "file": "src/experiment/split.js",
+      "sha256": "c4762d56e8c2e6f5b75e2e4d0a8b6e05a8c028481724187f4227fda8e1b959fd"
+    },
+    {
+      "file": "src/lib.js",
+      "sha256": "3a95468cf56370277780c5cef7f1d9440abd1e2bcfb8e369898f8cf34d921ec7"
+    },
+    {
+      "file": "src/library/discover.js",
+      "sha256": "0bf8962a4affa9c90f89514f8ba660518870a463acacad6fc29a240e79c1f878"
+    },
+    {
+      "file": "src/library/index.js",
+      "sha256": "8110fca421731948f9c0eef93f4262b25f4c1cc1e055032bb6db05b9e6d661f0"
+    },
+    {
+      "file": "src/library/promotion-ledger.js",
+      "sha256": "c629c0e7f45979543599402f02051aa873415ba3fcd5156223b1c2b991fbec83"
+    },
+    {
+      "file": "src/library/verify.js",
+      "sha256": "58e2865b3c57e92ed4d6371f30dfd81c3322849bcc747f8b29c25c6c21c0c2e9"
+    },
+    {
+      "file": "src/memory/gate-receipts.js",
+      "sha256": "85780135ae76cb7f8be031514150d9defcf366c6434f33c04439ab3e2389fc53"
+    },
+    {
+      "file": "src/memory/privacy.js",
+      "sha256": "3909da5008ae20ec2c4847a00b101106844d3af6faf4e756688c32e352448454"
+    },
+    {
+      "file": "src/model-lab/checkpoint.js",
+      "sha256": "01d62f8c98c63c392f1c18489ba9b1523e1c0b2b0803f297a8e8971f679e2f0e"
+    },
+    {
+      "file": "src/model-lab/cli.js",
+      "sha256": "a2896f6575892cdd163969b0b38867e7b8a0b735abe2c5f633ea6177e81f9042"
+    },
+    {
+      "file": "src/model-lab/contracts.js",
+      "sha256": "c84a4968ec67ac5fc3a21fbf2562677131b1a0814c9b1b7dbd156c3d673ff03e"
+    },
+    {
+      "file": "src/model-lab/hook.js",
+      "sha256": "b4109d9e0fb8e6bf2041002c4b1e2eeda4524b45e8305d718d48e210d828e87d"
+    },
+    {
+      "file": "src/model-lab/index.js",
+      "sha256": "91ff517b4d3a3cfe834e8e0e8e131170edec39465b2ea2bb77afbccf94926ba0"
+    },
+    {
+      "file": "src/model-lab/intent.js",
+      "sha256": "db1bcf9f6c4590fa812f950a09bcef0a56ed77601802c6ba25b9cfe3230a5310"
+    },
+    {
+      "file": "src/model-lab/live.js",
+      "sha256": "455d5796af3eb49cf4361e4cb0b657832661916ec5fdd0aab8b0e59700e5b29c"
+    },
+    {
+      "file": "src/model-lab/loop.js",
+      "sha256": "fcaaa98500fc33a6e2c5b018f580a9914dfa1d6292abbb56bf40faaf01d1005d"
+    },
+    {
+      "file": "src/model-lab/receipt.js",
+      "sha256": "63bc8c5cbd5aa3e33141af8bfda75d55a239b3003a8542fa202b5c40314aa394"
+    },
+    {
+      "file": "src/normalize.js",
+      "sha256": "58445b0f33bc080c186522b6f9f7aedd7e5f9425328298bbfc48581f84278bab"
+    },
+    {
+      "file": "src/providers/anthropic.js",
+      "sha256": "262913edb00d3e82f5a8eae9c4a677e69496e73db9678adab2ed05c2f5013d48"
+    },
+    {
+      "file": "src/providers/env.js",
+      "sha256": "3af2a3a2e67cfa678b8e1855108782b5732bb94a9ef1d607b8b8371a4bc56981"
+    },
+    {
+      "file": "src/providers/index.js",
+      "sha256": "644c8679295207552b5338bf71c341d1e9887f8f646eff275ce63891c384e62d"
+    },
+    {
+      "file": "src/providers/kimi.js",
+      "sha256": "e3bb007800e9b11d45be0667cfae19a420dcbf95081e40f0ed03face8fc3ee5c"
+    },
+    {
+      "file": "src/providers/proposal-contract.js",
+      "sha256": "2efd7287c3ef6603a01358a57a1dcacff47536f9062b9f693f30d6e55a5a1842"
+    },
+    {
+      "file": "src/providers/proposal.js",
+      "sha256": "44e72df75379956792d83cbfce0231ce88bdf0d9087e1bd35c0323d7227372fd"
+    },
+    {
+      "file": "units/audio.js",
+      "sha256": "1fc19536c24e46b8547b0bbfa1b494b3479f2d708ce539aba88de0427479b78c"
+    },
+    {
+      "file": "units/box.js",
+      "sha256": "bf5b582a2b7740f87189403a5aca56ed33c9c7ed0072b6ff75ec40eb491b8bf1"
+    },
+    {
+      "file": "units/canvas.js",
+      "sha256": "d83ed4f57b1472b34c67bdd1e7d3d5a644d12482da75ae8e8fc2f173b93b120b"
+    },
+    {
+      "file": "units/group.js",
+      "sha256": "37df6cf8f3733e7a3a7fd25914cccfd4565398d21ffd18e4e6659d4fc7e87054"
+    },
+    {
+      "file": "units/image.js",
+      "sha256": "c4d63d8d86824b69df076e1d341b4ada6e71da1ca090005f43ee39f14964c1aa"
+    },
+    {
+      "file": "units/layer.js",
+      "sha256": "413a792a68bf750d5af339340cfff4d242f09dc37a96c36a3c67399b82d8d65b"
+    },
+    {
+      "file": "units/repeat.js",
+      "sha256": "9384553c86899a70a098e8997590c43929e1fe3b15267f22c933b133fea1cddd"
+    },
+    {
+      "file": "units/sequence.js",
+      "sha256": "c167d6672266795556caae591d304da8bba54d71850d263c3327ef5ab48b969b"
+    },
+    {
+      "file": "units/shared.js",
+      "sha256": "5e76eaf7ae89948e8ae833225af262b147295eac4af6595b86c66e3fb8de2db4"
+    },
+    {
+      "file": "units/solid-fill.js",
+      "sha256": "6f5c625524f802ba6c5df7a0555f891f9f9e84cb01d1376a2c52f16f806eeb23"
+    },
+    {
+      "file": "units/sprite.js",
+      "sha256": "34a68cc22ca87da6e6c94ee0d7a2bf31797993657e3d58070a529f07d243132b"
+    },
+    {
+      "file": "units/surface.js",
+      "sha256": "fad6d8d714efd32074e0954c398d68a10acc7f045ef2b14a79a027250569c6c6"
+    },
+    {
+      "file": "units/svg.js",
+      "sha256": "a8231c28127f70cc06dbeb2310e9f3a8d765defadb93c30ea4b3f83e8acd6bf5"
+    },
+    {
+      "file": "units/switch.js",
+      "sha256": "e164bda81ac055f17f16012dc9f3a82b5b24e1b704fbd2ba9daf4d507db42f6d"
+    },
+    {
+      "file": "units/text-node.js",
+      "sha256": "9a2c0b7be81841b28eabe1bfc6d94287f1fa7afcb3d5d2a266040e462441ad0a"
+    },
+    {
+      "file": "units/text.js",
+      "sha256": "826f3e98d7f7d203d77a198d9f04b5a92f8ea3ab2e1c38c52d2d6fe79298bb4e"
+    },
+    {
+      "file": "units/three/scene.js",
+      "sha256": "9eff9e4ab9408f3e98131e5ff280f0c6f22e4db8106089a2420469bb93dfaf03"
+    },
+    {
+      "file": "units/video.js",
+      "sha256": "ca1a98a463d2faf0a4ab0eb345d6958a8eff532907c9bc4a13ceba01d32843a0"
+    },
+    {
+      "file": "units/vignette.js",
+      "sha256": "f9d2dba6b7b99cc4df4cf5314005cd09ad3a2e3a38c2d3438571b7c120c4aa97"
+    }
+  ],
+  "nodeVersion": "22.16.0",
+  "schemaVersion": 1,
+  "scope": "static-local-closure-plus-domain-library",
+  "sha256": "5ff174593cd6e630ac9a8c22f009dc07eacb10be7bc582ffde3a40f1858a246f"
+}

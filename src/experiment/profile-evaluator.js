@@ -12,6 +12,7 @@ export function evaluateCbaProfile(dataset, split, profile, options = {}) {
   const totals = emptyMetrics();
   const reusableKinds = new Set();
   const reusableUnitKinds = new Set();
+  const unsupportedEffectKinds = new Set();
 
   for (const workspace of dataset.workspaces) {
     const assigned = split.assignmentByWorkspaceKey.get(workspace.workspaceKey);
@@ -35,21 +36,52 @@ export function evaluateCbaProfile(dataset, split, profile, options = {}) {
         totals.exactCases += Number(verification.exact);
         totals.baselineErrorFrames += verification.baselineRenderErrors;
         totals.generatedErrorFrames += verification.generatedRenderErrors;
-        totals.nativeUnits += compiled.escapeHatches.nativeUnits;
-        totals.localBehaviours += compiled.escapeHatches.localBehaviours;
-        totals.reusableBehaviours += compiled.memoryCandidates.behaviours.length;
-        totals.reusableUnits += compiled.memoryCandidates.units.length;
+        totals.nativeUnits += verification.maximumNativeUnits;
+        totals.staticNativeUnitPotential += compiled.escapeHatches.nativeUnits;
+        totals.localBehaviours += verification.maximumLocalBehaviours;
+        totals.staticLocalBehaviourPotential += compiled.escapeHatches.localBehaviours;
+        totals.residualVisualComputations += verification.sourceDependentVisualComputations;
+        totals.staticResidualVisualPotential += (
+          compiled.escapeHatches.sourceDependentVisualComputations
+        );
+        totals.reusableBehaviours += verification.maximumPublicBehaviours;
+        totals.publicUnitOccurrences += verification.maximumPublicUnits;
         totals.warnings += compiled.warnings.length;
         totals.invalidOwners = Math.max(
           totals.invalidOwners,
           verification.invalidBehaviourOwners,
         );
-        for (const candidate of compiled.memoryCandidates.behaviours) {
-          reusableKinds.add(candidate.kind);
+        verification.publicBehaviourKinds.forEach((kind) => reusableKinds.add(kind));
+        verification.publicUnitKinds.forEach((kind) => reusableUnitKinds.add(kind));
+        if (verification.unsupportedEffects.length > 0) {
+          totals.unsupportedEffectCases += 1;
+          totals.unsupportedEffectFrames += verification.totalFrames;
+          totals.unsupportedEffectOccurrences += verification.unsupportedEffects.length;
+          verification.unsupportedEffects.forEach((kind) => unsupportedEffectKinds.add(kind));
         }
-        for (const candidate of compiled.memoryCandidates.units) {
-          reusableUnitKinds.add(candidate.kind);
-        }
+        const publicBrickStructuralExact = verification.exact
+          && verification.maximumPublicUnits > 0
+          && verification.maximumNativeUnits === 0
+          && verification.maximumLocalBehaviours === 0
+          && verification.sourceDependentVisualComputations === 0
+          && verification.unsupportedEffects.length === 0
+          && verification.baselineRenderErrors === 0
+          && verification.generatedRenderErrors === 0
+          && compiled.verification.generatedParse === true
+          && compiled.verification.publishableEsm === true
+          && options.libraryVerified === true
+          && options.promotionVerified === true
+          && options.indexVerified === true
+          && options.indexedKinds instanceof Set
+          && [...verification.publicUnitKinds, ...verification.publicBehaviourKinds]
+            .every((kind) => options.indexedKinds.has(kind));
+        const structurallyMatched = verification.matchedFrames === verification.totalFrames
+          && verification.baselineRenderErrors === 0
+          && verification.generatedRenderErrors === 0;
+        totals.publicBrickStructuralExactCases += Number(publicBrickStructuralExact);
+        totals.fallbackExactCases += Number(verification.exact && !publicBrickStructuralExact);
+        totals.structurallyMatchedCases += Number(structurallyMatched);
+        totals.fallbackMatchedCases += Number(structurallyMatched && !publicBrickStructuralExact);
         if (!verification.exact) {
           const code = mismatchCode(verification);
           totals.failureCases[code] = (totals.failureCases[code] ?? 0) + 1;
@@ -65,7 +97,16 @@ export function evaluateCbaProfile(dataset, split, profile, options = {}) {
   }
 
   totals.reusableKinds = reusableKinds.size;
-  totals.reusableUnitKinds = reusableUnitKinds.size;
+  totals.publicUnitKinds = reusableUnitKinds.size;
+  totals.unsupportedEffectKinds = unsupportedEffectKinds.size;
+  const unitOccurrences = totals.publicUnitOccurrences + totals.nativeUnits;
+  totals.publicUnitCoverage = unitOccurrences === 0
+    ? 0
+    : totals.publicUnitOccurrences / unitOccurrences;
+  const behaviourOccurrences = totals.reusableBehaviours + totals.localBehaviours;
+  totals.publicBehaviourCoverage = behaviourOccurrences === 0
+    ? 0
+    : totals.reusableBehaviours / behaviourOccurrences;
   totals.mismatchedFrames = totals.frames - totals.matchedFrames;
   totals.renderErrorFrames = totals.baselineErrorFrames + totals.generatedErrorFrames;
   totals.treeExact = totals.cases > 0
@@ -93,46 +134,96 @@ export function modelMetrics(train, validation) {
  * frame cannot hide a new compile failure, render error, or lost exact case.
  */
 export function isProfileImprovement(candidate, baseline) {
-  const lowerIsBetter = [
+  const hardLowerIsBetter = [
     'compileFailures',
     'renderErrorFrames',
     'mismatchedFrames',
     'invalidOwners',
+    'unsupportedEffectCases',
+    'unsupportedEffectFrames',
+    'unsupportedEffectOccurrences',
+    'unsupportedEffectKinds',
   ];
-  const higherIsBetter = ['matchedFrames', 'exactCases'];
-  const secondaryLowerIsBetter = ['localBehaviours', 'warnings'];
+  const reuseLowerIsBetter = [
+    'nativeUnits',
+    'residualVisualComputations',
+  ];
+  const hardHigherIsBetter = [
+    'matchedFrames',
+    'exactCases',
+    'publicBrickStructuralExactCases',
+    'structurallyMatchedCases',
+    'publicUnitCoverage',
+    'publicUnitOccurrences',
+    'publicUnitKinds',
+  ];
   const secondaryHigherIsBetter = [
-    'reusableUnits',
-    'reusableUnitKinds',
     'reusableBehaviours',
     'reusableKinds',
+    'publicBehaviourCoverage',
   ];
-  let improved = false;
+  let fidelityImproved = false;
+  let unitImproved = false;
+  let escapeHatchPotentialReduced = false;
 
   for (const group of ['validation', 'train']) {
-    for (const metric of lowerIsBetter) {
+    for (const metric of hardLowerIsBetter) {
       if (candidate[group][metric] > baseline[group][metric]) return false;
-      if (candidate[group][metric] < baseline[group][metric]) improved = true;
+      if (candidate[group][metric] < baseline[group][metric]) fidelityImproved = true;
     }
-    for (const metric of higherIsBetter) {
+    for (const metric of hardHigherIsBetter) {
       if (candidate[group][metric] < baseline[group][metric]) return false;
-      if (candidate[group][metric] > baseline[group][metric]) improved = true;
+      if (candidate[group][metric] > baseline[group][metric]) {
+        if (['publicUnitCoverage', 'publicUnitOccurrences', 'publicUnitKinds'].includes(metric)) {
+          unitImproved = true;
+        } else {
+          fidelityImproved = true;
+        }
+      }
     }
-  }
-
-  if (improved) return true;
-
-  for (const group of ['validation', 'train']) {
-    for (const metric of secondaryLowerIsBetter) {
+    for (const metric of reuseLowerIsBetter) {
       if (candidate[group][metric] > baseline[group][metric]) return false;
-      if (candidate[group][metric] < baseline[group][metric]) improved = true;
     }
+    const candidateEscapeHatches = staticEscapeHatchPotential(candidate[group]);
+    const baselineEscapeHatches = staticEscapeHatchPotential(baseline[group]);
+    if (candidateEscapeHatches > baselineEscapeHatches) return false;
+    if (candidateEscapeHatches < baselineEscapeHatches) escapeHatchPotentialReduced = true;
     for (const metric of secondaryHigherIsBetter) {
       if (candidate[group][metric] < baseline[group][metric]) return false;
-      if (candidate[group][metric] > baseline[group][metric]) improved = true;
     }
   }
-  return improved;
+
+  if (fidelityImproved) return true;
+
+  // A reusable Unit improvement must replace fallback nodes, not merely add a
+  // public class beside the same NativeUnit graph.
+  const replacedFallback = ['validation', 'train'].some((group) => (
+    candidate[group].nativeUnits < baseline[group].nativeUnits
+      && candidate[group].publicUnitOccurrences > baseline[group].publicUnitOccurrences
+      && candidate[group].publicUnitCoverage > baseline[group].publicUnitCoverage
+  ));
+  if (unitImproved && replacedFallback) return true;
+
+  // Behaviour-only improvements cannot turn a NativeUnit-only reconstruction
+  // into a successful memory result.  They become eligible only after both
+  // tuning splits already have a non-zero public Unit foundation.
+  if (['validation', 'train'].some((group) => candidate[group].publicUnitCoverage <= 0)) {
+    return false;
+  }
+
+  let secondaryImproved = escapeHatchPotentialReduced;
+  for (const group of ['validation', 'train']) {
+    for (const metric of secondaryHigherIsBetter) {
+      if (candidate[group][metric] > baseline[group][metric]) secondaryImproved = true;
+    }
+  }
+  return secondaryImproved;
+}
+
+function staticEscapeHatchPotential(metrics) {
+  return metrics.staticNativeUnitPotential
+    + metrics.staticLocalBehaviourPotential
+    + metrics.staticResidualVisualPotential;
 }
 
 function compactMetrics(value) {
@@ -146,10 +237,24 @@ function compactMetrics(value) {
     renderErrorFrames: value.renderErrorFrames,
     reusableBehaviours: value.reusableBehaviours,
     reusableKinds: value.reusableKinds,
-    reusableUnits: value.reusableUnits,
-    reusableUnitKinds: value.reusableUnitKinds,
+    publicBehaviourCoverage: value.publicBehaviourCoverage,
+    publicUnitOccurrences: value.publicUnitOccurrences,
+    publicUnitKinds: value.publicUnitKinds,
+    publicUnitCoverage: value.publicUnitCoverage,
     localBehaviours: value.localBehaviours,
+    staticLocalBehaviourPotential: value.staticLocalBehaviourPotential,
+    residualVisualComputations: value.residualVisualComputations,
+    staticResidualVisualPotential: value.staticResidualVisualPotential,
     nativeUnits: value.nativeUnits,
+    staticNativeUnitPotential: value.staticNativeUnitPotential,
+    publicBrickStructuralExactCases: value.publicBrickStructuralExactCases,
+    fallbackExactCases: value.fallbackExactCases,
+    structurallyMatchedCases: value.structurallyMatchedCases,
+    fallbackMatchedCases: value.fallbackMatchedCases,
+    unsupportedEffectCases: value.unsupportedEffectCases,
+    unsupportedEffectFrames: value.unsupportedEffectFrames,
+    unsupportedEffectOccurrences: value.unsupportedEffectOccurrences,
+    unsupportedEffectKinds: value.unsupportedEffectKinds,
     warnings: value.warnings,
     invalidOwners: value.invalidOwners,
   };
@@ -167,11 +272,25 @@ function emptyMetrics() {
     generatedErrorFrames: 0,
     renderErrorFrames: 0,
     nativeUnits: 0,
+    staticNativeUnitPotential: 0,
     localBehaviours: 0,
+    staticLocalBehaviourPotential: 0,
+    residualVisualComputations: 0,
+    staticResidualVisualPotential: 0,
     reusableBehaviours: 0,
     reusableKinds: 0,
-    reusableUnits: 0,
-    reusableUnitKinds: 0,
+    publicBehaviourCoverage: 0,
+    publicUnitOccurrences: 0,
+    publicUnitKinds: 0,
+    publicUnitCoverage: 0,
+    publicBrickStructuralExactCases: 0,
+    fallbackExactCases: 0,
+    structurallyMatchedCases: 0,
+    fallbackMatchedCases: 0,
+    unsupportedEffectCases: 0,
+    unsupportedEffectFrames: 0,
+    unsupportedEffectOccurrences: 0,
+    unsupportedEffectKinds: 0,
     warnings: 0,
     invalidOwners: 0,
     failureCases: {},
@@ -182,7 +301,8 @@ function emptyMetrics() {
 }
 
 function mismatchCode(verification) {
-  return verification.firstMismatch?.evaluatorError
+  return verification.mismatchCategory
+    ?? verification.firstMismatch?.evaluatorError
     ?? verification.firstMismatch?.baselineError
     ?? verification.firstMismatch?.generatedError
     ?? 'TreeMismatch';

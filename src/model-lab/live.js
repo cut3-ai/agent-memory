@@ -9,14 +9,16 @@ import {
   MAX_MODEL_LAB_ROUNDS,
   normalizeAggregateMetrics,
   normalizeCandidateCatalog,
-  normalizeCandidateId,
   normalizeReviewCheckpoints,
   normalizeRounds,
 } from './contracts.js';
+import { validateModelLabCheckpoint } from './checkpoint.js';
 import {
   REVIEW_SYSTEM,
+  REVIEW_TOOL_NAME,
   runModelAdvisoryLab,
   SELECT_SYSTEM,
+  SELECT_TOOL_NAME,
 } from './loop.js';
 
 export const LIVE_MODEL_LAB_CONFIRMATION = 'RUN_20_KIMI_AND_4_ANTHROPIC_CALLS';
@@ -37,23 +39,35 @@ export function prepareModelLabRun(options = {}) {
   const candidates = normalizeCandidateCatalog(options.candidates, rounds);
   const initialMetrics = normalizeAggregateMetrics(options.initialMetrics, 'initialMetrics');
   const candidateIds = Object.freeze(candidates.map(({ id }) => id));
+  const providerCalls = {
+    kimi: rounds,
+    anthropic: reviewCheckpoints.length,
+    total: rounds + reviewCheckpoints.length,
+  };
   const planBody = {
     schemaVersion: 1,
     mode: 'dry-run',
     rounds,
     reviewCheckpoints,
-    calls: {
-      kimi: rounds,
-      anthropic: reviewCheckpoints.length,
-      total: rounds + reviewCheckpoints.length,
-    },
+    calls: providerCalls,
+    providerResponseCheckpoints: providerCalls.total,
+    phaseCheckpoints: (rounds * 2) + reviewCheckpoints.length,
     candidateIds,
+    searchSpaceSize: candidateIds.length,
     candidateCatalogSha256: sha256(stableJson(candidates)),
     initialMetricsSha256: sha256(stableJson(initialMetrics)),
     requiredEnvironmentKeys: ['MOONSHOT_API_KEY', 'ANTHROPIC_API_KEY'],
     credentialFile: '.env',
     sendsOnlyOpaqueIdsAndAggregateMetrics: true,
-    modelDecisionAuthority: false,
+    sequentialRevealRequired: true,
+    sequentialRevealConfigured: typeof options.revealCandidateIds === 'function',
+    durablePhaseCheckpointsRequired: true,
+    durablePhaseCheckpointsConfigured: typeof options.onPhaseCheckpoint === 'function',
+    durableProviderIntentsRequired: true,
+    durableProviderIntentsConfigured: typeof options.onProviderIntent === 'function'
+      && typeof options.onProviderCheckpointed === 'function',
+    modelAcceptanceAuthority: false,
+    modelSearchOrderAuthority: true,
     paidCallsAuthorized: false,
   };
   return deepFreeze({
@@ -70,6 +84,13 @@ export function prepareModelLabRun(options = {}) {
 export async function runLiveModelAdvisoryLab(options = {}) {
   const plan = prepareModelLabRun(options);
   assertProductionPlan(plan, options);
+  if (options.resumeCheckpoint !== undefined) {
+    validateModelLabCheckpoint(options.resumeCheckpoint, {
+      bindingSha256: options.checkpointBindingSha256,
+      candidateIds: plan.candidateIds,
+      initialMetrics: options.initialMetrics,
+    });
+  }
   const providers = await createLiveAdvisoryProviders(options);
   return runModelAdvisoryLab({
     rounds: plan.rounds,
@@ -80,6 +101,12 @@ export async function runLiveModelAdvisoryLab(options = {}) {
     anthropic: providers.anthropic,
     evaluateCandidate: options.evaluateCandidate,
     acceptCandidate: options.acceptCandidate,
+    revealCandidateIds: options.revealCandidateIds,
+    checkpointBindingSha256: options.checkpointBindingSha256,
+    resumeCheckpoint: options.resumeCheckpoint,
+    onPhaseCheckpoint: options.onPhaseCheckpoint,
+    onProviderIntent: options.onProviderIntent,
+    onProviderCheckpointed: options.onProviderCheckpointed,
     onRound: options.onRound,
   });
 }
@@ -127,7 +154,7 @@ export function assertSafeAdvisoryRequest(request, expectedProvider) {
     throw new RangeError('Unsupported advisory provider');
   }
   assertExactObjectKeys(request, ['name', 'prompt', 'schema', 'system'], 'advisory request');
-  const expectedName = expectedProvider === 'kimi' ? 'select_candidate' : 'review_candidates';
+  const expectedName = expectedProvider === 'kimi' ? SELECT_TOOL_NAME : REVIEW_TOOL_NAME;
   const expectedSystem = expectedProvider === 'kimi' ? SELECT_SYSTEM : REVIEW_SYSTEM;
   if (request.name !== expectedName || request.system !== expectedSystem) {
     throw new Error('Provider received an unsupported advisory request');
@@ -138,9 +165,7 @@ export function assertSafeAdvisoryRequest(request, expectedProvider) {
   } catch {
     throw new Error('Advisory prompt must contain bounded JSON data');
   }
-  const allowedPayloadKeys = expectedProvider === 'kimi'
-    ? ['advisoryCandidateId', 'candidates', 'currentMetrics', 'round', 'roundsTotal']
-    : ['candidates', 'currentMetrics', 'round', 'roundsTotal'];
+  const allowedPayloadKeys = ['candidates', 'currentMetrics', 'round', 'roundsTotal'];
   const requiredPayloadKeys = ['candidates', 'currentMetrics', 'round', 'roundsTotal'];
   assertAllowedObjectKeys(payload, allowedPayloadKeys, requiredPayloadKeys, 'advisory payload');
   if (!Number.isSafeInteger(payload.round)
@@ -152,10 +177,6 @@ export function assertSafeAdvisoryRequest(request, expectedProvider) {
   const candidates = normalizeCandidateCatalog(payload.candidates, 1);
   normalizeAggregateMetrics(payload.currentMetrics, 'currentMetrics');
   const ids = candidates.map(({ id }) => id);
-  if (payload.advisoryCandidateId !== undefined) {
-    const advisoryId = normalizeCandidateId(payload.advisoryCandidateId);
-    if (!ids.includes(advisoryId)) throw new Error('Advisory candidate is unavailable');
-  }
   const expectedSchema = createCandidateChoiceSchema(ids);
   if (stableJson(request.schema) !== stableJson(expectedSchema)) {
     throw new Error('Advisory response schema does not match candidate ids');
@@ -177,10 +198,21 @@ function advisoryOnly(provider, expectedProvider) {
 function assertProductionPlan(plan, options) {
   assertLiveConfirmation(options.confirmPaidCalls);
   if (plan.rounds !== MAX_MODEL_LAB_ROUNDS
-      || plan.candidateIds.length !== MAX_MODEL_LAB_ROUNDS
+      || plan.candidateIds.length <= MAX_MODEL_LAB_ROUNDS
       || stableJson(plan.reviewCheckpoints) !== stableJson(DEFAULT_REVIEW_CHECKPOINTS)
       || stableJson(plan.calls) !== stableJson(LIVE_MODEL_LAB_CALLS)) {
-    throw new Error('Live model lab requires exactly 20 candidates, 20 Kimi calls, and 4 reviews');
+    throw new Error('Live model lab requires a search space larger than 20, 20 Kimi calls, and 4 reviews');
+  }
+  if (typeof options.revealCandidateIds !== 'function') {
+    throw new Error('Live model lab requires bounded sequential candidate reveal');
+  }
+  if (!/^[a-f0-9]{64}$/u.test(options.checkpointBindingSha256 ?? '')
+      || typeof options.onPhaseCheckpoint !== 'function') {
+    throw new Error('Live model lab requires a bound durable phase checkpoint writer');
+  }
+  if (typeof options.onProviderIntent !== 'function'
+      || typeof options.onProviderCheckpointed !== 'function') {
+    throw new Error('Live model lab requires a durable provider inflight journal');
   }
   if (plan.candidateIds.some((id) => !OPAQUE_CANDIDATE_ID.test(id))) {
     throw new Error('Live model lab candidate ids must be opaque hashes');

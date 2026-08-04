@@ -74,10 +74,20 @@ export function createKimiProvider(options = {}) {
       let data;
       try {
         data = JSON.parse(content);
+      } catch {
+        throw new ProviderRequestError('kimi', 'invalid-structured-json', {
+          status: response.request.status,
+          attempts: response.request.attempts,
+          retryable: false,
+        });
+      }
+      try {
         assertMatchesSchema(data, structured.schema);
       } catch {
-        throw new ProviderRequestError('kimi', 'invalid-structured-content', {
+        throw new ProviderRequestError('kimi', structuredViolationCode(data, structured.schema), {
+          status: response.request.status,
           attempts: response.request.attempts,
+          retryable: false,
         });
       }
       return structuredResult({
@@ -93,6 +103,32 @@ export function createKimiProvider(options = {}) {
       });
     },
   });
+}
+
+/** Return only a bounded structural reason; never copy provider output. */
+function structuredViolationCode(value, schema) {
+  if (schema?.type !== 'object') return 'invalid-structured-content';
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return 'invalid-structured-object';
+  }
+  const keys = Object.keys(value);
+  const required = Array.isArray(schema.required) ? schema.required : [];
+  if (required.some((key) => !Object.hasOwn(value, key))) {
+    return 'missing-structured-field';
+  }
+  const properties = schema.properties ?? {};
+  if (schema.additionalProperties === false
+      && keys.some((key) => !Object.hasOwn(properties, key))) {
+    return 'unexpected-structured-field';
+  }
+  for (const [key, property] of Object.entries(properties)) {
+    if (Object.hasOwn(value, key)
+        && Array.isArray(property?.enum)
+        && !property.enum.some((entry) => Object.is(entry, value[key]))) {
+      return 'invalid-structured-enum';
+    }
+  }
+  return 'invalid-structured-content';
 }
 
 function structuredResult({ data, model, response, usage }) {

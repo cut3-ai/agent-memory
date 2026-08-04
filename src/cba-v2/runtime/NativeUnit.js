@@ -1,4 +1,5 @@
 import { Unit, isUnit } from '../../../core/Unit.js';
+import { projectUnit } from '../../../core/frame.js';
 
 export const NATIVE_FRAGMENT = Symbol.for('@cut3/agent-memory.cba-v2.fragment');
 const TRANSFORM_PLAN = Symbol('cba-v2.transform-plan');
@@ -49,6 +50,15 @@ export function stripVisualStyle(props, keys, promotedTransformIndexes = null) {
 }
 
 export function readStyleValue(props, key) { return props?.style?.[key]; }
+export function readElementProp(props, key) { return plainVisualValue(props?.[key]); }
+export function plainVisualValue(value) {
+  if (value === null || ['string', 'number', 'boolean', 'undefined'].includes(typeof value)) return value;
+  if (Array.isArray(value)) return value.map(plainVisualValue);
+  if (Object.prototype.toString.call(value) === '[object Object]') {
+    return Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, plainVisualValue(nested)]));
+  }
+  return value;
+}
 
 export function readTransformOperation(transform, index) {
   const operation = scanTransform(String(transform ?? ''))[index];
@@ -81,41 +91,86 @@ export function readTransformSignal(transform, index, kind) {
   return operation?.value;
 }
 
-export function unitsOption(units) { return { units }; }
+export function unitsOption(unit) { return { unit }; }
 export function tweenOptions(from, to, start, end, easing = 'linear') {
   return { from, to, start, end, easing };
 }
 
-/** Render NativeUnit without a registry or runtime component identifier. */
-export function renderNativeTree(value, React, context = {}) {
-  if (Array.isArray(value)) return value.map((nested) => renderNativeTree(nested, React, context));
+/**
+ * Render a mixed public/Native graph. Public dispatch is ordinary statically
+ * imported application code supplied by the emitter; this boundary owns no
+ * class registry and imports no concrete public Unit.
+ */
+export function renderNativeTree(value, React, context = {}, renderUnit = null, options = {}) {
+  if (Array.isArray(value)) {
+    return value.map((nested) => renderNativeTree(nested, React, context, renderUnit, options));
+  }
   if (!isUnit(value)) return value;
-  if (!(value instanceof NativeUnit)) {
-    throw new TypeError(`cba-v2 cannot render non-native Unit ${value.constructor.kind}`);
+  if (value instanceof NativeUnit) {
+    const patch = projectUnit(value, context);
+    const props = { ...value.props };
+    const visualPatch = {
+      ...(patch.style ?? {}),
+      ...(patch.opacity === undefined ? {} : { opacity: patch.opacity }),
+      ...(patch.transform === undefined ? {} : { transform: patch.transform }),
+    };
+    if (Object.keys(visualPatch).length > 0) props.style = materializeStyle(props.style, visualPatch);
+    for (const [key, nested] of Object.entries(patch)) {
+      if (!['opacity', 'style', 'transform'].includes(key)) props[key] = nested;
+    }
+    const children = value.content.map((child) => (
+      renderNativeTree(child, React, context, renderUnit, options)
+    ));
+    const type = value.type === NATIVE_FRAGMENT ? React.Fragment : value.type;
+    if (typeof type === 'function') {
+      const componentProps = { ...props };
+      if (children.length === 1) componentProps.children = children[0];
+      else if (children.length > 1) componentProps.children = children;
+      return renderNativeTree(type(componentProps), React, context, renderUnit, options);
+    }
+    return React.createElement(type, props, ...children);
   }
-  const patch = projectBehaviours(value, context);
-  const props = { ...value.props };
-  if (patch.style) props.style = materializeStyle(props.style, patch.style);
-  for (const [key, nested] of Object.entries(patch)) if (key !== 'style') props[key] = nested;
-  const children = value.content.map((child) => renderNativeTree(child, React, context));
-  const type = value.type === NATIVE_FRAGMENT ? React.Fragment : value.type;
-  if (typeof type === 'function') {
-    const componentProps = { ...props };
-    if (children.length === 1) componentProps.children = children[0];
-    else if (children.length > 1) componentProps.children = children;
-    return renderNativeTree(type(componentProps), React, context);
-  }
-  return React.createElement(type, props, ...children);
-}
 
-function projectBehaviours(unit, context) {
-  let output = {};
-  for (const behaviour of unit.behaviours) {
-    const patch = behaviour.onFrame(context);
-    if (patch && typeof patch === 'object') output = merge(output, patch);
+  if (typeof renderUnit !== 'function') {
+    throw new TypeError(`cba-v2 requires a static adapter for ${value.constructor.name}`);
   }
-  if (unit.opacity !== undefined) output = merge(output, { style: { opacity: unit.opacity } });
-  if (unit.transform !== undefined) output = merge(output, { style: { transform: unit.transform } });
+  const state = projectUnit(value, context);
+  if (state.visible === false) return null;
+  const unhandled = Symbol.for('@cut3/agent-memory.cba-v2.unhandled-unit');
+  const components = options.components ?? {};
+  const adapterContext = Object.freeze({
+    React,
+    component(name, fallback) { return components[name] ?? fallback; },
+    frame: context,
+    props(name, props) {
+      if (typeof options.adaptProps !== 'function') return props;
+      const adapted = options.adaptProps(Object.freeze({
+        frame: context, name, props, state, unit: value,
+      }));
+      if (!isRecord(adapted)) throw new TypeError('backend prop adapter must return a plain object');
+      return adapted;
+    },
+    render(child, nextContext = context) {
+      return renderNativeTree(child, React, nextContext, renderUnit, options);
+    },
+    renderChildren(nextContext = context) {
+      return value.children.map((child) => (
+        renderNativeTree(child, React, nextContext, renderUnit, options)
+      )).filter(renderedChild);
+    },
+    renderSequence: typeof options.renderSequence === 'function'
+      ? (children) => options.renderSequence(Object.freeze({
+        children, frame: context, state, unit: value,
+      }))
+      : null,
+    state,
+    unit: value,
+    unhandled,
+  });
+  const output = renderUnit(adapterContext);
+  if (output === unhandled) {
+    throw new TypeError(`No static cba-v2 adapter for ${value.constructor.name}`);
+  }
   return output;
 }
 
@@ -150,14 +205,8 @@ function formatTransform(kind, value) {
   return `translate(${formatNumber(value?.x)}${unit}, ${formatNumber(value?.y)}${unit})`;
 }
 
-function merge(left, right) {
-  const output = { ...left };
-  for (const [key, value] of Object.entries(right)) {
-    output[key] = isRecord(output[key]) && isRecord(value) ? merge(output[key], value) : value;
-  }
-  return output;
-}
 function isRecord(value) { return Boolean(value && typeof value === 'object' && !Array.isArray(value)); }
+function renderedChild(value) { return value !== null && value !== undefined && value !== false; }
 function* collectUnits(values) {
   for (const value of values) {
     if (Array.isArray(value)) yield* collectUnits(value);

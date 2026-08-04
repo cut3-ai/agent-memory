@@ -1,0 +1,16 @@
+{
+  "behaviours": 7,
+  "discoveredEntries": 25,
+  "entries": 25,
+  "evaluatedModules": 0,
+  "excludedEntries": 0,
+  "format": "cut3-static-library-validation",
+  "indexSha256": "19b257f4b58d826d53f2046dd219364698447ab4ab35e5023ce1bcef53b1f7cc",
+  "modules": 27,
+  "promotionLedgerRevision": 3,
+  "promotionLedgerSha256": "d3bd6c377c943a36f8f12b68b55b0112f5352e5f34cc47e870924b1060f68af9",
+  "units": 18,
+  "valid": true,
+  "version": 1,
+  "violations": []
+}

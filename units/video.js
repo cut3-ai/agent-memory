@@ -4,7 +4,9 @@ import { addLeafBehaviours, finite, plain, source } from './shared.js';
 export class Video extends Unit {
   static kind = 'unit.video';
 
-  constructor(value, { from = 0, to = null, volume = 1, rate = 1, muted = false, appearance = {} } = {}) {
+  constructor(value, {
+    from = 0, to = null, volume = 1, rate = 1, muted = false, transparent = false, appearance = {},
+  } = {}) {
     super();
     this.source = source(value);
     this.from = finite(from, 'from');
@@ -13,6 +15,7 @@ export class Video extends Unit {
     this.volume = finite(volume, 'volume');
     this.rate = finite(rate, 'rate');
     this.muted = Boolean(muted);
+    this.transparent = Boolean(transparent);
     this.appearance = plain(appearance, 'appearance');
   }
 

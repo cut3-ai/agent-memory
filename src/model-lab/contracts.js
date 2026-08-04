@@ -83,25 +83,19 @@ export function createCandidateChoiceSchema(candidateIds) {
   return deepFreeze({
     type: 'object',
     additionalProperties: false,
-    required: ['candidateId', 'rationale'],
+    required: ['candidateId'],
     properties: {
       candidateId: { type: 'string', enum: ids },
-      rationale: { type: 'string', minLength: 1, maxLength: 512 },
     },
   });
 }
 
 export function validateCandidateChoice(value, remainingIds) {
   assertPlainDataObject(value, 'provider choice');
-  assertExactKeys(value, ['candidateId', 'rationale'], 'provider choice');
+  assertExactKeys(value, ['candidateId'], 'provider choice');
   const candidateId = normalizeCandidateId(value.candidateId);
   if (!remainingIds.includes(candidateId)) throw new Error('Provider selected an unavailable candidate');
-  if (typeof value.rationale !== 'string'
-      || value.rationale.length < 1
-      || value.rationale.length > 512) {
-    throw new Error('Provider rationale is invalid');
-  }
-  return Object.freeze({ candidateId, rationale: value.rationale });
+  return Object.freeze({ candidateId });
 }
 
 export function assertAdvisoryProvider(value, expectedProvider) {

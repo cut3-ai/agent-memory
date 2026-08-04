@@ -9,7 +9,7 @@ export const NAVIGATION_INDEX_FORMAT = 'cut3-static-library-index';
 export const NAVIGATION_INDEX_VERSION = 1;
 
 export function buildNavigationIndex(discovery) {
-  const entries = discovery.entries.map((entry) => ({
+  const entries = (discovery.publicEntries ?? []).map((entry) => ({
     kind: entry.kind,
     type: entry.type,
     source: entry.source,
@@ -109,6 +109,12 @@ export async function createNavigationIndex(options = {}) {
   const discovery = await discoverLibrary({ ...options, rootDir });
   const verification = verifyDiscovery(discovery, options);
   assertValidLibrary(verification);
+  if (!discovery.promotion.ok) {
+    const details = discovery.promotion.errors
+      .map((error) => `${error.location} [${error.code}]`)
+      .join('\n');
+    throw new Error(`Promotion ledger verification failed:\n${details}`);
+  }
   const index = buildNavigationIndex(discovery);
   const indexVerification = validateNavigationIndex(index);
   if (!indexVerification.ok) {
@@ -118,6 +124,7 @@ export async function createNavigationIndex(options = {}) {
     index,
     json: renderNavigationIndex(index),
     verification,
+    promotion: discovery.promotion,
     indexVerification,
   };
 }
@@ -194,3 +201,14 @@ export {
 } from './verify.js';
 
 export { discoverLibrary } from './discover.js';
+
+export {
+  buildDependencyClosure,
+  candidateRevisionSha256,
+  createPromotionLedger,
+  createReviewedCoreLedger,
+  loadPromotionLedger,
+  resolvePromotedEntries,
+  validatePromotionLedger,
+  writePromotionLedger,
+} from './promotion-ledger.js';
