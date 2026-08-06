@@ -3,8 +3,25 @@ import test from 'node:test';
 
 import {
   assertPublicArtifact,
+  assertPublicModuleSources,
   inspectPublicArtifact,
+  inspectPublicModuleSources,
 } from '../src/memory/privacy.js';
+import {
+  PUBLIC_FONT_FAMILIES,
+  PUBLIC_FONT_FAMILY_CATALOG_VERSION,
+} from '../src/memory/privacy/font-family-catalog.js';
+
+test('public font-family catalog is closed, versioned, and bounded', () => {
+  assert.equal(PUBLIC_FONT_FAMILY_CATALOG_VERSION, 'public-font-family-catalog-v1');
+  assert.equal(Object.isFrozen(PUBLIC_FONT_FAMILIES), true);
+  assert.ok(PUBLIC_FONT_FAMILIES.length > 10 && PUBLIC_FONT_FAMILIES.length <= 64);
+  assert.equal(new Set(PUBLIC_FONT_FAMILIES.map((family) => family.toLowerCase())).size,
+    PUBLIC_FONT_FAMILIES.length);
+  for (const required of ['Anton', 'Barlow Condensed', 'Inter', 'monospace', 'sans-serif', 'serif']) {
+    assert.ok(PUBLIC_FONT_FAMILIES.includes(required), required);
+  }
+});
 
 test('public artifact validation rejects raw user payloads', () => {
   const value = {
@@ -110,4 +127,99 @@ test('public artifact validation allows bounded schema metadata and real module 
 
   assert.deepEqual(inspectPublicArtifact(artifact), []);
   assert.equal(assertPublicArtifact(artifact), artifact);
+});
+
+test('built-in module privacy scans executable bytes and staged semantic literals', () => {
+  const safe = [
+    "import { Unit } from '../core/Unit.js';",
+    'export class Card extends Unit {',
+    "  static kind = 'unit.card';",
+    "  static scent = Object.freeze({ family: 'editorial', composition: ['stack'], typography: ['condensed'], palette: ['ink'], rendering: ['grain'], motion: ['snap'] });",
+    '  constructor(content) {',
+    "    const style = { fontFamily: 'Barlow Condensed', backgroundImage: 'radial-gradient(#fff 0.7px, transparent 0.7px)', color: '#f5f1e8', border: '4px solid #fff' };",
+    '    super(content);',
+    '  }',
+    '}',
+    '',
+  ].join('\n');
+  const records = [{ file: 'units/card.js', source: safe }];
+  assert.deepEqual(inspectPublicModuleSources(records, { strictFiles: ['units/card.js'] }), []);
+  assert.equal(assertPublicModuleSources(records, { strictFiles: ['units/card.js'] }), records);
+
+  const anton = safe.replace("fontFamily: 'Barlow Condensed'", "fontFamily: 'Anton'");
+  assert.deepEqual(inspectPublicModuleSources(
+    [{ file: 'units/card.js', source: anton }],
+    { strictFiles: ['units/card.js'] },
+  ), []);
+
+  const transcript = safe.replace(
+    'const style =',
+    "const privateTranscript = 'speaker disclosed private launch details';\n    const style =",
+  );
+  assert.ok(inspectPublicModuleSources(
+    [{ file: 'units/card.js', source: transcript }],
+    { strictFiles: ['units/card.js'] },
+  ).some(({ code }) => code === 'embedded-semantic-content'));
+
+  for (const declaration of [
+    "const leaked = 'Alice';",
+    'const leaked = `Alice`;',
+    'const leaked = `${content}`;',
+    "'private transcript words from user';",
+    'const leaked = /private transcript words from user/;',
+  ]) {
+    const oneWordLeak = safe.replace('const style =', `${declaration}\n    const style =`);
+    assert.ok(inspectPublicModuleSources(
+      [{ file: 'units/card.js', source: oneWordLeak }],
+      { strictFiles: ['units/card.js'] },
+    ).some(({ code }) => code === 'embedded-semantic-content'), declaration);
+  }
+
+  for (const declaration of [
+    "const leaked = {'private transcript words from user': 1};",
+    "const leaked = {['private transcript words from user']: 1};",
+  ]) {
+    const propertyKeyLeak = safe.replace('const style =', `${declaration}\n    const style =`);
+    assert.ok(inspectPublicModuleSources(
+      [{ file: 'units/card.js', source: propertyKeyLeak }],
+      { strictFiles: ['units/card.js'] },
+    ).some(({ code }) => code === 'embedded-semantic-content'), declaration);
+  }
+
+  const identifierKeys = safe.replace(
+    'const style =',
+    'const metadata = { authoredGeometry: 1 };\n    const style =',
+  );
+  assert.deepEqual(inspectPublicModuleSources(
+    [{ file: 'units/card.js', source: identifierKeys }],
+    { strictFiles: ['units/card.js'] },
+  ), []);
+
+  const commentLeak = safe.replace('const style =', '// Alice\n    const style =');
+  assert.ok(inspectPublicModuleSources(
+    [{ file: 'units/card.js', source: commentLeak }],
+    { strictFiles: ['units/card.js'] },
+  ).some(({ code }) => code === 'embedded-comment-content'));
+
+  for (const [property, unsafeValue] of [
+    ['fontFamily', 'private transcript words'],
+    ['fontFamily', 'UnlistedDisplay'],
+    ['backgroundImage', 'private transcript words'],
+    ['color', 'private transcript words'],
+    ['border', '4px solid private transcript'],
+  ]) {
+    const styleLeak = safe.replace(
+      "fontFamily: 'Barlow Condensed'",
+      `${property}: '${unsafeValue}'`,
+    );
+    assert.ok(inspectPublicModuleSources(
+      [{ file: 'units/card.js', source: styleLeak }],
+      { strictFiles: ['units/card.js'] },
+    ).some(({ code }) => code === 'unsafe-style-literal'), `${property}: ${unsafeValue}`);
+  }
+
+  const secretDependency = `${safe}// sk-privatefixturetoken1234567890\n`;
+  assert.ok(inspectPublicModuleSources([
+    { file: 'units/card.js', source: secretDependency },
+  ]).some(({ code }) => code === 'secret-like-token-source-bytes'));
 });

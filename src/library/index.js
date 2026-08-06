@@ -2,20 +2,29 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { sha256, stableStringify } from '../lib.js';
+import {
+  isStyleFamily,
+  isStyleScentToken,
+  STYLE_SCENT_KEYS,
+} from '../memory/scent-schema.js';
 import { discoverLibrary } from './discover.js';
 import { assertValidLibrary, verifyDiscovery } from './verify.js';
 
 export const NAVIGATION_INDEX_FORMAT = 'cut3-static-library-index';
-export const NAVIGATION_INDEX_VERSION = 2;
+export const NAVIGATION_INDEX_VERSION = 3;
 
 export function buildNavigationIndex(discovery) {
-  const entries = (discovery.publicEntries ?? []).map((entry) => ({
-    kind: entry.kind,
-    type: entry.type,
-    role: entry.role,
-    source: entry.source,
-    export: entry.export,
-  })).sort(compareIndexEntries);
+  const entries = (discovery.publicEntries ?? []).map((entry) => {
+    const navigation = {
+      kind: entry.kind,
+      type: entry.type,
+      role: entry.role,
+      source: entry.source,
+      export: entry.export,
+    };
+    if (entry.role === 'memory') navigation.scent = entry.scent;
+    return navigation;
+  }).sort(compareIndexEntries);
   const hashBody = {
     format: NAVIGATION_INDEX_FORMAT,
     version: NAVIGATION_INDEX_VERSION,
@@ -64,7 +73,14 @@ export function validateNavigationIndex(index) {
       errors.push(indexIssue('invalid-index-entry', location));
       return;
     }
-    assertExactKeys(entry, ['kind', 'type', 'role', 'source', 'export'], location, errors);
+    assertExactKeys(
+      entry,
+      entry.role === 'memory'
+        ? ['kind', 'type', 'role', 'source', 'export', 'scent']
+        : ['kind', 'type', 'role', 'source', 'export'],
+      location,
+      errors,
+    );
     if (!['unit', 'behaviour'].includes(entry.type)) {
       errors.push(indexIssue('invalid-entry-type', `${location}.type`));
     }
@@ -84,6 +100,9 @@ export function validateNavigationIndex(index) {
     if (typeof entry.export !== 'string'
         || !/^(?:default|[$A-Z_a-z][$\w]*)$/u.test(entry.export)) {
       errors.push(indexIssue('invalid-entry-export', `${location}.export`));
+    }
+    if (entry.role === 'memory') {
+      validateScent(entry.scent, entry.type, `${location}.scent`, errors);
     }
     if (previous && compareIndexEntries(previous, entry) > 0) {
       errors.push(indexIssue('unsorted-index-entries', location));
@@ -174,6 +193,33 @@ function isSafeSource(value, type) {
   }
   if (segments[0] !== (type === 'unit' ? 'units' : 'behaviours')) return false;
   return /\.(?:js|mjs|jsx)$/u.test(value);
+}
+
+function validateScent(value, type, location, errors) {
+  if (!isRecord(value)) {
+    errors.push(indexIssue('invalid-memory-scent', location));
+    return;
+  }
+  const keys = Object.keys(value);
+  if (keys.length !== STYLE_SCENT_KEYS.length
+      || STYLE_SCENT_KEYS.some((key) => !Object.hasOwn(value, key))) {
+    errors.push(indexIssue('invalid-memory-scent-shape', location));
+    return;
+  }
+  if (!isStyleFamily(value.family)) {
+    errors.push(indexIssue('invalid-memory-scent-family', `${location}.family`));
+  }
+  for (const axis of STYLE_SCENT_KEYS.slice(1)) {
+    const cues = value[axis];
+    const minimum = type === 'behaviour' && axis !== 'motion' ? 0 : 1;
+    const maximum = type === 'behaviour' && axis !== 'motion' ? 0 : 8;
+    if (!Array.isArray(cues) || cues.length < minimum || cues.length > maximum
+        || cues.some((cue) => !isStyleScentToken(cue))
+        || new Set(cues).size !== cues.length
+        || cues.some((cue, index) => index > 0 && cues[index - 1] > cue)) {
+      errors.push(indexIssue('invalid-memory-scent-axis', `${location}.${axis}`));
+    }
+  }
 }
 
 function compareIndexEntries(left, right) {

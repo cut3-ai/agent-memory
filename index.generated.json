@@ -1,7 +1,7 @@
 {
   "format": "cut3-static-library-index",
-  "version": 2,
-  "indexSha256": "01003bd9b205cc9838dff3a951abb86a5760ba8e57d7529e152beb34a18e0c50",
+  "version": 3,
+  "indexSha256": "f7dd3919b6b602105774fd325b89e9f3d9bf6d0560ddc5e6d489655e12984739",
   "entries": [
     {
       "kind": "behaviour.blur",
@@ -72,6 +72,13 @@
       "role": "infrastructure",
       "source": "units/canvas.js",
       "export": "Canvas"
+    },
+    {
+      "kind": "unit.composition-pivot",
+      "type": "unit",
+      "role": "infrastructure",
+      "source": "units/composition-pivot.js",
+      "export": "CompositionPivot"
     },
     {
       "kind": "unit.group",
@@ -163,6 +170,13 @@
       "role": "infrastructure",
       "source": "units/three/scene.js",
       "export": "ThreeScene"
+    },
+    {
+      "kind": "unit.vector-path",
+      "type": "unit",
+      "role": "infrastructure",
+      "source": "units/vector-path.js",
+      "export": "VectorPath"
     },
     {
       "kind": "unit.video",

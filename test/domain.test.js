@@ -24,6 +24,7 @@ import { VisibleDuring } from '../behaviours/visible-during.js';
 import { Audio } from '../units/audio.js';
 import { Box } from '../units/box.js';
 import { Canvas } from '../units/canvas.js';
+import { CompositionPivot } from '../units/composition-pivot.js';
 import { Group } from '../units/group.js';
 import { Image } from '../units/image.js';
 import { Layer } from '../units/layer.js';
@@ -37,13 +38,14 @@ import { Switch } from '../units/switch.js';
 import { Text } from '../units/text.js';
 import { ThreeScene } from '../units/three/scene.js';
 import { Video } from '../units/video.js';
+import { VectorPath } from '../units/vector-path.js';
 import { TextNode } from '../units/text-node.js';
 import { Vignette } from '../units/vignette.js';
 
 const UNIT_CLASSES = [
-  Audio, Box, Canvas, Group, Image, Layer, Repeat, Sequence, SolidFill, Sprite,
+  Audio, Box, Canvas, CompositionPivot, Group, Image, Layer, Repeat, Sequence, SolidFill, Sprite,
   Surface, Svg, Switch, Text, TextNode,
-  ThreeScene, Video, Vignette,
+  ThreeScene, VectorPath, Video, Vignette,
 ];
 const BEHAVIOUR_CLASSES = [Blur, Opacity, Rotate, Scale, TextReveal, Translate, VisibleDuring];
 const React = {
@@ -119,6 +121,28 @@ test('Unit composition accepts existing objects, preserves one parent, and rejec
   parent.remove(text);
   text.add(new Opacity(text, 1));
   assert.throws(() => text.add(parent), /primitive Unit/);
+});
+
+test('CompositionPivot stores an absolute composition point without renderer state', () => {
+  const text = new Text('around here');
+  const pivot = new CompositionPivot(text, { x: 540, y: 960 });
+  pivot.add(new Rotate(pivot, 90), new Scale(pivot, 1.5));
+
+  assert.deepEqual(pivot.pivot, { x: 540, y: 960 });
+  assert.equal(Object.isFrozen(pivot.pivot), true);
+  assert.deepEqual(pivot.children, [text]);
+  assert.deepEqual(projectUnit(pivot, { frame: 12 }), {
+    pivot: { x: 540, y: 960 },
+    transform: {
+      rotate: { unit: 'deg', value: 90 },
+      scale: 1.5,
+    },
+  });
+  for (const field of ['backend', 'component', 'renderer', 'style', 'transformOrigin']) {
+    assert.equal(Object.hasOwn(pivot, field), false, field);
+  }
+  assert.throws(() => new CompositionPivot(new Text('x'), { x: Number.NaN, y: 0 }), /pivot\.x/);
+  assert.throws(() => new CompositionPivot(new Text('x'), { x: 0, y: Infinity }), /pivot\.y/);
 });
 
 test('TextNode preserves a primitive child without adding a wrapper element', () => {

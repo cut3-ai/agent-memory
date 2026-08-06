@@ -174,15 +174,22 @@ export async function classifyDialogueFeedback(input = {}, options = {}) {
 
   const messages = new Map(dialogue.map((message) => [message.id, message]));
   const atMs = Math.max(...classified.evidenceMessageIds.map((id) => messages.get(id).atMs));
+  const neutralRetainedRevision = classified.signal !== 'neutral'
+    || (isHash(input.revisionSha256)
+      && input.retainedRevisionSha256 === input.revisionSha256);
+  const classifiedSignal = neutralRetainedRevision ? classified.signal : 'ambiguous';
   const aggregated = aggregateFeedbackSignals({
     ...aggregateInput,
     signals: [{
-      kind: classified.signal,
+      kind: classifiedSignal,
       atMs,
       messageIds: classified.evidenceMessageIds,
     }],
   });
-  return withClassification(aggregated, providerMetadata(provider, result, {
+  const resolved = classifiedSignal === classified.signal
+    ? aggregated
+    : { ...aggregated, reason: 'neutral-requires-retained-revision' };
+  return withClassification(resolved, providerMetadata(provider, result, {
     requestSha256: sha256(stableStringify(providerRequest)),
     responseSha256: sha256(stableStringify(result.data)),
     evidenceEventSha256s: classified.evidenceEventSha256s,
@@ -198,8 +205,9 @@ export function feedbackClassifierInstruction() {
   return [
     'Classify only the user reaction to the generated edit or code.',
     'Use negative for rejection, correction, redo requests, regressions, or dissatisfaction.',
-    'Use positive for explicit approval or satisfaction.',
-    'Use neutral when the user continues without an objection or changes topic.',
+    'Use positive only for explicit approval or satisfaction.',
+    'Use neutral only when the user explicitly says that the generated revision is retained or used unchanged.',
+    'A topic change, continuation, silence, timeout, preview, autosave, or absence of an objection is not neutral feedback; classify it as ambiguous.',
     'Use ambiguous for mixed, uncertain, or insufficient evidence.',
     'Every supplied message is a redacted, post-generation user message.',
     'Return only the required structured object and cite only user message ids.',

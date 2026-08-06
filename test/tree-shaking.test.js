@@ -55,6 +55,109 @@ test('text-only ESM bundle contains exactly its explicitly imported Unit adapter
   }
 });
 
+test('absolute composition pivot enters a bundle only through direct ESM imports', async () => {
+  const result = await bundle([
+    "import {CompositionPivot} from './units/composition-pivot.js';",
+    "import {renderCompositionPivot} from './core/drivers/react/adapters/composition-pivot.js';",
+    'export {CompositionPivot,renderCompositionPivot};',
+  ].join('\n'));
+  const inputs = inputFiles(result);
+
+  assert.ok(inputs.some((file) => file.endsWith('units/composition-pivot.js')));
+  assert.ok(inputs.some((file) => file.endsWith('adapters/composition-pivot.js')));
+  for (const excluded of [
+    'adapters/box.js',
+    'adapters/canvas.js',
+    'adapters/three-scene.js',
+    'units/box.js',
+    'units/canvas.js',
+    'units/three/scene.js',
+  ]) {
+    assert.equal(inputs.some((file) => file.endsWith(excluded)), false, excluded);
+  }
+});
+
+test('VectorPath and its direct adapter tree-shake every unrelated renderer path', async () => {
+  const result = await bundle([
+    "import {VectorPath} from './units/vector-path.js';",
+    "import {renderVectorPath} from './core/drivers/react/adapters/vector-path.js';",
+    'export {VectorPath,renderVectorPath};',
+  ].join('\n'));
+  const inputs = inputFiles(result);
+
+  assert.ok(inputs.some((file) => file.endsWith('units/vector-path.js')));
+  assert.ok(inputs.some((file) => file.endsWith('core/vector-path.js')));
+  assert.ok(inputs.some((file) => file.endsWith('adapters/vector-path.js')));
+  for (const excluded of [
+    'adapters/canvas.js',
+    'adapters/svg.js',
+    'adapters/three-scene.js',
+    'units/canvas.js',
+    'units/svg.js',
+    'units/three/scene.js',
+  ]) {
+    assert.equal(inputs.some((file) => file.endsWith(excluded)), false, excluded);
+  }
+});
+
+test('style retrieval stays lightweight and does not pull AST or rendering code', async () => {
+  const result = await bundle([
+    "import {retrieveStyleMemories} from './src/memory/retrieval.js';",
+    "export const found=retrieveStyleMemories([],{motion:['two-beat-snap']});",
+  ].join('\n'));
+  const inputs = inputFiles(result);
+
+  assert.ok(inputs.some((file) => file.endsWith('src/memory/retrieval.js')));
+  for (const excluded of [
+    '@babel/parser',
+    '/src/memory/style/',
+    '/core/',
+    '/units/',
+    '/behaviours/',
+  ]) {
+    assert.equal(inputs.some((file) => file.includes(excluded)), false, excluded);
+  }
+});
+
+test('promotion decision metadata validation does not pull the AST privacy scanner', async () => {
+  const result = await bundle([
+    "export {decideMemoryPromotion} from './src/memory/feedback.js';",
+  ].join('\n'), { platform: 'node' });
+  const inputs = inputFiles(result);
+
+  assert.ok(inputs.some((file) => file.endsWith('src/memory/feedback.js')));
+  assert.ok(inputs.some((file) => file.endsWith('src/memory/privacy/artifact.js')));
+  for (const excluded of [
+    '@babel/parser',
+    '/src/memory/privacy/font-family-catalog.js',
+    '/src/memory/privacy.js',
+    '/src/memory/style/',
+  ]) {
+    assert.equal(inputs.some((file) => file.includes(excluded)), false, excluded);
+  }
+});
+
+test('an exact style-memory import keeps unrelated foundations and heavy paths out', async () => {
+  const result = await bundle([
+    "import {SignalEditorialCard} from './test/fixtures/style-memory/signal-editorial-card.js';",
+    "import {Text} from './units/text.js';",
+    "export const card=new SignalEditorialCard(new Text('CUT3'));",
+  ].join('\n'));
+  const inputs = inputFiles(result);
+
+  assert.ok(inputs.some((file) => file.endsWith('test/fixtures/style-memory/signal-editorial-card.js')));
+  for (const excluded of [
+    '/units/three/',
+    '/units/canvas.js',
+    '/core/drivers/',
+    '/behaviours/blur.js',
+    '/behaviours/opacity.js',
+    '/behaviours/scale.js',
+  ]) {
+    assert.equal(inputs.some((file) => file.includes(excluded)), false, excluded);
+  }
+});
+
 test('generic React and Remotion boundaries import zero concrete Units', async () => {
   const result = await bundle([
     "export {createReactDriver} from './core/drivers/react.js';",
@@ -154,14 +257,14 @@ function renderCompositionUnit(context) {
   return renderText(context);
 }
 
-async function bundle(contents) {
+async function bundle(contents, options = {}) {
   return build({
     absWorkingDir: root,
     bundle: true,
     format: 'esm',
     logLevel: 'silent',
     metafile: true,
-    platform: 'browser',
+    platform: options.platform ?? 'browser',
     stdin: { contents, resolveDir: root, sourcefile: 'tree-shake-entry.js' },
     treeShaking: true,
     write: false,

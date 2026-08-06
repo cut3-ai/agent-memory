@@ -5,7 +5,7 @@ import {
   normalizeUsage,
   postJsonWithRetry,
   ProviderRequestError,
-} from './index.js';
+} from './transport.js';
 
 export const ANTHROPIC_MESSAGES_ENDPOINT = 'https://api.anthropic.com/v1/messages';
 export const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-5';

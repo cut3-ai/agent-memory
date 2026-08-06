@@ -6,17 +6,21 @@ import {
   PROMOTION_GATE_NAMES,
   verifyPromotionGateReceipt,
 } from '../memory/gate-receipts.js';
+import { inspectStyleModuleSource } from '../memory/style-contract.js';
 
 export const PROMOTION_LEDGER_FORMAT = 'cut3-promotion-ledger';
 export const PROMOTION_LEDGER_VERSION = 3;
 export const DEFAULT_PROMOTION_LEDGER_FILE = 'promotion-ledger.json';
 export const DEPENDENCY_CLOSURE_VERSION = 1;
+export const PROMOTION_BUNDLE_VERSION = 1;
 
 const HASH = /^[a-f0-9]{64}$/u;
 const SAFE_EXPORT = /^(?:default|[$A-Z_a-z][$\w]*)$/u;
 const SAFE_KIND = /^(?:unit|behaviour)\.[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/u;
 const SAFE_GATE_AUTHORITY = /^[A-Za-z0-9._-]{1,100}$/u;
-const AUTHORITIES = new Set(['reviewed-core', 'human-feedback']);
+const AUTHORITIES = new Set(['reviewed-core', 'human-feedback', 'workspace-outcome']);
+const MEMORY_AUTHORITIES = new Set(['human-feedback', 'workspace-outcome']);
+const OUTCOME_POLICY_VERSION = 'revision-outcome-v2-authenticity-bound';
 const ROLES = new Set(['infrastructure', 'memory']);
 
 /**
@@ -157,13 +161,13 @@ export function validatePromotionLedger(value) {
     }
     if (!AUTHORITIES.has(entry.authority)) issue(errors, 'invalid-entry-authority', `${location}.authority`);
     if ((entry.authority === 'reviewed-core' && entry.role !== 'infrastructure')
-        || (entry.authority === 'human-feedback' && entry.role !== 'memory')) {
+        || (MEMORY_AUTHORITIES.has(entry.authority) && entry.role !== 'memory')) {
       issue(errors, 'entry-role-authority-mismatch', `${location}.role`);
     }
     if (entry.authority === 'reviewed-core' && entry.decisionSha256 !== null) {
       issue(errors, 'unexpected-seed-decision', `${location}.decisionSha256`);
     }
-    if (entry.authority === 'human-feedback' && !isHash(entry.decisionSha256)) {
+    if (MEMORY_AUTHORITIES.has(entry.authority) && !isHash(entry.decisionSha256)) {
       issue(errors, 'missing-promotion-decision', `${location}.decisionSha256`);
     }
     if (previous && compareLedgerEntries(previous, entry) > 0) {
@@ -263,40 +267,177 @@ export function resolvePromotedEntries(discovery, ledgerValidation) {
  * signed receipts again before accepting a write.
  */
 export function appendPromotionDecision(ledger, discovery, decision, authorization = {}) {
+  return appendPromotionBundleDecision(ledger, discovery, decision, {
+    ...authorization,
+    bundleKinds: [decision?.candidate?.kind],
+  });
+}
+
+/**
+ * Commit one gate-bound style bundle as a single ledger revision. The primary
+ * decision authorizes only classes whose exact module bytes are inside its
+ * signed dependency closure; linked entries currently narrow to authored
+ * Behaviours of a Unit so unrelated discovered code cannot hitchhike.
+ */
+export function appendPromotionBundleDecision(ledger, discovery, decision, authorization = {}) {
   const validation = validatePromotionLedger(ledger);
   if (!validation.ok) throw new Error('Cannot append to an invalid promotion ledger');
   assertPromotionDecision(decision);
-  const discovered = uniqueDiscoveredKinds(discovery.entries).get(decision.candidate?.kind);
-  if (!discovered) throw new Error('Promotion candidate is not a discovered class');
-  const moduleSha256 = moduleHashes(discovery.modules).get(discovered.source);
-  const identity = publicIdentity(discovered, moduleSha256, 'memory');
-  const dependencyClosure = buildDependencyClosure(discovery, discovered.source);
-  const dependencyClosureSha256 = dependencyClosure.closureSha256;
-  const revisionSha256 = candidateRevisionSha256({
-    ...identity,
-    dependencyClosureSha256,
+  const byKind = uniqueDiscoveredKinds(discovery.entries);
+  const modules = moduleHashes(discovery.modules);
+  const primary = byKind.get(decision.candidate?.kind);
+  if (!primary) throw new Error('Promotion candidate is not a discovered class');
+  const primaryModuleSha256 = modules.get(primary.source);
+  const primaryIdentity = publicIdentity(primary, primaryModuleSha256, 'memory');
+  const primaryClosure = buildDependencyClosure(discovery, primary.source);
+  const primaryRevisionSha256 = candidateRevisionSha256({
+    ...primaryIdentity,
+    dependencyClosureSha256: primaryClosure.closureSha256,
   });
-  if (decision.candidate.moduleSha256 !== moduleSha256
-      || decision.candidate.dependencyClosureSha256 !== dependencyClosureSha256
-      || decision.candidate.candidateSha256 !== revisionSha256) {
+  const bundleKinds = normalizeBundleKinds(authorization.bundleKinds, primary.kind);
+  const bundle = buildPromotionBundleIdentity(discovery, bundleKinds);
+  const bundleSha256 = bundleKinds.length > 1 ? bundle.bundleSha256 : null;
+  const authorizedCandidateSha256 = bundleSha256 === null
+    ? primaryRevisionSha256
+    : bundleCandidateRevisionSha256({ primaryRevisionSha256, bundleSha256 });
+  if (decision.candidate.moduleSha256 !== primaryModuleSha256
+      || decision.candidate.dependencyClosureSha256 !== primaryClosure.closureSha256
+      || (decision.candidate.bundleSha256 ?? null) !== bundleSha256
+      || decision.candidate.candidateSha256 !== authorizedCandidateSha256) {
     throw new Error('Promotion decision targets a stale candidate revision or dependency closure');
   }
   assertSignedGateAuthorization(decision, authorization, {
-    candidateSha256: revisionSha256,
-    moduleSha256,
-    dependencyClosureSha256,
+    candidateSha256: authorizedCandidateSha256,
+    moduleSha256: primaryModuleSha256,
+    dependencyClosureSha256: primaryClosure.closureSha256,
     resultSha256: decision.candidate.evidenceSha256,
   });
-  const nextEntry = {
-    ...identity,
-    dependencyClosure,
-    revisionSha256,
-    authority: 'human-feedback',
-    decisionSha256: decision.decisionSha256,
+  const primaryFiles = new Set(primaryClosure.files.map((file) => file.module));
+  const sources = new Set();
+  const nextEntries = bundleKinds.map((kind) => {
+    const discovered = byKind.get(kind);
+    if (!discovered) throw new Error(`Promotion bundle class is not discovered: ${kind}`);
+    if (sources.has(discovered.source)) {
+      throw new Error('Promotion bundle classes must use distinct modules');
+    }
+    sources.add(discovered.source);
+    if (kind !== primary.kind && (
+      primary.type !== 'unit'
+      || discovered.type !== 'behaviour'
+      || !primaryFiles.has(discovered.source)
+    )) {
+      throw new Error('Linked promotion must be a Behaviour in the primary Unit dependency closure');
+    }
+    if (kind !== primary.kind) assertLinkedStyleMemory(discovery, discovered);
+    const moduleSha256 = modules.get(discovered.source);
+    if (!isHash(moduleSha256)) throw new Error(`Promotion bundle module is unavailable: ${kind}`);
+    const identity = publicIdentity(discovered, moduleSha256, 'memory');
+    const dependencyClosure = kind === primary.kind
+      ? primaryClosure
+      : buildDependencyClosure(discovery, discovered.source);
+    return {
+      ...identity,
+      dependencyClosure,
+      revisionSha256: candidateRevisionSha256({
+        ...identity,
+        dependencyClosureSha256: dependencyClosure.closureSha256,
+      }),
+      authority: decision.outcome.origin === 'workspace-outcome'
+        ? 'workspace-outcome'
+        : 'human-feedback',
+      decisionSha256: decision.decisionSha256,
+    };
+  });
+  const promotedKinds = new Set(nextEntries.map((entry) => entry.kind));
+  const entries = validation.ledger.entries.filter((entry) => !promotedKinds.has(entry.kind));
+  entries.push(...nextEntries);
+  const nextLedger = createPromotionLedger(entries, { revision: validation.ledger.revision + 1 });
+  const resolution = resolvePromotedEntries(discovery, validatePromotionLedger(nextLedger));
+  if (!resolution.ok) {
+    const failure = resolution.errors[0];
+    throw new Error(
+      `Promotion would invalidate the public dependency graph: ${failure.code} at ${failure.location}`,
+    );
+  }
+  return nextLedger;
+}
+
+/** Seal the ordered class membership that one set of primary gates authorizes. */
+export function buildPromotionBundleIdentity(discovery, bundleKinds) {
+  const primaryKind = bundleKinds?.[0];
+  const kinds = normalizeBundleKinds(bundleKinds, primaryKind);
+  const byKind = uniqueDiscoveredKinds(discovery?.entries ?? []);
+  const modules = new Map();
+  for (const module of discovery?.dependencyModules ?? []) modules.set(module.file, module);
+  for (const module of discovery?.modules ?? []) modules.set(module.file, module);
+  const entries = kinds.map((kind) => {
+    const entry = byKind.get(kind);
+    if (!entry) throw new Error(`Promotion bundle class is not discovered: ${kind}`);
+    const module = modules.get(entry.source);
+    if (!module || typeof module.source !== 'string') {
+      throw new Error(`Promotion bundle module is unavailable: ${kind}`);
+    }
+    const dependencyClosure = buildDependencyClosure(discovery, entry.source);
+    return {
+      kind: entry.kind,
+      type: entry.type,
+      source: entry.source,
+      export: entry.export,
+      moduleSha256: sha256(module.source),
+      dependencyClosureSha256: dependencyClosure.closureSha256,
+    };
+  });
+  const body = {
+    version: PROMOTION_BUNDLE_VERSION,
+    primaryKind,
+    entries,
   };
-  const entries = validation.ledger.entries.filter((entry) => entry.kind !== nextEntry.kind);
-  entries.push(nextEntry);
-  return createPromotionLedger(entries, { revision: validation.ledger.revision + 1 });
+  return deepFreeze({
+    ...body,
+    bundleSha256: sha256(stableStringify(body)),
+  });
+}
+
+export function bundleCandidateRevisionSha256(value) {
+  if (!isHash(value?.primaryRevisionSha256) || !isHash(value?.bundleSha256)) {
+    throw new TypeError('bundle candidate requires primary and bundle SHA-256 values');
+  }
+  return sha256(stableStringify({
+    version: PROMOTION_BUNDLE_VERSION,
+    primaryRevisionSha256: value.primaryRevisionSha256,
+    bundleSha256: value.bundleSha256,
+  }));
+}
+
+function assertLinkedStyleMemory(discovery, entry) {
+  const modules = new Map();
+  for (const module of discovery?.dependencyModules ?? []) modules.set(module.file, module);
+  for (const module of discovery?.modules ?? []) modules.set(module.file, module);
+  const module = modules.get(entry.source);
+  const report = inspectStyleModuleSource({
+    moduleSource: module?.source,
+    sourceFile: entry.source,
+    type: entry.type,
+    kind: entry.kind,
+    exportName: entry.export,
+    dependencyModules: discovery.dependencyModules ?? discovery.modules,
+  });
+  if (!report.ok) {
+    throw new Error(`Linked promotion class is not standalone style memory: ${entry.kind}`);
+  }
+}
+
+function normalizeBundleKinds(value, primaryKind) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 9) {
+    throw new TypeError('bundleKinds must contain one through nine kinds');
+  }
+  if (value[0] !== primaryKind || value.filter((kind) => kind === primaryKind).length !== 1) {
+    throw new Error('Promotion bundle must start with the exact primary candidate');
+  }
+  if (value.some((kind) => typeof kind !== 'string') || new Set(value).size !== value.length) {
+    throw new Error('Promotion bundle kinds must be unique strings');
+  }
+  return value;
 }
 
 function assertSignedGateAuthorization(decision, authorization, expected) {
@@ -320,7 +461,8 @@ function assertSignedGateAuthorization(decision, authorization, expected) {
 function assertPromotionDecision(decision) {
   if (decision?.action !== 'promote'
       || decision?.eligibleForPromotion !== true
-      || decision?.policyVersion !== 'human-feedback-v6-authenticity-bound'
+      || decision?.schemaVersion !== 2
+      || decision?.policyVersion !== OUTCOME_POLICY_VERSION
       || !Array.isArray(decision.reasons)
       || decision.reasons.length !== 0) {
     throw new Error('Only an eligible promote decision can update the ledger');
@@ -330,11 +472,24 @@ function assertPromotionDecision(decision) {
   if (sha256(stableStringify(body)) !== decisionSha256) {
     throw new Error('Promotion decision hash does not match its body');
   }
-  if (!['positive', 'neutral'].includes(decision.humanFeedback?.signal)
-      || !['explicit-human', 'human-dialogue-classified'].includes(decision.humanFeedback?.origin)
-      || !isHash(decision.humanFeedback?.generationEventSha256)
-      || decision.humanFeedback?.grace?.remainingMs !== 0) {
-    throw new Error('Promotion decision lacks eligible human feedback');
+  if (!['positive', 'neutral'].includes(decision.outcome?.signal)
+      || !['workspace-outcome', 'explicit-human', 'human-dialogue-classified']
+        .includes(decision.outcome?.origin)
+      || !isHash(decision.outcome?.revisionSha256)
+      || !isHash(decision.outcome?.generationEventSha256)
+      || !isHash(decision.outcome?.validationReceiptSha256)
+      || decision.outcome?.grace?.remainingMs !== 0) {
+    throw new Error('Promotion decision lacks an eligible revision outcome');
+  }
+  if (decision.outcome.revisionSha256
+      !== (decision.candidate?.outcomeRevisionSha256 ?? decision.candidate?.moduleSha256)) {
+    throw new Error('Promotion decision outcome does not target the exact candidate module revision');
+  }
+  if (decision.candidate?.bundleSha256 !== null
+      && decision.candidate?.bundleSha256 !== undefined
+      && (!isHash(decision.candidate.bundleSha256)
+        || decision.candidate.outcomeRevisionSha256 !== decision.candidate.candidateSha256)) {
+    throw new Error('Promotion decision bundle is not bound to its exact outcome revision');
   }
   if (!isHash(decision.candidate?.dependencyClosureSha256)
       || !isHash(decision.candidate?.evidenceSha256)) {

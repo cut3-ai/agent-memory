@@ -3,11 +3,11 @@ import test from 'node:test';
 
 import { decideMemoryPromotion } from '../src/memory/feedback.js';
 import {
-  createFeedbackReceipt,
   createPromotionGateIssuer,
   createPromotionGateVerifier,
 } from '../src/memory/promotion.js';
 import { PROMOTION_GATE_NAMES } from '../src/memory/gate-receipts.js';
+import { sha256, stableStringify } from '../src/lib.js';
 
 const H = Object.freeze({
   candidate: '0'.repeat(64),
@@ -16,6 +16,8 @@ const H = Object.freeze({
   evidence: '2'.repeat(64),
   event: '3'.repeat(64),
   generation: 'b'.repeat(64),
+  revision: '1'.repeat(64),
+  validation: '7'.repeat(64),
   request: '4'.repeat(64),
   response: '5'.repeat(64),
 });
@@ -39,9 +41,14 @@ const gateReceiptVerifier = createPromotionGateVerifier({
 
 function receipt(signal, options = {}) {
   const state = options.state ?? (signal === 'negative' ? 'reject' : 'candidate');
-  return createFeedbackReceipt({
+  const body = {
+    schemaVersion: 3,
     candidateSha256: H.candidate,
+    revisionSha256: options.revisionSha256 ?? H.revision,
     generationEventSha256: H.generation,
+    validationReceiptSha256: options.validationReceiptSha256 === undefined
+      ? H.validation
+      : options.validationReceiptSha256,
     origin: options.origin ?? 'explicit-human',
     signal,
     state,
@@ -61,6 +68,10 @@ function receipt(signal, options = {}) {
         responseSha256: H.response,
       }
       : null,
+  };
+  return Object.freeze({
+    ...body,
+    receiptSha256: sha256(stableStringify(body)),
   });
 }
 
@@ -94,7 +105,7 @@ test('negative user evidence always discards and cannot be overridden by gates',
   const decision = decide(receipt('negative'), { gates: {} });
   assert.equal(decision.action, 'discard');
   assert.equal(decision.eligibleForPromotion, false);
-  assert.deepEqual(decision.reasons, ['human-negative']);
+  assert.deepEqual(decision.reasons, ['negative-outcome']);
 });
 
 test('positive or neutral promotes only after grace and all bound gates', () => {
@@ -102,7 +113,7 @@ test('positive or neutral promotes only after grace and all bound gates', () => 
     assert.equal(decide(receipt(signal)).action, 'promote');
     const pending = decide(receipt(signal, { state: 'pending' }));
     assert.equal(pending.action, 'quarantine');
-    assert.deepEqual(pending.reasons, ['feedback-grace-incomplete']);
+    assert.deepEqual(pending.reasons, ['outcome-grace-incomplete']);
   }
 
   for (const gate of PROMOTION_GATE_NAMES) {
@@ -161,12 +172,22 @@ test('classified user dialogue is valid authority only with request and response
   const classified = receipt('positive', { origin: 'human-dialogue-classified' });
   const decision = decide(classified);
   assert.equal(decision.action, 'promote');
-  assert.equal(decision.humanFeedback.origin, 'human-dialogue-classified');
+  assert.equal(decision.outcome.origin, 'human-dialogue-classified');
 
-  assert.throws(() => createFeedbackReceipt({
-    ...classified,
-    classifier: null,
+  const { receiptSha256: ignored, ...classifiedBody } = classified;
+  const missingClassifierBody = { ...classifiedBody, classifier: null };
+  assert.throws(() => decide({
+    ...missingClassifierBody,
+    receiptSha256: sha256(stableStringify(missingClassifierBody)),
   }), /classifier/u);
+});
+
+test('qualified workspace outcomes promote without pretending to be human feedback', () => {
+  const workspace = receipt('neutral', { origin: 'workspace-outcome' });
+  const decision = decide(workspace);
+  assert.equal(decision.action, 'promote');
+  assert.equal(decision.outcome.origin, 'workspace-outcome');
+  assert.equal(workspace.classifier, null);
 });
 
 test('missing receipt or legacy model-authored event never approves', () => {
@@ -176,7 +197,7 @@ test('missing receipt or legacy model-authored event never approves', () => {
     gates: signedGates(),
   }, { gateVerifier: gateReceiptVerifier });
   assert.equal(missing.action, 'quarantine');
-  assert.deepEqual(missing.reasons, ['human-feedback-required']);
+  assert.deepEqual(missing.reasons, ['qualified-outcome-required']);
 });
 
 test('feedback receipt is revision-scoped, hash-sealed and contains no raw dialogue', () => {
@@ -187,9 +208,33 @@ test('feedback receipt is revision-scoped, hash-sealed and contains no raw dialo
     gates: signedGates(),
   }, { gateVerifier: gateReceiptVerifier }), /current candidate revision/u);
 
-  const tampered = { ...feedbackReceipt, signal: 'positive' };
+  const tampered = { ...feedbackReceipt, receiptSha256: 'f'.repeat(64) };
   assert.throws(() => decideMemoryPromotion({ candidate, feedbackReceipt: tampered, gates: signedGates() }, {
     gateVerifier: gateReceiptVerifier,
   }), /hash/u);
+  const otherRevision = receipt('neutral', { revisionSha256: '6'.repeat(64) });
+  assert.throws(() => decideMemoryPromotion({
+    candidate,
+    feedbackReceipt: otherRevision,
+    gates: signedGates(),
+  }, { gateVerifier: gateReceiptVerifier }), /exact candidate module revision/u);
   assert.doesNotMatch(JSON.stringify(decide(feedbackReceipt)), /dialogue|messageId|content|prompt|https?:\/\//iu);
+});
+
+test('self-hashed mixed counts cannot override negative outcome precedence', () => {
+  const positive = receipt('positive');
+  const { receiptSha256: ignored, ...body } = positive;
+  const forgedBody = {
+    ...body,
+    counts: { ...body.counts, negative: 1 },
+  };
+  const forged = {
+    ...forgedBody,
+    receiptSha256: sha256(stableStringify(forgedBody)),
+  };
+  assert.throws(() => decideMemoryPromotion({
+    candidate,
+    feedbackReceipt: forged,
+    gates: signedGates(),
+  }, { gateVerifier: gateReceiptVerifier }), /negative-first outcome precedence/u);
 });

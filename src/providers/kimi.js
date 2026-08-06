@@ -5,7 +5,7 @@ import {
   normalizeUsage,
   postJsonWithRetry,
   ProviderRequestError,
-} from './index.js';
+} from './transport.js';
 
 export const KIMI_CHAT_ENDPOINT = 'https://api.moonshot.ai/v1/chat/completions';
 export const DEFAULT_KIMI_MODEL = 'kimi-k2.6';

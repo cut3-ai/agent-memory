@@ -7,7 +7,6 @@ import {
   FEEDBACK_CLASSIFICATION_SCHEMA,
   hashDialogueEvent,
 } from '../src/feedback/classify.js';
-import { createCandidateChoiceSchema } from '../src/model-lab/contracts.js';
 import { createAnthropicProvider } from '../src/providers/anthropic.js';
 import {
   assertLocalProviderEnvFile,
@@ -30,6 +29,17 @@ const STRUCTURED_REQUEST = Object.freeze({
   prompt: 'Classify fixture message u1.',
   schema: FEEDBACK_CLASSIFICATION_SCHEMA,
 });
+
+function createCandidateChoiceSchema(candidateIds) {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['candidateId'],
+    properties: {
+      candidateId: { type: 'string', enum: [...candidateIds] },
+    },
+  };
+}
 
 test('advisory candidate output is a strict minimal enum object for both providers', async () => {
   const schema = createCandidateChoiceSchema(['candidate-1', 'candidate-2']);
@@ -516,6 +526,43 @@ test('optional structured dialogue classifier feeds deterministic aggregation', 
   });
   assert.deepEqual(result.evidenceMessageIds, ['u1']);
   assert.deepEqual(result.classification.request, { attempts: 1, retries: 0, status: 200 });
+});
+
+test('provider neutral is advisory unless the exact revision is structurally retained', async () => {
+  const revisionSha256 = 'a'.repeat(64);
+  let instruction;
+  const provider = {
+    provider: 'fixture',
+    model: 'fixture-model',
+    async generateStructured(request) {
+      instruction = request.system;
+      return { data: { signal: 'neutral', evidenceMessageIds: ['feedback-01'] } };
+    },
+  };
+  const input = {
+    signals: [],
+    generatedMessageId: 'a1',
+    generatedAtMs: 1_000,
+    nowMs: 2_000,
+    graceMs: 0,
+    revisionSha256,
+    dialogue: [
+      { id: 'a1', role: 'assistant', atMs: 1_000, content: 'Generated result.' },
+      { id: 'u1', role: 'user', atMs: 1_100, content: 'Let us discuss something else.' },
+    ],
+  };
+  const unbound = await classifyDialogueFeedback(input, { provider });
+  const retained = await classifyDialogueFeedback({
+    ...input,
+    retainedRevisionSha256: revisionSha256,
+  }, { provider });
+
+  assert.equal(unbound.state, 'quarantine');
+  assert.equal(unbound.signal, 'ambiguous');
+  assert.equal(unbound.reason, 'neutral-requires-retained-revision');
+  assert.equal(retained.state, 'candidate');
+  assert.equal(retained.signal, 'neutral');
+  assert.match(instruction, /topic change.*not neutral/iu);
 });
 
 test('feedback outside the bounded post-generation window never calls the provider', async () => {

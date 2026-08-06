@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import {
+  buildNavigationIndex,
   createPromotionLedger,
   createReviewedCoreLedger,
   discoverLibrary,
@@ -58,7 +59,7 @@ test('static discovery writes a deterministic navigation-only index without eval
   assert.equal(validateNavigationIndex(first.index).ok, true);
   assert.deepEqual(first.index, {
     format: 'cut3-static-library-index',
-    version: 2,
+    version: 3,
     indexSha256: first.index.indexSha256,
     entries: [
       {
@@ -81,6 +82,32 @@ test('static discovery writes a deterministic navigation-only index without eval
     'kind', 'type', 'role', 'source', 'export',
   ]);
   assert.doesNotMatch(firstBytes, /backend|factory|dependency|confidence|runtime/iu);
+});
+
+test('memory entries carry one controlled style scent inside the navigation index', () => {
+  const index = buildNavigationIndex({
+    publicEntries: [{
+      kind: 'unit.signal-editorial-card',
+      type: 'unit',
+      role: 'memory',
+      source: 'units/signal-editorial-card.js',
+      export: 'SignalEditorialCard',
+      scent: {
+        family: 'signal-editorial',
+        composition: ['asymmetric-stack', 'edge-anchored'],
+        typography: ['condensed-uppercase'],
+        palette: ['ink-paper-signal'],
+        rendering: ['hard-shadow'],
+        motion: ['two-beat-snap'],
+      },
+    }],
+  });
+
+  assert.equal(validateNavigationIndex(index).ok, true);
+  assert.equal(index.entries[0].scent.family, 'signal-editorial');
+  const unsafe = structuredClone(index);
+  unsafe.entries[0].scent.motion = ['make it like the user requested'];
+  assert.equal(validateNavigationIndex(unsafe).ok, false);
 });
 
 test('navigation index hash and minimal JSON shape fail closed', async (t) => {

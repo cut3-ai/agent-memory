@@ -3,6 +3,7 @@ node_modules/
 .env.*
 !.env.example
 runs/
+/lab/runs/
 .private-runs/
 cba-runs/*
 .private-cba-runs/
@@ -12,5 +13,6 @@ memory-runs/*
 .private-memory-runs/
 .private-refinement-runs/
 staging/
+*.promotion.lock
 *.local.json
 *.private.jsonl

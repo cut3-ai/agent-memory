@@ -1,7 +1,7 @@
 {
   "format": "cut3-promotion-ledger",
   "version": 3,
-  "revision": 5,
+  "revision": 7,
   "entries": [
     {
       "kind": "behaviour.blur",
@@ -460,6 +460,52 @@
         "closureSha256": "a7dd5d50190b8c5535fd402884715462f5d77fe4fa569260fc461033ad83bfbc"
       },
       "revisionSha256": "0bf581b7250149d1432fb41dcbf3f1bafc71a3f5d9b45cede0597375c9b6b5b9",
+      "authority": "reviewed-core",
+      "decisionSha256": null
+    },
+    {
+      "kind": "unit.composition-pivot",
+      "type": "unit",
+      "source": "units/composition-pivot.js",
+      "export": "CompositionPivot",
+      "role": "infrastructure",
+      "moduleSha256": "127781029eb8575e77215d6e5343fc7c4ed10ac4784c48274375736e6d131b77",
+      "dependencyClosure": {
+        "version": 1,
+        "files": [
+          {
+            "module": "core/Behaviour.js",
+            "sha256": "1629f53540fac7e1b161ced789ecb231605f80b76e789023484380fc6e689e66"
+          },
+          {
+            "module": "core/Unit.js",
+            "sha256": "1b2429bdd6d64ddb3dbe4fdc32c044e272858a0066bf1e4e76e8a093f00c1d4a"
+          },
+          {
+            "module": "core/identity.js",
+            "sha256": "4236f212c7b7cd1f72d82990edc940f65b9f8f30486da5ed177a273f7355ebce"
+          },
+          {
+            "module": "core/signals.js",
+            "sha256": "95530edcf7fbbe976dc942ed5b57f901356d222284a7730315ad753759aa4749"
+          },
+          {
+            "module": "core/state.js",
+            "sha256": "9031f577206b4626b235d6792574b1dfeab7ca3d2b56273b6c9023946c620c00"
+          },
+          {
+            "module": "units/composition-pivot.js",
+            "sha256": "127781029eb8575e77215d6e5343fc7c4ed10ac4784c48274375736e6d131b77"
+          },
+          {
+            "module": "units/shared.js",
+            "sha256": "5e76eaf7ae89948e8ae833225af262b147295eac4af6595b86c66e3fb8de2db4"
+          }
+        ],
+        "externalImports": [],
+        "closureSha256": "09495f5886fa8460e3f1762634ebdd52f4d85b2b413a6796ed03af363cf7d086"
+      },
+      "revisionSha256": "ece1fea5023d2a9219f073821f9eca495f201cc0d96a73062406eebd0c9bdeb5",
       "authority": "reviewed-core",
       "decisionSha256": null
     },
@@ -1042,6 +1088,56 @@
       "decisionSha256": null
     },
     {
+      "kind": "unit.vector-path",
+      "type": "unit",
+      "source": "units/vector-path.js",
+      "export": "VectorPath",
+      "role": "infrastructure",
+      "moduleSha256": "82dd56d182151a681058c1466ab4430784d6d73e373fd28d8a4e70902c2ecd43",
+      "dependencyClosure": {
+        "version": 1,
+        "files": [
+          {
+            "module": "core/Behaviour.js",
+            "sha256": "1629f53540fac7e1b161ced789ecb231605f80b76e789023484380fc6e689e66"
+          },
+          {
+            "module": "core/Unit.js",
+            "sha256": "1b2429bdd6d64ddb3dbe4fdc32c044e272858a0066bf1e4e76e8a093f00c1d4a"
+          },
+          {
+            "module": "core/identity.js",
+            "sha256": "4236f212c7b7cd1f72d82990edc940f65b9f8f30486da5ed177a273f7355ebce"
+          },
+          {
+            "module": "core/signals.js",
+            "sha256": "95530edcf7fbbe976dc942ed5b57f901356d222284a7730315ad753759aa4749"
+          },
+          {
+            "module": "core/state.js",
+            "sha256": "9031f577206b4626b235d6792574b1dfeab7ca3d2b56273b6c9023946c620c00"
+          },
+          {
+            "module": "core/vector-path.js",
+            "sha256": "696995a735b71987d524e82f6c80538fca94bfde9f49087ffe3d234b37cf905c"
+          },
+          {
+            "module": "units/shared.js",
+            "sha256": "5e76eaf7ae89948e8ae833225af262b147295eac4af6595b86c66e3fb8de2db4"
+          },
+          {
+            "module": "units/vector-path.js",
+            "sha256": "82dd56d182151a681058c1466ab4430784d6d73e373fd28d8a4e70902c2ecd43"
+          }
+        ],
+        "externalImports": [],
+        "closureSha256": "01f81cd844c4d8792448f36ead5bf3fc1982e2c2a5e595ed6f9b04c6c0da5f3a"
+      },
+      "revisionSha256": "cc8ef241857e24bfc0a10900b92b55b400653893fd8c9a72b344b4e07310c5e5",
+      "authority": "reviewed-core",
+      "decisionSha256": null
+    },
+    {
       "kind": "unit.video",
       "type": "unit",
       "source": "units/video.js",
@@ -1134,5 +1230,5 @@
       "decisionSha256": null
     }
   ],
-  "ledgerSha256": "79abbe39a5be2caaaef24e993ba92799ffaee6d50e93e580d7e353349b6c3066"
+  "ledgerSha256": "72bbe9bc24dacff12bebb9793eab7dc85462ad6d4dc62acf360a94aa16412a67"
 }

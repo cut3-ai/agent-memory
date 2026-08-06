@@ -7,6 +7,7 @@ import {
   loadPromotionLedger,
   resolvePromotedEntries,
 } from './promotion-ledger.js';
+import { readStyleScent } from '../memory/style-contract.js';
 
 const SOURCE_EXTENSIONS = new Set(['.js', '.mjs', '.jsx']);
 
@@ -55,6 +56,7 @@ export async function discoverLibrary(options = {}) {
 
       for (const exported of findExportedClasses(ast)) {
         const kind = readOwnStaticKind(exported.node);
+        const scent = readStyleScent(exported.node, root.type);
         entries.push({
           type: root.type,
           kind,
@@ -63,6 +65,8 @@ export async function discoverLibrary(options = {}) {
           hasSuperClass: Boolean(exported.node.superClass),
           superClass: propertyName(exported.node.superClass),
           source: relativeFile,
+          scent: scent.violations.length === 0 ? scent.scent : null,
+          scentViolations: scent.violations,
           loc: exported.node.loc?.start ?? null,
         });
       }

@@ -8,6 +8,7 @@ import {
   propertyName,
   walkAst,
 } from './discover.js';
+import { inspectStyleModuleSource } from '../memory/style-contract.js';
 
 export const FORBIDDEN_LIBRARY_FIELDS = Object.freeze([
   'backend',
@@ -32,6 +33,9 @@ export function verifyDiscovery(discovery, options = {}) {
   const errors = [...discovery.diagnostics];
   const kinds = new Map();
   const modulesByFile = new Map(discovery.modules.map((module) => [module.file, module]));
+  const memoryKinds = new Set((discovery.publicEntries ?? [])
+    .filter((entry) => entry.role === 'memory')
+    .map((entry) => entry.kind));
 
   for (const entry of discovery.entries) {
     const expectedBase = entry.type === 'unit' ? 'Unit' : 'Behaviour';
@@ -76,6 +80,25 @@ export function verifyDiscovery(discovery, options = {}) {
       ));
     } else {
       kinds.set(entry.kind, `${entry.source}#${entry.export}`);
+    }
+    if (memoryKinds.has(entry.kind)) {
+      const module = modulesByFile.get(entry.source);
+      const style = inspectStyleModuleSource({
+        moduleSource: module?.source,
+        sourceFile: entry.source,
+        type: entry.type,
+        kind: entry.kind,
+        exportName: entry.export,
+        dependencyModules: discovery.dependencyModules ?? discovery.modules,
+      });
+      for (const violation of style.violations) {
+        errors.push(issue(
+          `style-memory-${violation}`,
+          entry.source,
+          `${entry.className} violates the style-memory contract: ${violation}`,
+          entry.loc,
+        ));
+      }
     }
   }
 
