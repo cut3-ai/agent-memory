@@ -86,18 +86,6 @@ const entries = [
     ['transition to ranking winner'],
     ['six-by-ten mosaic', 'hard pixel border', 'green-purple checker']),
 
-  memory('unit.composition.signal-editorial', 'composition', 'signal-editorial',
-    '@cut3/agent-memory/compositions/SignalEditorialComposition',
-    ['vertical social opener'],
-    ['media plate', 'headline band', 'razor transition']),
-  memory('unit.composition.archival-dossier', 'composition', 'archival-dossier',
-    '@cut3/agent-memory/compositions/ArchivalDossierComposition',
-    ['podcast quote video', 'documentary excerpt'],
-    ['photo evidence', 'carbon transcript', 'casefile shutter']),
-  memory('unit.composition.retro-ritual-ranking', 'composition', 'retro-ritual',
-    '@cut3/agent-memory/compositions/RetroRitualRankingComposition',
-    ['ranking video', 'list reveal'],
-    ['arbitrary card count', 'ritual cards', 'portal winner cut']),
 ];
 
 export const memoryCatalog = Object.freeze(entries);

@@ -3,13 +3,17 @@ import test from 'node:test';
 
 import { ArchivalDossierComposition } from '@cut3/agent-memory/compositions/ArchivalDossierComposition';
 import { RetroRitualRankingComposition } from '@cut3/agent-memory/compositions/RetroRitualRankingComposition';
+import { ritualOffer } from '@cut3/agent-memory/compositions/RitualOffer';
 import { SignalEditorialComposition } from '@cut3/agent-memory/compositions/SignalEditorialComposition';
 import { Engine, visitUnits } from '@cut3/agent-memory/core/Engine';
+import { projectUnit } from '@cut3/agent-memory/core/frame';
 import { memoryCatalog } from '@cut3/agent-memory/catalog';
 import { Box } from '@cut3/agent-memory/units/base/Box';
+import { CompositionPivot } from '@cut3/agent-memory/units/base/CompositionPivot';
 import { Layer } from '@cut3/agent-memory/units/base/Layer';
 import { Text } from '@cut3/agent-memory/units/base/Text';
 import { SignalHeadlineBand } from '@cut3/agent-memory/units/signal-editorial/SignalHeadlineBand';
+import { RitualOfferCard } from '@cut3/agent-memory/units/retro-ritual/RitualOfferCard';
 
 const compositions = [
   ['signal-editorial', SignalEditorialComposition, 60],
@@ -37,6 +41,39 @@ for (const [name, CompositionClass, transitionFrame] of compositions) {
   });
 }
 
+test('online-agent output is a plain Norman-shaped builder with explicit ordered Behaviours', () => {
+  const undecorated = new RitualOfferCard(new Text('STATIC TREE'));
+  const unit = ritualOffer('RUNTIME TEXT');
+  const behaviourKinds = unit.behaviours.map((behaviour) => behaviour.constructor.kind);
+  const hiddenBehaviourKinds = [];
+  const texts = [];
+  visitUnits(undecorated, (child) => {
+    hiddenBehaviourKinds.push(
+      ...child.behaviours.map((behaviour) => behaviour.constructor.kind),
+    );
+  });
+  visitUnits(unit, (child) => {
+    if (child instanceof Text) texts.push(child.text);
+  });
+
+  assert.ok(unit instanceof RitualOfferCard);
+  assert.deepEqual(
+    hiddenBehaviourKinds,
+    [],
+    'Unit constructor must not hide optional motion anywhere in its tree',
+  );
+  assert.deepEqual(behaviourKinds, [
+    'behaviour.retro-ritual.ritual-card-deal',
+    'behaviour.retro-ritual.bone-idle-hop',
+  ]);
+  assert.deepEqual(texts, ['RUNTIME TEXT']);
+  assert.ok(unit.children.length > 0, 'builder must return a nested Unit tree');
+  assert.equal(projectUnit(unit, { frame: 0 }).opacity, 0);
+  assert.notEqual(projectUnit(unit, { frame: 8 }).pose.x, 0);
+  assert.match(projectUnit(unit, { frame: 24 }).effects.shadow, /#09060f/u);
+  assert.throws(() => ritualOffer({ text: 'not a string' }), /must be a string/u);
+});
+
 test('ranking cardinality is data: two and twenty items use the same RitualOfferCard', () => {
   const two = new RetroRitualRankingComposition({ items: ['A', 'B'] });
   const twenty = new RetroRitualRankingComposition({
@@ -56,8 +93,8 @@ test('ranking cardinality is data: two and twenty items use the same RitualOffer
 
   const engine = new Engine(twenty);
   for (const frame of [30, 102, 174, 246, 318]) {
-    const cards = findOutput(engine.at({ frame }), (node) => node.name === 'ritual-offer-card')
-      .map((node) => node.frame.y)
+    const cards = findOutput(engine.at({ frame }), (node) => node.name === 'ritual-offer-placement')
+      .map((node) => node.pose.y)
       .sort((left, right) => left - right);
     assert.ok(cards.length >= 1 && cards.length <= 4);
     for (let index = 1; index < cards.length; index += 1) {
@@ -67,7 +104,8 @@ test('ranking cardinality is data: two and twenty items use the same RitualOffer
 });
 
 test('catalog contains code locations and visual traits, never scores or confidence', () => {
-  assert.equal(memoryCatalog.length, 24);
+  assert.equal(memoryCatalog.length, 21);
+  assert.ok(memoryCatalog.every((entry) => ['behaviour', 'unit'].includes(entry.type)));
   assert.ok(memoryCatalog.every((entry) => entry.import.startsWith('@cut3/agent-memory/')));
   assert.ok(memoryCatalog.every((entry) => entry.preserves.length >= 2));
   assert.doesNotMatch(JSON.stringify(memoryCatalog), /confidence|score|probability/iu);
@@ -109,7 +147,7 @@ test('every CompositionPivot is rooted in an unshifted full-composition containi
     RetroRitualRankingComposition,
   ]) {
     visitUnits(new CompositionClass(), (unit) => {
-      if (unit.constructor.kind !== 'unit.composition-pivot') return;
+      if (!(unit instanceof CompositionPivot)) return;
       for (let ancestor = unit.parent; ancestor; ancestor = ancestor.parent) {
         if (!(ancestor instanceof Box || ancestor instanceof Layer)) continue;
         assert.equal(ancestor.frame.x, 0);

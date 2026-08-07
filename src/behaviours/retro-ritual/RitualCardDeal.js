@@ -7,7 +7,7 @@ export class RitualCardDeal extends Behaviour {
   static kind = 'behaviour.retro-ritual.ritual-card-deal';
 
   constructor(unit) {
-    super(requireOwnerKind(unit, 'unit.composition-pivot', 'RitualCardDeal'));
+    super(requireOwnerKind(unit, 'unit.retro-ritual.offer-card', 'RitualCardDeal'));
   }
 
   onFrame({ frame }) {

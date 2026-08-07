@@ -1,10 +1,11 @@
 import { Box } from '@cut3/agent-memory/units/base/Box';
 import { Composition } from '@cut3/agent-memory/units/base/Composition';
+import { ritualOffer } from '@cut3/agent-memory/compositions/RitualOffer';
+import { CompositionPivot } from '@cut3/agent-memory/units/base/CompositionPivot';
 import { Layer } from '@cut3/agent-memory/units/base/Layer';
 import { Shot } from '@cut3/agent-memory/units/base/Shot';
 import { Text } from '@cut3/agent-memory/units/base/Text';
 import { PortalTileTransition } from '@cut3/agent-memory/units/retro-ritual/PortalTileTransition';
-import { RitualOfferCard } from '@cut3/agent-memory/units/retro-ritual/RitualOfferCard';
 
 /** Arbitrary-cardinality ranking assembled from one reusable ritual card Unit. */
 export class RetroRitualRankingComposition extends Composition {
@@ -53,7 +54,7 @@ function rankingPage(items, pageIndex, pageCount, duration) {
   const root = ritualBackground('RITUAL RANKING', `PAGE ${pageIndex + 1}/${pageCount}`);
   items.forEach((item, index) => {
     const rank = (pageIndex * 4) + index + 1;
-    const card = new RitualOfferCard(new Text(`${rank}. ${String(item)}`), {
+    const card = place(ritualOffer(`${rank}. ${String(item)}`), {
       y: 390 + (index * 310),
     });
     root.add(new Shot(card, {
@@ -67,8 +68,15 @@ function rankingPage(items, pageIndex, pageCount, duration) {
 
 function winnerScene(winner) {
   const root = ritualBackground('CHOSEN RITUAL');
-  root.add(new RitualOfferCard(new Text(`1. ${String(winner)}`), { y: 770 }));
+  root.add(place(ritualOffer(`1. ${String(winner)}`), { y: 770 }));
   return root;
+}
+
+function place(unit, pose) {
+  return new CompositionPivot(unit, {
+    name: 'ritual-offer-placement',
+    pose,
+  });
 }
 
 function ritualBackground(title, page = '') {

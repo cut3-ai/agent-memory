@@ -29,17 +29,33 @@ Behaviour contract:
 - never create Opacity, Scale, Translate, Blur, CSSProperty, Interpolate or library-import wrappers.
 
 Unit contract:
-- extend Unit directly and construct a real nested Unit tree;
+- extend a renderer-neutral renderable Unit base and construct a real nested Unit tree;
 - accept runtime content as Units; never embed customer text, URLs or transcripts;
 - use CompositionPivot for transforms and express its pivot in absolute composition coordinates;
+- keep optional entry/idle Behaviours out of the Unit constructor so the output function chooses and orders them explicitly;
 - keep renderer/backend fields out of Units and Behaviours.
+
+Required workspace output:
+- export a plain ESM builder function whose first argument is runtime content;
+- inside it, construct the root Unit, instantiate each named Behaviour with that exact Unit, call unit.addBehaviour(...) in authored order, and return the Unit;
+- the builder is executable application code, not a Composition class, descriptor, schema or JSON response;
+
+Shape:
+export function build(runtimeText) {
+  const unit = new StyledUnit(new Text(runtimeText));
+  const entry = new AuthoredEntry(unit);
+  const idle = new AuthoredIdle(unit);
+  unit.addBehaviour(entry);
+  unit.addBehaviour(idle);
+  return unit;
+}
 
 Module contract:
 - use only global @cut3/agent-memory/... ESM imports;
-- no dynamic imports, factories, registries, AST parsing or generated JSON;
+- no dynamic imports, factory registries, runtime factory abstractions, AST parsing or generated JSON;
 - write Behaviours to src/behaviours/<style>/, Units to src/units/<style>/;
 - update src/catalog.js by hand with import path, exact use cases and preserved visual traits;
-- add or update a composition under src/compositions/ that visibly proves reuse at different content/cardinality;
+- add or update a plain builder under src/compositions/ that visibly proves reuse at different content/cardinality;
 - add node:test coverage under misc/test-runs/tests/.
 - run npm test and npm run showcase inside the candidate; inspect its change set for customer text, URLs, transcripts and credentials.
 

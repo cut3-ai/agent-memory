@@ -16,6 +16,8 @@ The catalog is now ordinary static ESM in `src/catalog.js`. It contains only:
 
 There are no confidence scores, generated metadata or dynamic loaders.
 
+The catalog contains only reusable Units and Behaviours. Full compositions and output builders are application code that consumes memory, not memory entries themselves.
+
 ## Source model
 
 Norman the Necromancer does not define a formal CBA specification or a Unit tree. Its actual model is a flat list of `GameObject` instances, each owning an ordered list of Behaviours. The reusable idea is semantic ownership: `March`, `Bleeding`, `Seeking` and `Summon` retain complete actions instead of wrapping individual fields.
@@ -27,6 +29,8 @@ Reference inspected for this rewrite:
 
 Cut3 keeps the owner-based Behaviour idea and deliberately adds a renderer-neutral Unit tree because video compositions need hierarchy, media slots and nested transitions. That tree is the Cut3 adaptation, not a claim about Norman.
 
+Norman's application output lives in plain functions such as `Spell()`, `Villager()` and `Piper()` in `src/objects.ts`: construct an object, construct named Behaviours with that object, attach them in order, return the object. The Cut3 online agent now has the same output contract, with nested Units added for video.
+
 ```text
 src/
 ├── core/          Unit, Behaviour, deterministic frame engine
@@ -34,7 +38,7 @@ src/
 │   ├── base/      renderer-neutral infrastructure
 │   └── <style>/   authored reusable visual trees
 ├── behaviours/    complete named visual laws grouped by style
-├── compositions/  executable 9:16 demonstrations
+├── compositions/  plain output builders and executable 9:16 demonstrations
 ├── drivers/       React and Remotion boundaries
 ├── fonts/         vendored-font manifest and preload contract
 ├── online/        exact feedback policy and coding-agent prompt
@@ -55,7 +59,26 @@ import { EditorialImpactSettle }
   from '@cut3/agent-memory/behaviours/signal-editorial/EditorialImpactSettle';
 ```
 
-The package has no root barrel, registry, factory or dynamic import. Consumers import only the classes they use.
+The package has no root barrel, factory registry, runtime factory abstraction or dynamic import. Plain application builder functions are deliberately allowed; consumers still import only the classes they use.
+
+## Actual online-agent output
+
+`src/compositions/RitualOffer.js` is a runnable example of the exact artifact expected from the online coding agent:
+
+```js
+export function ritualOffer(text) {
+  const unit = new RitualOfferCard(new Text(text));
+  const entry = new RitualCardDeal(unit);
+  const animation = new BoneIdleHop(unit);
+
+  unit.addBehaviour(entry);
+  unit.addBehaviour(animation);
+
+  return unit;
+}
+```
+
+The first argument is runtime data, not a schema. `RitualOfferCard` owns the nested visual tree but does not secretly select its entry or idle animation. The builder makes Behaviour choice and order readable application code. `RetroRitualRankingComposition` uses this same function for every ranking item and the winner; the example is not disconnected test scaffolding.
 
 ## What counts as memory
 

@@ -381,6 +381,9 @@ test('agent prompt describes an isolated code-writing candidate, not AST admissi
   assert.match(prompt, /compile, tests, render, privacy and semantic evidence/iu);
   assert.match(prompt, /preserves:/iu);
   assert.match(prompt, /context\.frame for Shot-local motion/iu);
+  assert.match(prompt, /plain ESM builder function/iu);
+  assert.match(prompt, /unit\.addBehaviour\(entry\)/u);
+  assert.match(prompt, /not a Composition class, descriptor, schema or JSON response/iu);
   assert.doesNotMatch(prompt, /confidence|probability|source parser/iu);
   assert.doesNotMatch(prompt, /task summary|composition module/iu);
 });
