@@ -1,66 +1,30 @@
 {
   "name": "@cut3/agent-memory",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "sideEffects": false,
   "files": [
-    "behaviours",
-    "core",
-    "units",
-    "src/feedback",
-    "src/cba-v2",
-    "src/library",
-    "src/memory",
-    "src/providers",
-    "src/lib.js",
-    "index.generated.json",
-    "promotion-ledger.json",
+    "src",
     "VERIFY.md"
   ],
   "exports": {
-    "./core/Unit": "./core/Unit.js",
-    "./core/Behaviour": "./core/Behaviour.js",
-    "./core/Engine": "./core/Engine.js",
-    "./core/frame": "./core/frame.js",
-    "./core/signals": "./core/signals.js",
-    "./units/*": "./units/*.js",
-    "./behaviours/*": "./behaviours/*.js",
-    "./drivers/react": "./core/drivers/react.js",
-    "./drivers/react/adapters/*": "./core/drivers/react/adapters/*.js",
-    "./drivers/remotion": "./core/drivers/remotion.js",
-    "./cba-v2": "./src/cba-v2/index.js",
-    "./cba-v2/runtime": "./src/cba-v2/runtime/index.js",
-    "./providers": "./src/providers/index.js",
-    "./memory": "./src/memory/index.js",
-    "./memory/agent-contract": "./src/memory/agent-contract.js",
-    "./memory/online-observer": "./src/feedback/online-observer.js",
-    "./memory/outcome": "./src/feedback/outcome.js",
-    "./memory/promotion": "./src/memory/promotion.js",
-    "./memory/retrieval": "./src/memory/retrieval.js",
-    "./memory/style-contract": "./src/memory/style-contract.js",
-    "./library": "./src/library/index.js",
-    "./index.generated.json": "./index.generated.json"
+    "./core/*": "./src/core/*.js",
+    "./units/*": "./src/units/*.js",
+    "./behaviours/*": "./src/behaviours/*.js",
+    "./compositions/*": "./src/compositions/*.js",
+    "./online/*": "./src/online/*.js",
+    "./drivers/react": "./src/drivers/react.js",
+    "./drivers/remotion": "./src/drivers/remotion.js",
+    "./fonts/*": "./src/fonts/*.js",
+    "./catalog": "./src/catalog.js"
   },
   "scripts": {
-    "lab:experiment": "node lab/experiment/profile-lab-cli.js",
-    "lab:census": "node lab/census/cli.js",
-    "lab:gates": "node lab/gates/cli.js",
-    "memory:promote": "node src/memory/promotion-cli.js",
-    "test": "npm run test:production && npm run test:lab",
-    "test:production": "node --test \"test/*.test.js\"",
-    "test:lab": "node --test \"lab/test/*.test.js\""
+    "test": "node --test \"misc/test-runs/tests/*.test.js\"",
+    "showcase": "node misc/test-runs/render-showcase.js",
+    "showcase:browser": "node misc/test-runs/render-browser-showcase.js"
   },
   "engines": {
     "node": ">=22"
-  },
-  "dependencies": {
-    "@babel/generator": "7.29.8",
-    "@babel/parser": "7.29.8",
-    "@babel/traverse": "7.29.8",
-    "@babel/types": "7.29.8"
-  },
-  "devDependencies": {
-    "esbuild": "0.25.8"
   }
 }
