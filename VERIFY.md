@@ -78,7 +78,7 @@ export function ritualOffer(text) {
 }
 ```
 
-The first argument is runtime data, not a schema. `RitualOfferCard` owns the nested visual tree but does not secretly select its entry or idle animation. The builder makes Behaviour choice and order readable application code. `RetroRitualRankingComposition` uses this same function for every ranking item and the winner; the example is not disconnected test scaffolding.
+The first argument is runtime data, not a schema. The builder contains no validation, classification or guard branches; it passes runtime content directly into Units. `RitualOfferCard` owns the nested visual tree but does not secretly select its entry or idle animation. The builder makes Behaviour choice and order readable application code. `RetroRitualRankingComposition` uses this same function for every ranking item and the winner; the example is not disconnected test scaffolding.
 
 ## What counts as memory
 

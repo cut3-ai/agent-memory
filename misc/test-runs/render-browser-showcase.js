@@ -46,8 +46,13 @@ try {
     const htmlFile = path.join(htmlDirectory, `${name}.html`);
     const pngFile = path.join(outputDirectory, `${name}.png`);
     await writeFile(htmlFile, documentHtml(name, panels), 'utf8');
+    await rm(pngFile, { force: true });
     const result = spawnSync(browser, [
       '--headless=new',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--disable-background-networking',
+      '--disable-component-update',
       '--disable-gpu',
       '--hide-scrollbars',
       '--allow-file-access-from-files',
@@ -57,10 +62,12 @@ try {
       `--user-data-dir=${profile}`,
       `--screenshot=${pngFile}`,
       pathToFileURL(htmlFile).href,
-    ], { encoding: 'utf8' });
-    if (result.status !== 0) {
+    ], { encoding: 'utf8', timeout: 10_000 });
+    const timedOutAfterCapture = result.error?.code === 'ETIMEDOUT';
+    if (result.status !== 0 && !timedOutAfterCapture) {
       throw new Error(result.stderr || `browser exited with ${result.status}`);
     }
+    await access(pngFile);
     console.log(`${name}: ${frames.join(', ')} -> ${path.relative(process.cwd(), pngFile)}`);
   }
 } finally {
@@ -151,7 +158,12 @@ async function findBrowser() {
       'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
       'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
     ]
-    : ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
+    : process.platform === 'darwin'
+      ? [
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+      ]
+      : ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
   for (const candidate of candidates) {
     try {
       await access(candidate);

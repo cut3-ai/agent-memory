@@ -37,6 +37,7 @@ Unit contract:
 
 Required workspace output:
 - export a plain ESM builder function whose first argument is runtime content;
+- do not validate, classify or guard runtime input inside the builder; pass it directly into Units;
 - inside it, construct the root Unit, instantiate each named Behaviour with that exact Unit, call unit.addBehaviour(...) in authored order, and return the Unit;
 - the builder is executable application code, not a Composition class, descriptor, schema or JSON response;
 

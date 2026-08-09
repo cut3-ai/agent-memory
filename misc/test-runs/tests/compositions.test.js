@@ -71,7 +71,11 @@ test('online-agent output is a plain Norman-shaped builder with explicit ordered
   assert.equal(projectUnit(unit, { frame: 0 }).opacity, 0);
   assert.notEqual(projectUnit(unit, { frame: 8 }).pose.x, 0);
   assert.match(projectUnit(unit, { frame: 24 }).effects.shadow, /#09060f/u);
-  assert.throws(() => ritualOffer({ text: 'not a string' }), /must be a string/u);
+  assert.doesNotMatch(
+    ritualOffer.toString(),
+    /\b(?:if|switch|throw|try|catch|typeof|instanceof)\b/u,
+    'online-agent builder must contain no runtime validation or guards',
+  );
 });
 
 test('ranking cardinality is data: two and twenty items use the same RitualOfferCard', () => {
