@@ -86,6 +86,41 @@ const entries = [
     ['transition to ranking winner'],
     ['six-by-ten mosaic', 'hard pixel border', 'green-purple checker']),
 
+  memory('behaviour.blue-terminal.message-cadence', 'behaviour', 'blue-terminal',
+    '@cut3/agent-memory/behaviours/blue-terminal/TerminalMessageCadence',
+    ['pixel system message reveal', 'pixel terminal dialogue cadence'],
+    ['uneven pixel typing', 'held block cursor', 'cobalt phosphor echo']),
+  memory('behaviour.blue-terminal.panel-boot', 'behaviour', 'blue-terminal',
+    '@cut3/agent-memory/behaviours/blue-terminal/TerminalPanelBoot',
+    ['terminal panel entrance', 'system message boot'],
+    ['stepped cobalt scale', 'ice flash', 'deep terminal settle']),
+  memory('unit.blue-terminal.message-panel', 'unit', 'blue-terminal',
+    '@cut3/agent-memory/units/blue-terminal/BlueTerminalMessagePanel',
+    ['pixel system message', 'pixel terminal dialogue panel'],
+    ['cobalt layered frame', 'pixel status rail', 'ice border', 'Press Start 2P 400']),
+
+  memory('behaviour.neon-heart-pop.chroma-pop-settle', 'behaviour', 'neon-heart-pop',
+    '@cut3/agent-memory/behaviours/neon-heart-pop/ChromaPopSettle',
+    ['neon nameplate entrance', 'pop title landing'],
+    ['zero-to-overshoot scale', 'chromatic recoil', 'hot-pink glow settle']),
+  memory('unit.neon-heart-pop.chroma-nameplate', 'unit', 'neon-heart-pop',
+    '@cut3/agent-memory/units/neon-heart-pop/NeonChromaNameplate',
+    ['two-line neon nameplate', 'heart-pop title'],
+    ['cyan-red chromatic ghosts', 'hot-pink heart', 'Bebas Neue 400', 'Caveat 700']),
+
+  memory('behaviour.fight-zine.row-stagger', 'behaviour', 'fight-zine',
+    '@cut3/agent-memory/behaviours/fight-zine/ZineRowStagger',
+    ['text ranking row entrance', 'fight-stat strip reveal'],
+    ['hard lateral throw', 'paper overshoot', 'marker settle']),
+  memory('behaviour.fight-zine.boiling-ink', 'behaviour', 'fight-zine',
+    '@cut3/agent-memory/behaviours/fight-zine/BoilingInk',
+    ['inked ranking idle', 'zine card texture'],
+    ['two-frame hold', 'deterministic jitter', 'additive ink motion']),
+  memory('unit.fight-zine.rank-row', 'unit', 'fight-zine',
+    '@cut3/agent-memory/units/fight-zine/FightZineRankRow',
+    ['text ranking row', 'fight-stat strip'],
+    ['cream paper', 'yellow tape', 'rough ink rule', 'Anton 400', 'Permanent Marker 400']),
+
 ];
 
 export const memoryCatalog = Object.freeze(entries);

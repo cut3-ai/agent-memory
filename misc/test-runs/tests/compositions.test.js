@@ -108,7 +108,7 @@ test('ranking cardinality is data: two and twenty items use the same RitualOffer
 });
 
 test('catalog contains code locations and visual traits, never scores or confidence', () => {
-  assert.equal(memoryCatalog.length, 21);
+  assert.equal(memoryCatalog.length, 29);
   assert.ok(memoryCatalog.every((entry) => ['behaviour', 'unit'].includes(entry.type)));
   assert.ok(memoryCatalog.every((entry) => entry.import.startsWith('@cut3/agent-memory/')));
   assert.ok(memoryCatalog.every((entry) => entry.preserves.length >= 2));

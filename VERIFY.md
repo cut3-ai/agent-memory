@@ -1,6 +1,6 @@
 # Cut3 Agent Memory 0.6
 
-This version is an online code memory, not an offline dataset miner.
+This version is an online code memory, not an offline dataset miner. It also contains three manually reconstructed style families derived from a legacy local corpus; that bounded reconstruction is not evidence that production online learning has run.
 
 ## What changed
 
@@ -108,9 +108,22 @@ Exact typography is shipped with the package, not delegated to host fallbacks:
 
 - Barlow Condensed ExtraBold 800;
 - IBM Plex Mono Medium 500;
-- Silkscreen Bold 700.
+- Silkscreen Bold 700;
+- Press Start 2P Regular 400;
+- Bebas Neue Regular 400;
+- Caveat Bold 700;
+- Anton Regular 400;
+- Permanent Marker Regular 400.
 
-The binaries and OFL licenses live in `src/assets/fonts/`; their SHA-256 values are fixed in `src/fonts/memory-fonts.js`. The driver embeds static `@font-face` rules. Remotion registration should additionally await `loadMemoryFonts()` once before rendering so the first frame cannot use a fallback.
+The five new exact families bring the vendored total to eight. The binaries and matching upstream licenses live in `src/assets/fonts/`; their SHA-256 values are fixed in `src/fonts/memory-fonts.js`. The driver embeds static `@font-face` rules. Remotion registration should additionally await `loadMemoryFonts()` once before rendering so the first frame cannot use a fallback.
+
+## Legacy-corpus reconstructions
+
+`blue-terminal`, `neon-heart-pop` and `fight-zine` are privacy-safe, manually authored reconstructions of recurring visual mechanics observed in a legacy local corpus. Their verification uses synthetic runtime content. Raw prompts, URLs, identifiers and source hashes were excluded from Units, Behaviours, builders, tests and catalog metadata.
+
+They add eight catalog entries: three Units and five Behaviours. Their plain builders remain application output and are not catalog entries.
+
+These memories demonstrate reusable code extracted from existing local renders. They do not prove that the production event observer, outcome policy, isolated candidate flow, review boundary or publication adapters performed online learning; those claims require production integration evidence.
 
 ## Demonstration compositions
 
@@ -174,4 +187,4 @@ npm run showcase:browser
 npm pack --dry-run
 ```
 
-The tests execute all three compositions, covered-scene transition handoffs, React/Remotion adapter semantics, paginated ranking cardinality, runtime-enforced absolute pivots, exact fonts and hashes, source offsets, path intervals, whole-tree projection rollback, observable frame consistency, global imports, isolated candidates, concurrent negative signals, stale-lease fencing, operation/heartbeat deadlines, structured review receipts and post-completion retraction.
+The tests execute all three demonstration compositions and the three legacy-corpus reconstruction slices, covered-scene transition handoffs, React/Remotion adapter semantics, paginated ranking cardinality, runtime-enforced absolute pivots, exact fonts and hashes, source offsets, path intervals, whole-tree projection rollback, observable frame consistency, global imports, isolated candidates, concurrent negative signals, stale-lease fencing, operation/heartbeat deadlines, structured review receipts and post-completion retraction.

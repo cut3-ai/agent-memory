@@ -16,6 +16,11 @@ test('all exact style fonts are vendored and content-addressed', async () => {
     'Barlow Condensed',
     'IBM Plex Mono',
     'Silkscreen',
+    'Press Start 2P',
+    'Bebas Neue',
+    'Caveat',
+    'Anton',
+    'Permanent Marker',
   ]);
   for (const font of memoryFonts) {
     const bytes = await readFile(fileURLToPath(font.file));
@@ -27,6 +32,11 @@ test('all exact style fonts are vendored and content-addressed', async () => {
   assert.match(css, /Barlow Condensed/u);
   assert.match(css, /IBM Plex Mono/u);
   assert.match(css, /Silkscreen/u);
+  assert.match(css, /Press Start 2P/u);
+  assert.match(css, /Bebas Neue/u);
+  assert.match(css, /Caveat/u);
+  assert.match(css, /Anton/u);
+  assert.match(css, /Permanent Marker/u);
 });
 
 test('browser showcase contains inspectable 1080x700 rendered contact sheets', async () => {
@@ -57,7 +67,7 @@ test('font preloader waits for every vendored face before rendering', async () =
       ready: Promise.resolve(),
     },
   });
-  assert.equal(loaded.length, 3);
-  assert.equal(added.length, 3);
+  assert.equal(loaded.length, 8);
+  assert.equal(added.length, 8);
   assert.deepEqual(added.map((font) => font.family), memoryFonts.map((font) => font.family));
 });

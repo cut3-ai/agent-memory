@@ -17,6 +17,36 @@ export const memoryFonts = Object.freeze([
     sha256: '768476aa712d4f5c3e18d3bce80f980a8bd3f72b7094d22ec5e768df3acfed61',
     weight: 700,
   }),
+  font({
+    family: 'Press Start 2P',
+    file: new URL('../assets/fonts/PressStart2P-Regular.ttf', import.meta.url).href,
+    sha256: '034c77f1f05ec89421e4a63f0e3a4ca1ecf852cc6d2bf611f126f275728e017d',
+    weight: 400,
+  }),
+  font({
+    family: 'Bebas Neue',
+    file: new URL('../assets/fonts/BebasNeue-Regular.ttf', import.meta.url).href,
+    sha256: '08e4623805102d819f58601e46e345648846075e363b2ceb23313c2d1c83ec73',
+    weight: 400,
+  }),
+  font({
+    family: 'Caveat',
+    file: new URL('../assets/fonts/Caveat-Variable.ttf', import.meta.url).href,
+    sha256: '0bdb6b660482d31531b3945849fba5916b3ef8695da7024a9e6b9ee3c4157988',
+    weight: 700,
+  }),
+  font({
+    family: 'Anton',
+    file: new URL('../assets/fonts/Anton-Regular.ttf', import.meta.url).href,
+    sha256: 'a4ba3a92350ebb031da0cb47630ac49eb265082ca1bc0450442f4a83ab947cab',
+    weight: 400,
+  }),
+  font({
+    family: 'Permanent Marker',
+    file: new URL('../assets/fonts/PermanentMarker-Regular.ttf', import.meta.url).href,
+    sha256: '28f82c8a7943cb8e9d599f8554da1d4fc75dbcf69b9885ad6c0611d20c6946c5',
+    weight: 400,
+  }),
 ]);
 
 export function memoryFontFaceCss() {
