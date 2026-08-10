@@ -236,6 +236,10 @@ const entries = [
       'units/crt-glitch/CrtGlitchField',
       ['film-grain field', 'canvas glitch title'],
       ['plain projected frame state', 'direct native 2D draw method', 'semantic signal surface']],
+    ['unit.crt-glitch.signal', 'unit',
+      'units/crt-glitch/CrtGlitchField',
+      ['raw CRT signal surface', 'canvas-drawn glitch source'],
+      ['seeded film-grain and glitch-title variants', 'native canvas-2d draw method', 'owned by CrtGlitchField']],
   ]),
 
   ...familyMemories('flash-photo', [
@@ -361,6 +365,10 @@ const entries = [
       'behaviours/kinetic-intertitles/SplitWordCadence',
       ['split-serif word entrance', 'staggered intertitle phrase'],
       ['per-word spring stagger', 'normalized hold', 'coordinated fade']],
+    ['unit.kinetic-intertitles.progress-trace', 'unit',
+      'units/kinetic-intertitles/SplitSerifIntertitle',
+      ['intertitle progress mark', 'serif underline trace'],
+      ['transparent projected trace frame', 'owned by SplitSerifIntertitle', 'direct vector path renderer']],
     ['unit.kinetic-intertitles.scanline-impact', 'unit',
       'units/kinetic-intertitles/ScanlineImpactCaption',
       ['Impact scanline caption', 'condensed kinetic title'],
@@ -666,6 +674,10 @@ const entries = [
       'units/turbulent-emulsion/EmulsionOverlay',
       ['film-emulsion overlay', 'turbulent media distress'],
       ['typed SVG filter graph', 'turbulence and displacement', 'blend-ready full-frame surface']],
+    ['unit.turbulent-emulsion.surface', 'unit',
+      'units/turbulent-emulsion/EmulsionOverlay',
+      ['authored emulsion scene surface', 'turbulent full-frame backdrop'],
+      ['authored per-variant scene and motion', 'owned by EmulsionOverlay', 'direct declarative SVG renderer']],
   ]),
 
   memory('behaviour.outlined-word-card.word-cue-state', 'behaviour', 'outlined-word-card',

@@ -7,6 +7,7 @@ import { projectFrame } from '@cut3/agent-memory/core/frame';
 import { publicSnapshot } from '@cut3/agent-memory/core/state';
 import { createReactDriver } from '@cut3/agent-memory/drivers/react';
 import {
+  cubicBezier,
   easeIn,
   easeOut,
   interpolateRange,
@@ -50,6 +51,26 @@ const React = Object.freeze({
   createElement(type, props, ...children) {
     return { children, props: props ?? {}, type };
   },
+});
+/**
+ * ImpactLetterCadence and SplitWordCadence require a host-injected `motion`
+ * capability (see core/timeline.js requireMotion / drivers/remotion.js
+ * remotionMotion) instead of computing spring/interpolate themselves. In
+ * production the Remotion driver builds this from Remotion.spring,
+ * Remotion.interpolate and Remotion.Easing; this test harness has no
+ * Remotion dependency, so it builds the same shape from the library's own
+ * already-tested pure implementations, which share Remotion's call signature.
+ */
+const TEST_MOTION = Object.freeze({
+  Easing: Object.freeze({
+    bezier: (x1, y1, x2, y2) => cubicBezier(x1, y1, x2, y2),
+    in: (easing) => easeIn(easing),
+    out: (easing) => easeOut(easing),
+  }),
+  interpolate: (input, inputRange, outputRange, options) => (
+    interpolateRange(input, inputRange, outputRange, options)
+  ),
+  spring: (options) => springValue(options),
 });
 
 test('plain builders are guard/style-free and attach owner-first laws to named semantic targets', () => {
@@ -247,7 +268,14 @@ test('all authored states are finite and projection restores deterministic basel
 
 test('generic driver emits no SVG and the host can opt into the direct family SVG helper', () => {
   const root = splitSerifIntertitle('ALPHA BETA GAMMA', 'trace');
-  const input = { duration: 210, fps: 60, frame: 90, height: 1920, width: 1080 };
+  const input = {
+    duration: 210,
+    fps: 60,
+    frame: 90,
+    height: 1920,
+    motion: TEST_MOTION,
+    width: 1080,
+  };
   const genericTree = createReactDriver(React).render(root, input);
   assert.equal(findType(genericTree, 'svg'), null);
   assert.equal(findType(genericTree, 'path'), null);
@@ -532,6 +560,7 @@ function projected(root, frame, duration) {
     fps: 60,
     frame,
     height: 1920,
+    motion: TEST_MOTION,
     width: 1080,
   });
 }
