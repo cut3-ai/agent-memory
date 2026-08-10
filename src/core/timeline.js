@@ -26,8 +26,15 @@ export function motionCapability(value) {
   if (typeof value.spring !== 'function') {
     throw new TypeError('motion.spring must be a function');
   }
-  if (!value.Easing || typeof value.Easing !== 'object' || Array.isArray(value.Easing)) {
-    throw new TypeError('motion.Easing must be an object');
+  // Remotion's real Easing export is itself a callable function carrying
+  // .bezier/.in/.out as properties (same shape React Native uses), not a
+  // plain object, so both shapes are accepted here.
+  if (
+    !value.Easing
+    || (typeof value.Easing !== 'object' && typeof value.Easing !== 'function')
+    || Array.isArray(value.Easing)
+  ) {
+    throw new TypeError('motion.Easing must be an object or function');
   }
   for (const method of ['bezier', 'in', 'out']) {
     if (typeof value.Easing[method] !== 'function') {
