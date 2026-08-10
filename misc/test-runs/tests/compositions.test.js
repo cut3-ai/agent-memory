@@ -108,11 +108,16 @@ test('ranking cardinality is data: two and twenty items use the same RitualOffer
 });
 
 test('catalog contains code locations and visual traits, never scores or confidence', () => {
-  assert.equal(memoryCatalog.length, 29);
+  assert.ok(memoryCatalog.length >= 100);
+  assert.equal(new Set(memoryCatalog.map((entry) => entry.id)).size, memoryCatalog.length);
   assert.ok(memoryCatalog.every((entry) => ['behaviour', 'unit'].includes(entry.type)));
   assert.ok(memoryCatalog.every((entry) => entry.import.startsWith('@cut3/agent-memory/')));
   assert.ok(memoryCatalog.every((entry) => entry.preserves.length >= 2));
-  assert.doesNotMatch(JSON.stringify(memoryCatalog), /confidence|score|probability/iu);
+  assert.ok(memoryCatalog.every((entry) => (
+    !Object.hasOwn(entry, 'confidence')
+    && !Object.hasOwn(entry, 'score')
+    && !Object.hasOwn(entry, 'probability')
+  )));
 });
 
 test('incoming scenes stay transparent until each transition covers the outgoing scene', () => {

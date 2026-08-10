@@ -1,6 +1,5 @@
 import { requireUnit, Unit } from '@cut3/agent-memory/core/Unit';
 import { requireDetachedUnit } from '@cut3/agent-memory/core/ownership';
-import { PinnedEvidenceDrop } from '@cut3/agent-memory/behaviours/archival-dossier/PinnedEvidenceDrop';
 import { Box } from '@cut3/agent-memory/units/base/Box';
 import { CompositionPivot } from '@cut3/agent-memory/units/base/CompositionPivot';
 import { Layer } from '@cut3/agent-memory/units/base/Layer';
@@ -9,6 +8,8 @@ import { VectorPath } from '@cut3/agent-memory/units/base/VectorPath';
 /** Warm evidence-board photo mount with torn tape, thread and registration ink. */
 export class DossierPhotoMount extends Unit {
   static kind = 'unit.archival-dossier.photo-mount';
+
+  #animationTargets;
 
   constructor(content) {
     requireUnit(content, 'DossierPhotoMount content');
@@ -51,7 +52,12 @@ export class DossierPhotoMount extends Unit {
     const stack = new Layer(mount, { name: 'dossier-photo-stack' });
     stack.add(tape, thread);
     const pivot = new CompositionPivot(stack, { x: 196, y: 420 });
-    pivot.add(new PinnedEvidenceDrop(pivot));
     super(pivot);
+    this.#animationTargets = Object.freeze({ evidence: pivot });
+  }
+
+  /** Frozen semantic owner for the complete pinned-evidence drop. */
+  animationTargets() {
+    return this.#animationTargets;
   }
 }

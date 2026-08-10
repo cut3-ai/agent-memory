@@ -1,7 +1,5 @@
 import { requireUnit, Unit } from '@cut3/agent-memory/core/Unit';
 import { requireDetachedUnit } from '@cut3/agent-memory/core/ownership';
-import { EditorialImpactSettle } from '@cut3/agent-memory/behaviours/signal-editorial/EditorialImpactSettle';
-import { InkRuleStrike } from '@cut3/agent-memory/behaviours/signal-editorial/InkRuleStrike';
 import { Box } from '@cut3/agent-memory/units/base/Box';
 import { CompositionPivot } from '@cut3/agent-memory/units/base/CompositionPivot';
 import { Layer } from '@cut3/agent-memory/units/base/Layer';
@@ -10,6 +8,8 @@ import { VectorPath } from '@cut3/agent-memory/units/base/VectorPath';
 /** Paper-black condensed headline with signal-red gutter and hand-struck rule. */
 export class SignalHeadlineBand extends Unit {
   static kind = 'unit.signal-editorial.headline-band';
+
+  #animationTargets;
 
   constructor(content) {
     requireUnit(content, 'SignalHeadlineBand content');
@@ -50,11 +50,18 @@ export class SignalHeadlineBand extends Unit {
       paint: { stroke: '#ff3b30', strokeWidth: 11 },
       viewBox: [0, 0, 800, 34],
     });
-    rule.add(new InkRuleStrike(rule));
     const stack = new Layer(paper, { name: 'signal-headline-stack' });
     stack.add(gutter, rule);
     const pivot = new CompositionPivot(stack, { x: 144, y: 1390 });
-    pivot.add(new EditorialImpactSettle(pivot));
     super(pivot);
+    this.#animationTargets = Object.freeze({
+      impact: pivot,
+      rule,
+    });
+  }
+
+  /** Frozen semantic owners for application-level Behaviour wiring. */
+  animationTargets() {
+    return this.#animationTargets;
   }
 }

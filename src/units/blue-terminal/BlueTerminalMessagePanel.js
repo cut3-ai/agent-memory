@@ -5,6 +5,7 @@ import { CompositionPivot } from '@cut3/agent-memory/units/base/CompositionPivot
 import { Layer } from '@cut3/agent-memory/units/base/Layer';
 import { Text } from '@cut3/agent-memory/units/base/Text';
 import { VectorPath } from '@cut3/agent-memory/units/base/VectorPath';
+import { registerTerminalTextTarget } from '@cut3/agent-memory/units/blue-terminal/terminalSemantics';
 
 /** Layered cobalt system message with an ice border and pixel status rail. */
 export class BlueTerminalMessagePanel extends CompositionPivot {
@@ -21,7 +22,7 @@ export class BlueTerminalMessagePanel extends CompositionPivot {
     content.paint = { ...content.paint, color: '#e8f0ff' };
     content.typography = {
       align: 'left',
-      family: 'Press Start 2P, monospace',
+      family: "'Press Start 2P', monospace",
       letterSpacing: 0,
       lineHeight: 1.45,
       size: 32,
@@ -39,7 +40,7 @@ export class BlueTerminalMessagePanel extends CompositionPivot {
       frame: { x: 34, y: 20, width: 430, height: 34, z: 12 },
       paint: { color: '#aaccff' },
       typography: {
-        family: 'Press Start 2P, monospace',
+        family: "'Press Start 2P', monospace",
         letterSpacing: 0,
         lineHeight: 1,
         size: 22,
@@ -52,7 +53,7 @@ export class BlueTerminalMessagePanel extends CompositionPivot {
       paint: { color: '#ffe87c' },
       typography: {
         align: 'right',
-        family: 'Press Start 2P, monospace',
+        family: "'Press Start 2P', monospace",
         letterSpacing: 0,
         lineHeight: 1,
         size: 19,
@@ -127,6 +128,7 @@ export class BlueTerminalMessagePanel extends CompositionPivot {
       x: 540,
       y: 1345,
     });
+    registerTerminalTextTarget(content, 'message-study');
   }
 }
 

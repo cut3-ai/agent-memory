@@ -33,14 +33,13 @@ Norman's application output lives in plain functions such as `Spell()`, `Village
 
 ```text
 src/
-├── core/          Unit, Behaviour, deterministic frame engine
+├── core/          Unit, Behaviour and frame-state projection
 ├── units/
 │   ├── base/      renderer-neutral infrastructure
 │   └── <style>/   authored reusable visual trees
 ├── behaviours/    complete named visual laws grouped by style
 ├── compositions/  plain output builders and executable 9:16 demonstrations
 ├── drivers/       React and Remotion boundaries
-├── fonts/         vendored-font manifest and preload contract
 ├── online/        exact feedback policy and coding-agent prompt
 └── catalog.js     handwritten ESM navigation
 
@@ -102,26 +101,13 @@ Style Units are constructed in unshifted, full-composition containing blocks. Dy
 
 Frame evaluation freezes the complete nested baseline, restores exact descriptors and object identities, and locks the Unit tree against structural edits. One whole-tree transaction covers visibility, child context and every Behaviour; React, Remotion and `Engine` consume immutable first-pass state and child snapshots only after restoration. Repeated projection is compared exactly. Across calls, one compact non-cryptographic 128-bit whole-frame fingerprint is retained for every context for the lifetime of the live root, with no 256-frame eviction; this detects common accidental private state or randomness without retaining every Unit snapshot. JavaScript cannot prove that arbitrary external code has no invisible side effects (and a non-cryptographic fingerprint has a theoretical collision), so frame purity remains an explicit Behaviour contract as well as a fail-closed runtime check.
 
-The React fallback seeks and pauses a native video at `(startFrom + local frame) / fps` on every render. An injected React video component receives `frame`, `absoluteFrame`, `fps` and `startFrom`; the Remotion driver keeps `OffthreadVideo` timeline ownership.
-
-Exact typography is shipped with the package, not delegated to host fallbacks:
-
-- Barlow Condensed ExtraBold 800;
-- IBM Plex Mono Medium 500;
-- Silkscreen Bold 700;
-- Press Start 2P Regular 400;
-- Bebas Neue Regular 400;
-- Caveat Bold 700;
-- Anton Regular 400;
-- Permanent Marker Regular 400.
-
-The five new exact families bring the vendored total to eight. The binaries and matching upstream licenses live in `src/assets/fonts/`; their SHA-256 values are fixed in `src/fonts/memory-fonts.js`. The driver embeds static `@font-face` rules. Remotion registration should additionally await `loadMemoryFonts()` once before rendering so the first frame cannot use a fallback.
+Image, video, audio and font delivery belong to the host. Units preserve opaque resource values, semantic font-family names and authored timing fields; drivers pass those values to injected React or native Remotion components without downloading, caching, decoding or injecting font CSS. Resource availability can affect a host preview or optional QA run, but it cannot affect semantic coverage.
 
 ## Legacy-corpus reconstructions
 
-`blue-terminal`, `neon-heart-pop` and `fight-zine` are privacy-safe, manually authored reconstructions of recurring visual mechanics observed in a legacy local corpus. Their verification uses synthetic runtime content. Raw prompts, URLs, identifiers and source hashes were excluded from Units, Behaviours, builders, tests and catalog metadata.
+The legacy-corpus families are privacy-safe, manually authored refactors of original React composition functions. Their tests use synthetic runtime content. Raw prompts, URLs, identifiers and source hashes are excluded from Units, Behaviours, builders, tests and catalog metadata.
 
-They add eight catalog entries: three Units and five Behaviours. Their plain builders remain application output and are not catalog entries.
+Coverage counts original source functions, not classes, catalog entries, frame samples or pixels. Refactoring five original functions into five Unit/Behaviour applications is 5/5 semantic coverage even when host resource delivery or optional raster QA is unavailable.
 
 These memories demonstrate reusable code extracted from existing local renders. They do not prove that the production event observer, outcome policy, isolated candidate flow, review boundary or publication adapters performed online learning; those claims require production integration evidence.
 
@@ -187,4 +173,4 @@ npm run showcase:browser
 npm pack --dry-run
 ```
 
-The tests execute all three demonstration compositions and the three legacy-corpus reconstruction slices, covered-scene transition handoffs, React/Remotion adapter semantics, paginated ranking cardinality, runtime-enforced absolute pivots, exact fonts and hashes, source offsets, path intervals, whole-tree projection rollback, observable frame consistency, global imports, isolated candidates, concurrent negative signals, stale-lease fencing, operation/heartbeat deadlines, structured review receipts and post-completion retraction.
+The tests execute the semantic applications, covered-scene transition handoffs, React/Remotion adapter semantics, runtime-content pass-through, paginated ranking cardinality, runtime-enforced absolute pivots, source offsets, path intervals, whole-tree projection rollback, observable frame consistency, global imports, isolated candidates, concurrent negative signals, stale-lease fencing, operation/heartbeat deadlines, structured review receipts and post-completion retraction. Pixel, codec, font and resource checks are optional host QA and are not coverage gates.

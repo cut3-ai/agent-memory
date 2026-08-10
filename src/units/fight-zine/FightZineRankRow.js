@@ -1,9 +1,9 @@
-import { requireUnit } from '@cut3/agent-memory/core/Unit';
+import { Unit, requireUnit } from '@cut3/agent-memory/core/Unit';
 import { requireDetachedUnit } from '@cut3/agent-memory/core/ownership';
 import { Box } from '@cut3/agent-memory/units/base/Box';
 import { CompositionPivot } from '@cut3/agent-memory/units/base/CompositionPivot';
 import { Layer } from '@cut3/agent-memory/units/base/Layer';
-import { VectorPath } from '@cut3/agent-memory/units/base/VectorPath';
+import { visual } from '@cut3/agent-memory/units/base/visual';
 
 const INK = '#141414';
 const PAPER = '#f4f1ea';
@@ -98,24 +98,8 @@ export class FightZineRankRow extends CompositionPivot {
       pose: { rotate: -2.4 },
       name: 'fight-zine-gain-tape',
     });
-    const rule = new VectorPath([
-      { command: 'move', x: 0, y: 15 },
-      { command: 'cubic', x1: 106, y1: 2, x2: 254, y2: 25, x: 374, y: 10 },
-      { command: 'cubic', x1: 432, y1: 3, x2: 496, y2: 20, x: 548, y: 8 },
-    ], {
-      frame: { x: 274, y: 174, width: 548, height: 32, z: 6 },
-      paint: { stroke: INK, strokeWidth: 6 },
-      viewBox: [0, 0, 548, 32],
-    });
-    const scratch = new VectorPath([
-      { command: 'move', x: 4, y: 22 },
-      { command: 'line', x: 42, y: 4 },
-      { command: 'line', x: 74, y: 20 },
-    ], {
-      frame: { x: 944, y: 52, width: 78, height: 28, z: 10 },
-      paint: { stroke: INK, strokeWidth: 5 },
-      viewBox: [0, 0, 78, 28],
-    });
+    const rule = new FightZineRankRowMark('rule');
+    const scratch = new FightZineRankRowMark('scratch');
 
     const stack = new Layer(paper, {
       frame: { x: 0, y: 0, width: 1080, height: 1920 },
@@ -128,4 +112,60 @@ export class FightZineRankRow extends CompositionPivot {
       y: 153,
     });
   }
+}
+
+class FightZineRankRowMark extends Unit {
+  static kind = 'unit.fight-zine.rank-row-mark';
+
+  constructor(role) {
+    super();
+    const scratch = role === 'scratch';
+    Object.assign(this, visual({
+      frame: scratch
+        ? { x: 944, y: 52, width: 78, height: 28, z: 10 }
+        : { x: 274, y: 174, width: 548, height: 32, z: 6 },
+    }));
+    this.markRole = String(role);
+    this.name = `fight-zine-rank-row-${role}`;
+  }
+}
+
+/** Host-native SVG adapter for the two fixed ink marks on a ranking row. */
+export const fightZineRankRowUnitRenderers = Object.freeze({
+  [FightZineRankRowMark.kind]: renderRankRowMark,
+});
+
+function renderRankRowMark({ React, state }) {
+  const scratch = state.markRole === 'scratch';
+  const mark = scratch
+    ? React.createElement('polyline', {
+      fill: 'none',
+      points: '4,22 42,4 74,20',
+      stroke: INK,
+      strokeWidth: 5,
+    })
+    : React.createElement('path', {
+      d: 'M 0 15 C 106 2 254 25 374 10 C 432 3 496 20 548 8',
+      fill: 'none',
+      stroke: INK,
+      strokeWidth: 6,
+    });
+  return React.createElement('svg', {
+    'data-fight-zine': state.markRole,
+    preserveAspectRatio: 'none',
+    style: {
+      height: dimension(state.frame.height),
+      left: dimension(state.frame.x),
+      opacity: state.opacity,
+      position: 'absolute',
+      top: dimension(state.frame.y),
+      width: dimension(state.frame.width),
+      zIndex: state.frame.z,
+    },
+    viewBox: scratch ? '0 0 78 28' : '0 0 548 32',
+  }, mark);
+}
+
+function dimension(value) {
+  return typeof value === 'number' ? `${value}px` : value;
 }

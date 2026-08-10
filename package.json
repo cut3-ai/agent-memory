@@ -5,7 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "files": [
-    "src",
+    "src/**/*.js",
     "VERIFY.md"
   ],
   "exports": {
@@ -16,7 +16,6 @@
     "./online/*": "./src/online/*.js",
     "./drivers/react": "./src/drivers/react.js",
     "./drivers/remotion": "./src/drivers/remotion.js",
-    "./fonts/*": "./src/fonts/*.js",
     "./catalog": "./src/catalog.js"
   },
   "scripts": {

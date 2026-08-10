@@ -1,6 +1,5 @@
 import { requireUnit, Unit } from '@cut3/agent-memory/core/Unit';
 import { requireDetachedUnit } from '@cut3/agent-memory/core/ownership';
-import { CarbonCopyCadence } from '@cut3/agent-memory/behaviours/archival-dossier/CarbonCopyCadence';
 import { Box } from '@cut3/agent-memory/units/base/Box';
 import { Layer } from '@cut3/agent-memory/units/base/Layer';
 import { VectorPath } from '@cut3/agent-memory/units/base/VectorPath';
@@ -9,6 +8,8 @@ import { VectorPath } from '@cut3/agent-memory/units/base/VectorPath';
 export class DossierQuoteStrip extends Unit {
   static kind = 'unit.archival-dossier.quote-strip';
 
+  #animationTargets;
+
   constructor(content) {
     requireUnit(content, 'DossierQuoteStrip content');
     requireDetachedUnit(content, 'DossierQuoteStrip content');
@@ -16,7 +17,6 @@ export class DossierQuoteStrip extends Unit {
       throw new TypeError('DossierQuoteStrip requires a Text Unit');
     }
     content.frame = { x: 62, y: 54, width: 824, height: 270, z: 3 };
-    content.add(new CarbonCopyCadence(content));
     const paper = new Box(content, {
       effects: { shadow: '14px 18px 0 rgba(42,32,24,.28)' },
       frame: { x: 86, y: 1216, width: 940, height: 372, z: 4 },
@@ -36,5 +36,11 @@ export class DossierQuoteStrip extends Unit {
     const stack = new Layer(paper, { name: 'dossier-quote-stack' });
     stack.add(scratch);
     super(stack);
+    this.#animationTargets = Object.freeze({ copy: content });
+  }
+
+  /** Frozen semantic text owner for the carbon-copy cadence. */
+  animationTargets() {
+    return this.#animationTargets;
   }
 }

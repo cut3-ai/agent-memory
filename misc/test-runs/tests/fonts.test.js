@@ -1,42 +1,51 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-import test from 'node:test';
+import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import test from 'node:test';
 
-import {
-  loadMemoryFonts,
-  memoryFontFaceCss,
-  memoryFonts,
-} from '@cut3/agent-memory/fonts/memory-fonts';
+import { createReactDriver } from '@cut3/agent-memory/drivers/react';
+import { Composition } from '@cut3/agent-memory/units/base/Composition';
+import { Text } from '@cut3/agent-memory/units/base/Text';
 
-test('all exact style fonts are vendored and content-addressed', async () => {
-  assert.deepEqual(memoryFonts.map((font) => font.family), [
-    'Barlow Condensed',
-    'IBM Plex Mono',
-    'Silkscreen',
-    'Press Start 2P',
-    'Bebas Neue',
-    'Caveat',
-    'Anton',
-    'Permanent Marker',
-  ]);
-  for (const font of memoryFonts) {
-    const bytes = await readFile(fileURLToPath(font.file));
-    const digest = createHash('sha256').update(bytes).digest('hex');
-    assert.equal(digest, font.sha256, font.family);
-  }
-  const css = memoryFontFaceCss();
-  assert.match(css, /font-display: block/u);
-  assert.match(css, /Barlow Condensed/u);
-  assert.match(css, /IBM Plex Mono/u);
-  assert.match(css, /Silkscreen/u);
-  assert.match(css, /Press Start 2P/u);
-  assert.match(css, /Bebas Neue/u);
-  assert.match(css, /Caveat/u);
-  assert.match(css, /Anton/u);
-  assert.match(css, /Permanent Marker/u);
+const React = Object.freeze({
+  Fragment: 'fragment',
+  createElement(type, props, ...children) {
+    return { children, props: props ?? {}, type };
+  },
+});
+
+test('React driver preserves semantic font-family and never injects font resources', () => {
+  const family = 'Runtime Font, system-ui';
+  const composition = new Composition(new Text('caller copy', {
+    typography: { family, size: 48 },
+  }));
+  const tree = createReactDriver(React).render(composition, { frame: 0 });
+  const text = find(tree, (node) => node.props?.style?.fontFamily === family)[0];
+  assert.ok(text);
+  assert.equal(find(tree, (node) => node.type === 'style').length, 0);
+});
+
+test('driver source has no font loader, font CSS registry or FontFace side effect', async () => {
+  const source = await readFile(
+    new URL('../../../src/drivers/react.js', import.meta.url),
+    'utf8',
+  );
+  assert.doesNotMatch(source, /memory-fonts|memoryFontFaceCss|loadMemoryFonts|FontFace|dangerouslySetInnerHTML/u);
+});
+
+test('Agent Memory exports no font loader and excludes font bytes from its package', async () => {
+  const packageDocument = JSON.parse(await readFile(
+    new URL('../../../package.json', import.meta.url),
+    'utf8',
+  ));
+  const npmIgnore = await readFile(
+    new URL('../../../.npmignore', import.meta.url),
+    'utf8',
+  );
+  assert.equal(Object.keys(packageDocument.exports).some((key) => key.startsWith('./fonts')), false);
+  assert.deepEqual(packageDocument.files, ['src/**/*.js', 'VERIFY.md']);
+  assert.match(npmIgnore, /^src\/assets\/fonts\/$/mu);
+  assert.match(npmIgnore, /^src\/fonts\/$/mu);
 });
 
 test('browser showcase contains inspectable 1080x700 rendered contact sheets', async () => {
@@ -49,25 +58,21 @@ test('browser showcase contains inspectable 1080x700 rendered contact sheets', a
   }
 });
 
-test('font preloader waits for every vendored face before rendering', async () => {
-  const added = [];
-  class FakeFontFace {
-    constructor(family, source, descriptors) {
-      Object.assign(this, { descriptors, family, source });
-    }
-
-    async load() {
-      return this;
-    }
-  }
-  const loaded = await loadMemoryFonts({
-    FontFace: FakeFontFace,
-    fontSet: {
-      add(face) { added.push(face); },
-      ready: Promise.resolve(),
-    },
-  });
-  assert.equal(loaded.length, 8);
-  assert.equal(added.length, 8);
-  assert.deepEqual(added.map((font) => font.family), memoryFonts.map((font) => font.family));
+test('repository excludes font closures added by the audit', async () => {
+  const names = new Set(await readdir(
+    new URL('../../../src/assets/fonts/', import.meta.url),
+  ));
+  for (const name of [
+    'Caveat-Bold.ttf',
+    'Estonia-Regular.ttf',
+    'Nunito-Latin-Variable.woff2',
+    'Oswald-Latin-Variable.woff2',
+  ]) assert.equal(names.has(name), false, name);
 });
+
+function find(node, predicate, output = []) {
+  if (!node || typeof node !== 'object') return output;
+  if (predicate(node)) output.push(node);
+  for (const child of node.children ?? []) find(child, predicate, output);
+  return output;
+}

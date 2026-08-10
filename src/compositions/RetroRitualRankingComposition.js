@@ -1,11 +1,11 @@
 import { Box } from '@cut3/agent-memory/units/base/Box';
 import { Composition } from '@cut3/agent-memory/units/base/Composition';
+import { portalTileTransition } from '@cut3/agent-memory/compositions/PortalTileHandoff';
 import { ritualOffer } from '@cut3/agent-memory/compositions/RitualOffer';
 import { CompositionPivot } from '@cut3/agent-memory/units/base/CompositionPivot';
 import { Layer } from '@cut3/agent-memory/units/base/Layer';
 import { Shot } from '@cut3/agent-memory/units/base/Shot';
 import { Text } from '@cut3/agent-memory/units/base/Text';
-import { PortalTileTransition } from '@cut3/agent-memory/units/retro-ritual/PortalTileTransition';
 
 /** Arbitrary-cardinality ranking assembled from one reusable ritual card Unit. */
 export class RetroRitualRankingComposition extends Composition {
@@ -35,7 +35,7 @@ export class RetroRitualRankingComposition extends Composition {
         name: `ritual-ranking-page-${index + 2}`,
       },
     )));
-    timeline.add(new Shot(new PortalTileTransition(winner), {
+    timeline.add(new Shot(portalTileTransition(winner), {
       duration: 60,
       from: transitionFrom,
       name: 'portal-to-winner',

@@ -1,6 +1,5 @@
 import { requireUnit, Unit } from '@cut3/agent-memory/core/Unit';
 import { requireDetachedUnit } from '@cut3/agent-memory/core/ownership';
-import { EditorialImpactSettle } from '@cut3/agent-memory/behaviours/signal-editorial/EditorialImpactSettle';
 import { Box } from '@cut3/agent-memory/units/base/Box';
 import { CompositionPivot } from '@cut3/agent-memory/units/base/CompositionPivot';
 import { Layer } from '@cut3/agent-memory/units/base/Layer';
@@ -9,6 +8,8 @@ import { VectorPath } from '@cut3/agent-memory/units/base/VectorPath';
 /** High-contrast cropped media plate with authored registration marks. */
 export class SignalMediaPlate extends Unit {
   static kind = 'unit.signal-editorial.media-plate';
+
+  #animationTargets;
 
   constructor(content) {
     requireUnit(content, 'SignalMediaPlate content');
@@ -43,7 +44,12 @@ export class SignalMediaPlate extends Unit {
     const stack = new Layer(mediaWell, { name: 'signal-media-stack' });
     stack.add(redBlock, registration);
     const pivot = new CompositionPivot(stack, { x: 540, y: 665 });
-    pivot.add(new EditorialImpactSettle(pivot));
     super(pivot);
+    this.#animationTargets = Object.freeze({ impact: pivot });
+  }
+
+  /** Frozen semantic owner for the complete editorial impact law. */
+  animationTargets() {
+    return this.#animationTargets;
   }
 }

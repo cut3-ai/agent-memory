@@ -31,19 +31,21 @@ const runtimeContentSets = Object.freeze([
   }),
 ]);
 
-test('catalog exposes exactly eight reconstructed Units and Behaviours, never builders', () => {
-  const styles = new Set(['blue-terminal', 'neon-heart-pop', 'fight-zine']);
-  const entries = memoryCatalog.filter((entry) => styles.has(entry.style));
+test('catalog retains the original eight reconstructed classes and never lists builders', () => {
+  const required = [
+    'behaviour.blue-terminal.message-cadence',
+    'behaviour.blue-terminal.panel-boot',
+    'unit.blue-terminal.message-panel',
+    'behaviour.neon-heart-pop.chroma-pop-settle',
+    'unit.neon-heart-pop.chroma-nameplate',
+    'behaviour.fight-zine.row-stagger',
+    'behaviour.fight-zine.boiling-ink',
+    'unit.fight-zine.rank-row',
+  ];
+  const ids = new Set(memoryCatalog.map((entry) => entry.id));
 
-  assert.equal(entries.length, 8);
-  assert.deepEqual(
-    Object.fromEntries([...styles].map((style) => [
-      style,
-      entries.filter((entry) => entry.style === style).length,
-    ])),
-    { 'blue-terminal': 3, 'neon-heart-pop': 2, 'fight-zine': 3 },
-  );
-  assert.ok(entries.every((entry) => !entry.import.includes('/compositions/')));
+  assert.ok(required.every((id) => ids.has(id)));
+  assert.ok(memoryCatalog.every((entry) => !entry.import.includes('/compositions/')));
 });
 
 test('bare reconstructed Units contain zero hidden Behaviours in their complete trees', () => {

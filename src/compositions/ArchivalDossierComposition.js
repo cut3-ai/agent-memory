@@ -1,11 +1,12 @@
-import { CasefileShutterTransition } from '@cut3/agent-memory/units/archival-dossier/CasefileShutterTransition';
-import { DossierPhotoMount } from '@cut3/agent-memory/units/archival-dossier/DossierPhotoMount';
-import { DossierQuoteStrip } from '@cut3/agent-memory/units/archival-dossier/DossierQuoteStrip';
+import {
+  casefileShutterTransition,
+  dossierPhotoMount,
+  dossierQuoteStrip,
+} from '@cut3/agent-memory/compositions/ArchivalDossierElements';
 import { Box } from '@cut3/agent-memory/units/base/Box';
 import { Composition } from '@cut3/agent-memory/units/base/Composition';
 import { Layer } from '@cut3/agent-memory/units/base/Layer';
 import { Shot } from '@cut3/agent-memory/units/base/Shot';
-import { Text } from '@cut3/agent-memory/units/base/Text';
 
 /** Documentary quote composition with evidence-board drawing and shutter cut. */
 export class ArchivalDossierComposition extends Composition {
@@ -24,7 +25,7 @@ export class ArchivalDossierComposition extends Composition {
       from: 0,
       name: 'dossier-opening',
     }), { name: 'dossier-timeline' });
-    timeline.add(new Shot(new CasefileShutterTransition(closing), {
+    timeline.add(new Shot(casefileShutterTransition(closing), {
       duration: 66,
       from: 66,
       name: 'casefile-shutter-to-closing',
@@ -52,8 +53,8 @@ function dossierScene(quote, imageTone, suppliedMedia) {
     name: 'replaceable-archival-media',
   });
   scene.add(
-    new DossierPhotoMount(mediaSlot),
-    new DossierQuoteStrip(new Text(quote)),
+    dossierPhotoMount(mediaSlot),
+    dossierQuoteStrip(quote),
   );
   return scene;
 }

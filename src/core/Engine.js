@@ -43,6 +43,8 @@ export function visitUnits(root, visitor) {
 
 function evaluate(unit, projection, active) {
   if (!projection.has(unit)) return null;
+  const state = projection.stateOf(unit);
+  if (state.present === false) return null;
   if (active.has(unit)) throw new TypeError('A Unit tree cannot contain a cycle');
   active.add(unit);
   try {
@@ -51,7 +53,7 @@ function evaluate(unit, projection, active) {
       .filter(Boolean);
     return deepFreeze({
       kind: unit.constructor.kind,
-      ...projection.stateOf(unit),
+      ...state,
       children,
     });
   } finally {

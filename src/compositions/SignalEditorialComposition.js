@@ -1,11 +1,12 @@
+import {
+  signalHeadlineBand,
+  signalMediaPlate,
+  signalRazorTransition,
+} from '@cut3/agent-memory/compositions/SignalEditorialElements';
 import { Composition } from '@cut3/agent-memory/units/base/Composition';
 import { Box } from '@cut3/agent-memory/units/base/Box';
 import { Layer } from '@cut3/agent-memory/units/base/Layer';
 import { Shot } from '@cut3/agent-memory/units/base/Shot';
-import { Text } from '@cut3/agent-memory/units/base/Text';
-import { SignalHeadlineBand } from '@cut3/agent-memory/units/signal-editorial/SignalHeadlineBand';
-import { SignalMediaPlate } from '@cut3/agent-memory/units/signal-editorial/SignalMediaPlate';
-import { SignalRazorTransition } from '@cut3/agent-memory/units/signal-editorial/SignalRazorTransition';
 
 /** Complete 9:16 editorial opener; content is replaceable, art direction is fixed. */
 export class SignalEditorialComposition extends Composition {
@@ -29,7 +30,7 @@ export class SignalEditorialComposition extends Composition {
       from: 0,
       name: 'signal-opening',
     }), { name: 'signal-editorial-timeline' });
-    timeline.add(new Shot(new SignalRazorTransition(closing), {
+    timeline.add(new Shot(signalRazorTransition(closing), {
       duration: 64,
       from: 56,
       name: 'razor-to-closing',
@@ -56,8 +57,8 @@ function signalScene(headline, mediaFill, background, suppliedMedia) {
     name: 'signal-scene-background',
   }), { name: 'signal-scene' });
   scene.add(
-    new SignalMediaPlate(media),
-    new SignalHeadlineBand(new Text(headline)),
+    signalMediaPlate(media),
+    signalHeadlineBand(headline),
   );
   return scene;
 }

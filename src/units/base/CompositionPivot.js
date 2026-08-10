@@ -1,7 +1,7 @@
 import { Unit } from '@cut3/agent-memory/core/Unit';
 import { finite } from '@cut3/agent-memory/core/timeline';
 import { Composition } from '@cut3/agent-memory/units/base/Composition';
-import { effects, pose } from '@cut3/agent-memory/units/base/visual';
+import { effects, pose, presence } from '@cut3/agent-memory/units/base/visual';
 
 /** Transform origin expressed in absolute composition coordinates. */
 export class CompositionPivot extends Unit {
@@ -17,6 +17,7 @@ export class CompositionPivot extends Unit {
     this.effects = effects(options.effects);
     this.name = String(options.name ?? 'composition-pivot');
     this.opacity = finite(options.opacity ?? 1, 'pivot.opacity');
+    this.present = presence(options.present);
   }
 
   /**
@@ -37,7 +38,25 @@ export class CompositionPivot extends Unit {
       const { frame } = state;
       const fullWidth = frame.width === '100%' || frame.width === context.width;
       const fullHeight = frame.height === '100%' || frame.height === context.height;
-      const borderless = !state.paint || state.paint.strokeWidth === 0;
+      const unconstrainedFrame = (
+        frame.right === undefined
+        && frame.bottom === undefined
+        && frame.minWidth === undefined
+        && frame.maxWidth === undefined
+        && frame.minHeight === undefined
+        && frame.maxHeight === undefined
+        && frame.aspectRatio === undefined
+        && (frame.position ?? 'absolute') === 'absolute'
+      );
+      const borderless = !state.paint || (
+        state.paint.strokeWidth === 0
+        && (!state.paint.border || [
+          state.paint.border.top,
+          state.paint.border.right,
+          state.paint.border.bottom,
+          state.paint.border.left,
+        ].every((side) => side.width === 0 || side.style === 'none'))
+      );
       const untransformed = !state.pose || (
         state.pose.x === 0
         && state.pose.y === 0
@@ -45,14 +64,22 @@ export class CompositionPivot extends Unit {
         && state.pose.skewX === 0
         && state.pose.scaleX === 1
         && state.pose.scaleY === 1
+        && (state.pose.operations?.length ?? 0) === 0
+        && state.pose.perspective === undefined
+        && (state.pose.transformStyle ?? 'flat') === 'flat'
       );
+      const unpadded = !state.layout || Object.values(state.layout.padding).every(isZeroDimension);
+      const unmanagedByLayout = !state.layoutItem;
       if (
         frame.x !== 0
         || frame.y !== 0
         || !fullWidth
         || !fullHeight
+        || !unconstrainedFrame
         || !borderless
         || !untransformed
+        || !unpadded
+        || !unmanagedByLayout
       ) {
         throw new TypeError(
           'CompositionPivot must remain in an unshifted, untransformed, borderless, full-composition coordinate space',
@@ -63,4 +90,8 @@ export class CompositionPivot extends Unit {
       throw new TypeError('CompositionPivot must belong to a Composition before rendering');
     }
   }
+}
+
+function isZeroDimension(value) {
+  return value === 0 || (typeof value === 'string' && /^0(?:[a-z%]+)?$/iu.test(value));
 }
