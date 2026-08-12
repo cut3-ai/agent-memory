@@ -680,6 +680,21 @@ const entries = [
       ['authored per-variant scene and motion', 'owned by EmulsionOverlay', 'direct declarative SVG renderer']],
   ]),
 
+  ...familyMemories('tape-warble', [
+    ['behaviour.tape-warble.vhs-tracking-error', 'behaviour',
+      'behaviours/tape-warble/VhsTrackingError',
+      ['VHS tracking error transition', 'tape sync roll glitch'],
+      ['sync roll band scroll', 'tape warble scanline displacement', 'timecode burn-in']],
+    ['unit.tape-warble.tracking-field', 'unit',
+      'units/tape-warble/VhsTrackingField',
+      ['VHS tape tracking distortion', 'analog video glitch surface'],
+      ['native-canvas-2d draw method', 'sync roll and warble geometry', 'timecode phosphor overlay']],
+    ['unit.tape-warble.signal', 'unit',
+      'units/tape-warble/VhsTrackingField',
+      ['raw VHS signal surface', 'canvas-drawn tracking error source'],
+      ['native canvas-2d draw method', 'owned by VhsTrackingField', 'frame-state driven warble']],
+  ]),
+
   memory('behaviour.outlined-word-card.word-cue-state', 'behaviour', 'outlined-word-card',
     '@cut3/agent-memory/behaviours/outlined-word-card/WordCueState',
     ['hard-cued social word groups', 'outlined kinetic word cards'],
