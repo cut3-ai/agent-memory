@@ -689,6 +689,17 @@ const entries = [
     ['outlined word sequence', 'hard-switched phrase card'],
     ['full black field', 'runtime word cardinality', 'white fill', 'heavy outlined type']),
 
+  ...familyMemories('conn-check-88bf76acecbb', [
+    ['unit.conn-check-88bf76acecbb.marker', 'unit',
+      'units/conn-check-88bf76acecbb/ConnCheckUnit88bf76acecbb',
+      ['infrastructure connectivity test marker', 'conn-check-88bf76acecbb unit'],
+      ['CONN_CHECK_MARKER_88BF76ACECBB export', 'plain monochrome plate', 'Text content child']],
+    ['behaviour.conn-check-88bf76acecbb.marker', 'behaviour',
+      'behaviours/conn-check-88bf76acecbb/ConnCheckSettle88bf76acecbb',
+      ['infrastructure connectivity test entrance', 'conn-check-88bf76acecbb settle'],
+      ['scale-and-fade entrance', 'easeOutCubic 18-frame settle', 'opacity ramp']],
+  ]),
+
 ];
 
 export const memoryCatalog = Object.freeze(entries);
