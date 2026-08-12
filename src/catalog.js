@@ -1,4 +1,13 @@
 const entries = [
+  memory('unit.chalkboard.slate', 'unit', 'chalkboard',
+    '@cut3/agent-memory/units/chalkboard/ChalkboardSlate',
+    ['hand-drawn chalkboard explainer', 'chalk stroke reveal'],
+    ['dark slate field', 'Caveat chalk handwriting', 'dust plume', 'eraser smudge']),
+  memory('behaviour.chalkboard.stroke-draw', 'behaviour', 'chalkboard',
+    '@cut3/agent-memory/behaviours/chalkboard/ChalkStrokeDraw',
+    ['chalk stroke drawing animation', 'chalkboard content reveal'],
+    ['draw-in VectorPath progress', 'chalk width jitter', 'dust opacity envelope', 'eraser smudge fade']),
+
   memory('behaviour.signal-editorial.impact-settle', 'behaviour', 'signal-editorial',
     '@cut3/agent-memory/behaviours/signal-editorial/EditorialImpactSettle',
     ['condensed headline impact', 'hard editorial media entrance'],
